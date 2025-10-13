@@ -4,7 +4,20 @@ const cors = require('cors');
 const app = express();
 
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001', 
+    'http://localhost:5173',
+    'https://www.tvjhair.com',
+    'https://tvjhair.com',
+    'https://sistema-tv-jhaire-tlmy.vercel.app',
+    'https://sistema-tv-jhaire-tlmy-git-main-gabriels-projects-697bb8c5.vercel.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
