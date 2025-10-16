@@ -5,7 +5,7 @@ import {
     AlertTriangle, Plus, Search, Filter, Clock, CheckCircle,
     XCircle, Home, LogOut, Users, CreditCard, FileText, 
     BarChart3, Settings, Bell, Menu, X, Calendar,
-    Phone, MapPin, Wrench, Tool, Zap, User, Edit,
+    Phone, MapPin, Wrench, Zap, User, Edit,
     PlayCircle, CheckCheck, Ban, Trash2, Eye
 } from 'lucide-react';
 import incidenciaService from '../services/incidenciaService';
@@ -105,7 +105,7 @@ const Incidencias = () => {
     const getTipoIcon = (tipo) => {
         const icons = {
             averia: { icon: AlertTriangle, color: 'text-red-500' },
-            soporte: { icon: Tool, color: 'text-blue-500' },
+            soporte: { icon: Settings, color: 'text-blue-500' },
             mantenimiento: { icon: Wrench, color: 'text-green-500' },
             instalacion: { icon: Zap, color: 'text-purple-500' }
         };
