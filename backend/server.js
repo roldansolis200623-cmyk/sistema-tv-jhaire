@@ -3,11 +3,12 @@ const app = require('./src/app');
 const pool = require('./src/config/database');
 const ClienteModel = require('./src/models/clienteModel');
 const PagoModel = require('./src/models/pagoModel');
-const PerfilInternetModel = require('./src/models/perfilInternetModel'); // AGREGAR
+const PerfilInternetModel = require('./src/models/perfilInternetModel');
 const UsuarioModel = require('./src/models/usuarioModel');
 const cronService = require('./src/services/cronService');
 
 const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0'; // IMPORTANTE: Railway necesita esto
 
 const inicializarBD = async () => {
     try {
@@ -17,7 +18,7 @@ const inicializarBD = async () => {
         console.log('📝 Creando/verificando tablas...');
         await ClienteModel.crearTabla();
         await PagoModel.crearTabla();
-        await PerfilInternetModel.crearTabla(); // AGREGAR
+        await PerfilInternetModel.crearTabla();
         await UsuarioModel.crearTabla();
         console.log('✅ Tablas verificadas correctamente');
     } catch (error) {
@@ -31,11 +32,10 @@ const iniciarServidor = async () => {
         await inicializarBD();
         cronService.iniciar();
         
-        app.listen(PORT, () => {
-            console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-            console.log(`📊 Base de datos: ${process.env.DB_NAME}`);
+        app.listen(PORT, HOST, () => {
+            console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+            console.log(`📊 Base de datos: ${process.env.PGDATABASE || 'local'}`);
             console.log(`⏰ Iniciado: ${new Date().toLocaleString()}`);
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         });
     } catch (error) {
         console.error('❌ Error iniciando el servidor:', error);
