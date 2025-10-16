@@ -10,12 +10,11 @@ import {
     Users, TrendingUp, DollarSign, AlertCircle, 
     Activity, Target, Award, Calendar, Clock, 
     TrendingDown, Home, LogOut, CreditCard, FileText,
-    BarChart3, Settings, Bell
+    BarChart3, Settings, Bell, Menu, X
 } from 'lucide-react';
 import { clienteService } from '../services/api';
 import pagoService from '../services/pagoService';
 
-// Hook simple para autenticación (si no existe AuthContext)
 const useAuth = () => {
     const logout = () => {
         localStorage.removeItem('token');
@@ -67,6 +66,7 @@ const EstadisticasView = () => {
     const [pagos, setPagos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('general');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -75,32 +75,14 @@ const EstadisticasView = () => {
     const loadData = async () => {
         try {
             setLoading(true);
-            
-            console.log('🔄 Cargando datos...');
-            
             const [clientesData, pagosData] = await Promise.all([
                 clienteService.getAll(),
                 pagoService.getAll()
             ]);
             
-            console.log('📊 DATOS RECIBIDOS:');
-            console.log('  - Clientes:', clientesData.length);
-            console.log('  - Pagos:', pagosData.length);
-            console.log('  - Ejemplo de pago:', pagosData[0]);
-            
-            const primerPago = pagosData[0];
-            if (primerPago) {
-                console.log('🔍 Estructura del primer pago:');
-                console.log('  - Tiene campo "cliente"?', !!primerPago.cliente);
-                console.log('  - Tiene campo "cliente_id"?', !!primerPago.cliente_id);
-                console.log('  - Datos completos:', primerPago);
-            }
-            
             let pagosConClientes = pagosData;
             
             if (pagosData.length > 0 && !pagosData[0].cliente && pagosData[0].cliente_id) {
-                console.log('⚠️ Los pagos solo tienen cliente_id, cargando datos de clientes...');
-                
                 const clienteMap = {};
                 clientesData.forEach(c => {
                     clienteMap[c.id] = c;
@@ -114,24 +96,13 @@ const EstadisticasView = () => {
                         dni: 'N/A'
                     }
                 }));
-                
-                console.log('✅ Pagos con datos de clientes agregados');
-            } else {
-                console.log('✅ Los pagos ya incluyen datos del cliente');
             }
             
             setClientes(clientesData);
             setPagos(pagosConClientes);
             
-            const totalIngresos = pagosConClientes.reduce((sum, p) => sum + parseFloat(p.monto || 0), 0);
-            console.log('💰 TOTALES:');
-            console.log('  - Total Clientes:', clientesData.length);
-            console.log('  - Total Pagos:', pagosConClientes.length);
-            console.log('  - Total Ingresos: S/', totalIngresos.toFixed(2));
-            
         } catch (error) {
-            console.error('❌ ERROR cargando datos:', error);
-            console.error('   Detalles:', error.response?.data || error.message);
+            console.error('Error cargando datos:', error);
         } finally {
             setLoading(false);
         }
@@ -143,11 +114,12 @@ const EstadisticasView = () => {
     };
 
     const menuItems = [
-        { icon: Home, label: 'Dashboard', onClick: () => navigate('/dashboard') },
-        { icon: Users, label: 'Clientes', onClick: () => navigate('/clientes') },
-        { icon: CreditCard, label: 'Pagos', onClick: () => navigate('/pagos') },
-        { icon: FileText, label: 'Reportes', onClick: () => navigate('/reportes') },
-        { icon: Settings, label: 'Perfiles Internet', onClick: () => navigate('/perfiles-internet') },
+        { icon: Home, label: 'Dashboard', onClick: () => { navigate('/dashboard'); setSidebarOpen(false); } },
+        { icon: Users, label: 'Clientes', onClick: () => { navigate('/clientes'); setSidebarOpen(false); } },
+        { icon: CreditCard, label: 'Pagos', onClick: () => { navigate('/pagos'); setSidebarOpen(false); } },
+        { icon: Calendar, label: 'Calendario', onClick: () => { navigate('/calendario'); setSidebarOpen(false); } },
+        { icon: FileText, label: 'Reportes', onClick: () => { navigate('/reportes'); setSidebarOpen(false); } },
+        { icon: Settings, label: 'Perfiles Internet', onClick: () => { navigate('/perfiles-internet'); setSidebarOpen(false); } },
         { icon: BarChart3, label: 'Estadísticas', active: true },
     ];
 
@@ -223,8 +195,35 @@ const EstadisticasView = () => {
 
     return (
         <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-            {/* Sidebar */}
-            <aside className="w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col shadow-2xl">
+            {/* OVERLAY MÓVIL */}
+            <AnimatePresence>
+                {sidebarOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setSidebarOpen(false)}
+                        className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* SIDEBAR RESPONSIVE */}
+            <aside className={`
+                fixed lg:static
+                w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 
+                flex flex-col shadow-2xl z-50
+                transform transition-transform duration-300 ease-in-out
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+                h-full
+            `}>
+                <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="lg:hidden absolute top-4 right-4 text-white p-2 hover:bg-slate-700 rounded-lg"
+                >
+                    <X size={24} />
+                </button>
+
                 <div className="p-6 border-b border-slate-700/50">
                     <div className="flex items-center gap-3">
                         <motion.img 
@@ -241,7 +240,7 @@ const EstadisticasView = () => {
                     </div>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-1">
+                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                     {menuItems.map((item, i) => (
                         <motion.button
                             key={i}
@@ -263,7 +262,7 @@ const EstadisticasView = () => {
                 <div className="p-4 border-t border-slate-700/50">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
-                            {user?.nombre_completo?.charAt(0) || 'A'}
+                            {user?.nombre?.charAt(0) || 'A'}
                         </div>
                         <div className="flex-1">
                             <p className="text-sm font-semibold text-white">Administrador</p>
@@ -277,34 +276,36 @@ const EstadisticasView = () => {
                         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white rounded-lg transition-all shadow-lg"
                     >
                         <LogOut size={18} />
-                        Cerrar Sesión
+                        <span className="hidden sm:inline">Cerrar Sesión</span>
+                        <span className="sm:hidden">Salir</span>
                     </motion.button>
                 </div>
             </aside>
 
-            {/* Main */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Header */}
-                <header className="bg-white/80 backdrop-blur-xl border-b border-indigo-100 px-8 py-4 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                Estadísticas y <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Análisis</span>
-                            </h1>
-                            <p className="text-sm text-gray-600">Visualiza métricas y reportes del negocio</p>
-                        </div>
-                        <motion.button 
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            className="relative p-2 bg-gradient-to-br from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 rounded-xl transition-all"
+            {/* MAIN */}
+            <div className="flex-1 flex flex-col overflow-hidden w-full">
+                {/* HEADER RESPONSIVE */}
+                <header className="bg-white/80 backdrop-blur-xl border-b border-indigo-100 px-4 lg:px-8 py-4 shadow-sm">
+                    <div className="flex items-center justify-between gap-4">
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="lg:hidden p-2 hover:bg-indigo-100 rounded-lg transition-colors"
                         >
-                            <Bell size={20} className="text-indigo-600" />
-                        </motion.button>
+                            <Menu size={24} className="text-gray-700" />
+                        </button>
+
+                        <div className="flex-1">
+                            <h1 className="text-lg lg:text-2xl font-bold text-gray-900">
+                                <span className="hidden sm:inline">Estadísticas y </span>
+                                <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Análisis</span>
+                            </h1>
+                            <p className="text-xs lg:text-sm text-gray-600 hidden sm:block">Visualiza métricas y reportes del negocio</p>
+                        </div>
                     </div>
                 </header>
 
-                {/* Content */}
-                <main className="flex-1 overflow-y-auto p-8 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+                {/* CONTENT */}
+                <main className="flex-1 overflow-y-auto p-4 lg:p-8 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
                     {loading ? (
                         <div className="flex justify-center items-center h-full">
                             <motion.div
@@ -315,8 +316,8 @@ const EstadisticasView = () => {
                         </div>
                     ) : (
                         <>
-                            {/* Tabs */}
-                            <div className="flex gap-3 mb-6">
+                            {/* TABS RESPONSIVE */}
+                            <div className="flex flex-col sm:flex-row gap-2 lg:gap-3 mb-4 lg:mb-6">
                                 {[
                                     { id: 'general', label: 'General', icon: BarChart3 },
                                     { id: 'deudores', label: 'Deudores', icon: AlertCircle },
@@ -327,7 +328,7 @@ const EstadisticasView = () => {
                                         onClick={() => setActiveTab(tab.id)}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
-                                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+                                        className={`flex items-center justify-center gap-2 px-4 lg:px-6 py-2.5 lg:py-3 rounded-xl font-semibold transition-all text-sm lg:text-base ${
                                             activeTab === tab.id 
                                                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg' 
                                                 : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
@@ -348,8 +349,8 @@ const EstadisticasView = () => {
                                         exit={{ opacity: 0, y: -20 }}
                                         transition={{ duration: 0.3 }}
                                     >
-                                        {/* Stats Cards */}
-                                        <div className="grid grid-cols-4 gap-6 mb-6">
+                                        {/* STATS CARDS RESPONSIVE */}
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-4 lg:mb-6">
                                             <StatCard 
                                                 icon={Users} 
                                                 label="Total Clientes" 
@@ -381,8 +382,8 @@ const EstadisticasView = () => {
                                             />
                                         </div>
 
-                                        {/* Big Cards */}
-                                        <div className="grid grid-cols-2 gap-6 mb-6">
+                                        {/* BIG CARDS RESPONSIVE */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-4 lg:mb-6">
                                             <BigStatCard 
                                                 icon={DollarSign}
                                                 label="Ingresos Potenciales"
@@ -401,17 +402,17 @@ const EstadisticasView = () => {
                                             />
                                         </div>
 
-                                        {/* Charts */}
-                                        <div className="grid grid-cols-2 gap-6 mb-6">
+                                        {/* CHARTS RESPONSIVE */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-4 lg:mb-6">
                                             {datosEstados.length > 0 && (
                                                 <ChartCard title="Estados de Clientes">
-                                                    <ResponsiveContainer width="100%" height={280}>
+                                                    <ResponsiveContainer width="100%" height={250}>
                                                         <PieChart>
                                                             <Pie 
                                                                 data={datosEstados} 
                                                                 cx="50%" 
                                                                 cy="50%" 
-                                                                outerRadius={90} 
+                                                                outerRadius={80} 
                                                                 dataKey="value"
                                                                 label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                                                             >
@@ -427,11 +428,11 @@ const EstadisticasView = () => {
 
                                             {datosServicios.length > 0 && (
                                                 <ChartCard title="Distribución de Servicios">
-                                                    <ResponsiveContainer width="100%" height={280}>
+                                                    <ResponsiveContainer width="100%" height={250}>
                                                         <BarChart data={datosServicios}>
                                                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                                            <XAxis dataKey="name" fontSize={12} />
-                                                            <YAxis fontSize={12} />
+                                                            <XAxis dataKey="name" fontSize={11} />
+                                                            <YAxis fontSize={11} />
                                                             <Tooltip />
                                                             <Bar dataKey="value" fill="url(#colorBar)" radius={[8, 8, 0, 0]} />
                                                             <defs>
@@ -446,20 +447,20 @@ const EstadisticasView = () => {
                                             )}
                                         </div>
 
-                                        {/* Tendencia */}
-                                        <ChartCard title="Tendencia de Ingresos Reales (Últimos 6 Meses)">
-                                            <ResponsiveContainer width="100%" height={250}>
+                                        {/* TENDENCIA RESPONSIVE */}
+                                        <ChartCard title="Tendencia de Ingresos (Últimos 6 Meses)">
+                                            <ResponsiveContainer width="100%" height={220}>
                                                 <LineChart data={datosMensuales}>
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                                    <XAxis dataKey="mes" />
-                                                    <YAxis />
+                                                    <XAxis dataKey="mes" fontSize={11} />
+                                                    <YAxis fontSize={11} />
                                                     <Tooltip />
                                                     <Line 
                                                         type="monotone" 
                                                         dataKey="ingresos" 
                                                         stroke="#10b981" 
                                                         strokeWidth={3}
-                                                        dot={{ fill: '#10b981', r: 5 }}
+                                                        dot={{ fill: '#10b981', r: 4 }}
                                                     />
                                                 </LineChart>
                                             </ResponsiveContainer>
@@ -475,7 +476,7 @@ const EstadisticasView = () => {
                                         exit={{ opacity: 0, y: -20 }}
                                         transition={{ duration: 0.3 }}
                                     >
-                                        <div className="grid grid-cols-3 gap-6 mb-6">
+                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-4 lg:mb-6">
                                             <BigStatCard 
                                                 icon={AlertCircle}
                                                 label="Total Deudores"
@@ -503,12 +504,12 @@ const EstadisticasView = () => {
 
                                         {topDeudores.length > 0 ? (
                                             <motion.div 
-                                                className="bg-white rounded-2xl shadow-lg p-6"
+                                                className="bg-white rounded-xl lg:rounded-2xl shadow-lg p-4 lg:p-6"
                                                 initial={{ opacity: 0, scale: 0.95 }}
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 transition={{ delay: 0.3 }}
                                             >
-                                                <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-900">
+                                                <h3 className="text-lg lg:text-xl font-bold mb-4 flex items-center gap-2 text-gray-900">
                                                     <Award className="text-yellow-500" size={24} />
                                                     Top 5 Deudores
                                                 </h3>
@@ -516,23 +517,25 @@ const EstadisticasView = () => {
                                                     {topDeudores.map((cliente, index) => (
                                                         <motion.div
                                                             key={cliente.id}
-                                                            className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-red-50 to-orange-50 hover:from-red-100 hover:to-orange-100 transition-all"
+                                                            className="flex items-center gap-3 lg:gap-4 p-3 lg:p-4 rounded-xl bg-gradient-to-r from-red-50 to-orange-50 hover:from-red-100 hover:to-orange-100 transition-all"
                                                             initial={{ x: -50, opacity: 0 }}
                                                             animate={{ x: 0, opacity: 1 }}
                                                             transition={{ delay: 0.4 + index * 0.1 }}
-                                                            whileHover={{ scale: 1.02 }}
+                                                            whileHover={{ scale: 1.01 }}
                                                         >
-                                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-bold text-lg">
+                                                            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-bold text-base lg:text-lg flex-shrink-0">
                                                                 {index + 1}
                                                             </div>
-                                                            <div className="flex-1">
-                                                                <div className="font-bold text-gray-900">{cliente.nombre} {cliente.apellido}</div>
-                                                                <div className="text-sm text-gray-600 flex items-center gap-1">
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="font-bold text-gray-900 text-sm lg:text-base truncate">
+                                                                    {cliente.nombre} {cliente.apellido}
+                                                                </div>
+                                                                <div className="text-xs lg:text-sm text-gray-600 flex items-center gap-1">
                                                                     <Clock size={14} />
                                                                     {cliente.meses_deuda} {cliente.meses_deuda === 1 ? 'mes' : 'meses'}
                                                                 </div>
                                                             </div>
-                                                            <div className="text-2xl font-bold text-red-600">
+                                                            <div className="text-lg lg:text-2xl font-bold text-red-600 flex-shrink-0">
                                                                 S/ {cliente.deudaTotal.toFixed(2)}
                                                             </div>
                                                         </motion.div>
@@ -555,7 +558,7 @@ const EstadisticasView = () => {
                                         exit={{ opacity: 0, y: -20 }}
                                         transition={{ duration: 0.3 }}
                                     >
-                                        <div className="grid grid-cols-3 gap-6 mb-6">
+                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-4 lg:mb-6">
                                             <BigStatCard 
                                                 icon={DollarSign}
                                                 label="Total Recaudado"
@@ -582,12 +585,12 @@ const EstadisticasView = () => {
                                         </div>
 
                                         <motion.div 
-                                            className="bg-white rounded-2xl shadow-lg p-6"
+                                            className="bg-white rounded-xl lg:rounded-2xl shadow-lg p-4 lg:p-6"
                                             initial={{ opacity: 0, scale: 0.95 }}
                                             animate={{ opacity: 1, scale: 1 }}
                                             transition={{ delay: 0.3 }}
                                         >
-                                            <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-900">
+                                            <h3 className="text-lg lg:text-xl font-bold mb-4 flex items-center gap-2 text-gray-900">
                                                 <Calendar className="text-green-500" size={24} />
                                                 Pagos Recientes ({pagosRecientes.length})
                                             </h3>
@@ -598,28 +601,28 @@ const EstadisticasView = () => {
                                                     pagosRecientes.map((pago, index) => (
                                                         <motion.div
                                                             key={pago.id}
-                                                            className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-all"
+                                                            className="flex items-center justify-between p-3 lg:p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-all"
                                                             initial={{ x: -50, opacity: 0 }}
                                                             animate={{ x: 0, opacity: 1 }}
                                                             transition={{ delay: 0.4 + index * 0.05 }}
-                                                            whileHover={{ scale: 1.02 }}
+                                                            whileHover={{ scale: 1.01 }}
                                                         >
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold">
+                                                            <div className="flex items-center gap-3 lg:gap-4 flex-1 min-w-0">
+                                                                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold flex-shrink-0">
                                                                     {index + 1}
                                                                 </div>
-                                                                <div>
-                                                                    <div className="font-bold text-gray-900">
+                                                                <div className="min-w-0">
+                                                                    <div className="font-bold text-gray-900 text-sm lg:text-base truncate">
                                                                         {pago.cliente?.nombre || 'Desconocido'} {pago.cliente?.apellido || ''}
                                                                     </div>
-                                                                    <div className="text-sm text-gray-600 flex items-center gap-1">
+                                                                    <div className="text-xs lg:text-sm text-gray-600 flex items-center gap-1">
                                                                         <Calendar size={14} />
                                                                         {new Date(pago.fecha_pago || pago.fecha).toLocaleDateString('es-PE')}
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-right">
-                                                                <div className="text-2xl font-bold text-green-600">
+                                                            <div className="text-right flex-shrink-0">
+                                                                <div className="text-lg lg:text-2xl font-bold text-green-600">
                                                                     S/ {parseFloat(pago.monto).toFixed(2)}
                                                                 </div>
                                                                 <div className="text-xs text-gray-500">
@@ -648,15 +651,15 @@ const StatCard = ({ icon: Icon, label, value, suffix = '', gradient, delay }) =>
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay }}
         whileHover={{ y: -5, scale: 1.02 }}
-        className="bg-white rounded-2xl shadow-lg p-6 relative overflow-hidden"
+        className="bg-white rounded-xl lg:rounded-2xl shadow-lg p-4 lg:p-6 relative overflow-hidden"
     >
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-5`} />
         <div className="relative">
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-3 shadow-lg`}>
-                <Icon className="text-white" size={24} />
+            <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-3 shadow-lg`}>
+                <Icon className="text-white" size={20} />
             </div>
             <p className="text-xs font-semibold text-gray-600 uppercase mb-2">{label}</p>
-            <p className={`text-3xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
+            <p className={`text-2xl lg:text-3xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
                 <AnimatedNumber value={value} suffix={suffix} />
             </p>
         </div>
@@ -669,15 +672,15 @@ const BigStatCard = ({ icon: Icon, label, value, prefix = '', suffix = '', gradi
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay }}
         whileHover={{ y: -5, scale: 1.01 }}
-        className="bg-white rounded-2xl shadow-lg p-8 relative overflow-hidden"
+        className="bg-white rounded-xl lg:rounded-2xl shadow-lg p-6 lg:p-8 relative overflow-hidden"
     >
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-5`} />
         <div className="relative">
-            <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-4 shadow-lg`}>
-                <Icon className="text-white" size={28} />
+            <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-4 shadow-lg`}>
+                <Icon className="text-white" size={24} />
             </div>
-            <p className="text-sm font-semibold text-gray-600 uppercase mb-2">{label}</p>
-            <p className={`text-4xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
+            <p className="text-xs lg:text-sm font-semibold text-gray-600 uppercase mb-2">{label}</p>
+            <p className={`text-3xl lg:text-4xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
                 {prefix}<AnimatedNumber value={value} decimals={2} />{suffix}
             </p>
         </div>
@@ -688,10 +691,10 @@ const ChartCard = ({ title, children }) => (
     <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        whileHover={{ y: -5 }}
-        className="bg-white rounded-2xl shadow-lg p-6"
+        whileHover={{ y: -3 }}
+        className="bg-white rounded-xl lg:rounded-2xl shadow-lg p-4 lg:p-6"
     >
-        <h3 className="text-lg font-bold mb-4 text-gray-900">{title}</h3>
+        <h3 className="text-base lg:text-lg font-bold mb-4 text-gray-900">{title}</h3>
         {children}
     </motion.div>
 );
