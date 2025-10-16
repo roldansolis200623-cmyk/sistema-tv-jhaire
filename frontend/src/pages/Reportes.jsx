@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
     FileText, Download, Home, LogOut, Users, CreditCard,
-    BarChart3, Settings, Bell
+    BarChart3, Settings, Bell, Menu, X, Calendar
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,6 +11,7 @@ const Reportes = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState({});
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const handleLogout = () => {
         logout();
@@ -21,7 +22,7 @@ const Reportes = () => {
         setLoading({ ...loading, [tipo]: true });
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/reportes/pdf/${tipo}`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/reportes/pdf/${tipo}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -54,7 +55,7 @@ const Reportes = () => {
         setLoading({ ...loading, [tipoServicio]: true });
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/reportes/pdf/servicio/${encodeURIComponent(tipoServicio)}`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/reportes/pdf/servicio/${encodeURIComponent(tipoServicio)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -87,7 +88,7 @@ const Reportes = () => {
         setLoading({ ...loading, [tipoSenal]: true });
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/reportes/pdf/senal/${encodeURIComponent(tipoSenal)}`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/reportes/pdf/senal/${encodeURIComponent(tipoSenal)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -120,7 +121,7 @@ const Reportes = () => {
         setLoading({ ...loading, excel: true });
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/reportes/exportar-excel', {
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/reportes/exportar-excel`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -150,12 +151,13 @@ const Reportes = () => {
     };
 
     const menuItems = [
-        { icon: Home, label: 'Dashboard', onClick: () => navigate('/dashboard') },
-        { icon: Users, label: 'Clientes', onClick: () => navigate('/clientes') },
-        { icon: CreditCard, label: 'Pagos', onClick: () => navigate('/pagos') },
+        { icon: Home, label: 'Dashboard', onClick: () => { navigate('/dashboard'); setSidebarOpen(false); } },
+        { icon: Users, label: 'Clientes', onClick: () => { navigate('/clientes'); setSidebarOpen(false); } },
+        { icon: CreditCard, label: 'Pagos', onClick: () => { navigate('/pagos'); setSidebarOpen(false); } },
+        { icon: Calendar, label: 'Calendario', onClick: () => { navigate('/calendario'); setSidebarOpen(false); } },
         { icon: FileText, label: 'Reportes', active: true },
-        { icon: Settings, label: 'Perfiles Internet', onClick: () => navigate('/perfiles-internet') },
-        { icon: BarChart3, label: 'Estadísticas', onClick: () => navigate('/estadisticas') },
+        { icon: Settings, label: 'Perfiles Internet', onClick: () => { navigate('/perfiles-internet'); setSidebarOpen(false); } },
+        { icon: BarChart3, label: 'Estadísticas', onClick: () => { navigate('/estadisticas'); setSidebarOpen(false); } },
     ];
 
     const reportes = [
@@ -272,8 +274,35 @@ const Reportes = () => {
 
     return (
         <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-            {/* Sidebar */}
-            <aside className="w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col shadow-2xl">
+            {/* OVERLAY MÓVIL */}
+            <AnimatePresence>
+                {sidebarOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setSidebarOpen(false)}
+                        className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* SIDEBAR RESPONSIVE */}
+            <aside className={`
+                fixed lg:static
+                w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 
+                flex flex-col shadow-2xl z-50
+                transform transition-transform duration-300 ease-in-out
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+                h-full
+            `}>
+                <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="lg:hidden absolute top-4 right-4 text-white p-2 hover:bg-slate-700 rounded-lg"
+                >
+                    <X size={24} />
+                </button>
+
                 <div className="p-6 border-b border-slate-700/50">
                     <div className="flex items-center gap-3">
                         <motion.img 
@@ -290,7 +319,7 @@ const Reportes = () => {
                     </div>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-1">
+                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                     {menuItems.map((item, i) => (
                         <motion.button
                             key={i}
@@ -312,7 +341,7 @@ const Reportes = () => {
                 <div className="p-4 border-t border-slate-700/50">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
-                            {user?.nombre_completo?.charAt(0) || 'A'}
+                            {user?.nombre?.charAt(0) || 'A'}
                         </div>
                         <div className="flex-1">
                             <p className="text-sm font-semibold text-white">Administrador</p>
@@ -326,52 +355,54 @@ const Reportes = () => {
                         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white rounded-lg transition-all shadow-lg"
                     >
                         <LogOut size={18} />
-                        Cerrar Sesión
+                        <span className="hidden sm:inline">Cerrar Sesión</span>
+                        <span className="sm:hidden">Salir</span>
                     </motion.button>
                 </div>
             </aside>
 
-            {/* Main */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Header */}
+            {/* MAIN */}
+            <div className="flex-1 flex flex-col overflow-hidden w-full">
+                {/* HEADER RESPONSIVE */}
                 <motion.header 
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="bg-white/80 backdrop-blur-xl border-b border-indigo-100 px-8 py-4 shadow-sm"
+                    className="bg-white/80 backdrop-blur-xl border-b border-indigo-100 px-4 lg:px-8 py-4 shadow-sm"
                 >
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                Generación de <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Reportes</span>
-                            </h1>
-                            <p className="text-sm text-gray-600">Exporta y descarga reportes en PDF y Excel</p>
-                        </div>
-                        <motion.button 
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            className="relative p-2 bg-gradient-to-br from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 rounded-xl transition-all"
+                    <div className="flex items-center justify-between gap-4">
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="lg:hidden p-2 hover:bg-indigo-100 rounded-lg transition-colors"
                         >
-                            <Bell size={20} className="text-indigo-600" />
-                        </motion.button>
+                            <Menu size={24} className="text-gray-700" />
+                        </button>
+
+                        <div className="flex-1">
+                            <h1 className="text-lg lg:text-2xl font-bold text-gray-900">
+                                <span className="hidden sm:inline">Generación de </span>
+                                <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Reportes</span>
+                            </h1>
+                            <p className="text-xs lg:text-sm text-gray-600 hidden sm:block">Exporta y descarga reportes en PDF y Excel</p>
+                        </div>
                     </div>
                 </motion.header>
 
-                {/* Content */}
-                <main className="flex-1 overflow-y-auto p-8">
-                    {/* Excel Export */}
+                {/* CONTENT */}
+                <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+                    {/* EXCEL EXPORT RESPONSIVE */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-8 mb-8 shadow-2xl"
+                        className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl lg:rounded-2xl p-6 lg:p-8 mb-6 lg:mb-8 shadow-2xl"
                     >
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center">
-                                    <Download className="text-white" size={32} />
+                        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 lg:gap-4">
+                                <div className="w-12 h-12 lg:w-16 lg:h-16 bg-white/20 backdrop-blur-xl rounded-xl lg:rounded-2xl flex items-center justify-center flex-shrink-0">
+                                    <Download className="text-white" size={24} />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-bold text-white mb-1">Exportar a Excel</h2>
-                                    <p className="text-emerald-100">Descarga todos los datos de clientes en formato Excel</p>
+                                    <h2 className="text-xl lg:text-2xl font-bold text-white mb-1">Exportar a Excel</h2>
+                                    <p className="text-sm lg:text-base text-emerald-100">Descarga todos los datos en Excel</p>
                                 </div>
                             </div>
                             <motion.button
@@ -379,36 +410,36 @@ const Reportes = () => {
                                 disabled={loading.excel}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                className="px-8 py-4 bg-white text-emerald-600 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+                                className="w-full lg:w-auto px-6 lg:px-8 py-3 lg:py-4 bg-white text-emerald-600 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 text-sm lg:text-base"
                             >
                                 {loading.excel ? 'Descargando...' : 'Descargar Excel'}
                             </motion.button>
                         </div>
                     </motion.div>
 
-                    {/* PDF Reports */}
+                    {/* PDF REPORTS RESPONSIVE */}
                     {reportes.map((categoria, idx) => (
                         <motion.div
                             key={idx}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.1 }}
-                            className="mb-8"
+                            className="mb-6 lg:mb-8"
                         >
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">{categoria.categoria}</h3>
-                            <div className="grid grid-cols-3 gap-6">
+                            <h3 className="text-base lg:text-lg font-bold text-gray-900 mb-3 lg:mb-4">{categoria.categoria}</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                                 {categoria.items.map((reporte, i) => (
                                     <motion.div
                                         key={i}
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: (idx * 0.1) + (i * 0.05) }}
-                                        whileHover={{ y: -8, scale: 1.02 }}
-                                        className={`bg-gradient-to-br ${reporte.bgGradient} rounded-2xl p-6 shadow-lg border ${reporte.borderColor} cursor-pointer`}
+                                        whileHover={{ y: -5, scale: 1.02 }}
+                                        className={`bg-gradient-to-br ${reporte.bgGradient} rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-lg border ${reporte.borderColor} cursor-pointer`}
                                     >
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className={`w-14 h-14 bg-gradient-to-br ${reporte.iconGradient} rounded-xl flex items-center justify-center shadow-lg`}>
-                                                <FileText className="text-white" size={26} />
+                                        <div className="flex items-start justify-between mb-3 lg:mb-4">
+                                            <div className={`w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br ${reporte.iconGradient} rounded-xl flex items-center justify-center shadow-lg flex-shrink-0`}>
+                                                <FileText className="text-white" size={22} />
                                             </div>
                                             <motion.button
                                                 onClick={() => {
@@ -423,7 +454,7 @@ const Reportes = () => {
                                                 disabled={loading[reporte.tipo]}
                                                 whileHover={{ scale: 1.1, rotate: 5 }}
                                                 whileTap={{ scale: 0.9 }}
-                                                className={`p-3 bg-white ${reporte.hoverBg} rounded-lg shadow-md transition-all disabled:opacity-50`}
+                                                className={`p-2.5 lg:p-3 bg-white ${reporte.hoverBg} rounded-lg shadow-md transition-all disabled:opacity-50`}
                                             >
                                                 {loading[reporte.tipo] ? (
                                                     <motion.div
@@ -436,7 +467,7 @@ const Reportes = () => {
                                                 )}
                                             </motion.button>
                                         </div>
-                                        <h4 className="text-lg font-bold text-gray-900 mb-1">{reporte.nombre}</h4>
+                                        <h4 className="text-base lg:text-lg font-bold text-gray-900 mb-1">{reporte.nombre}</h4>
                                         <p className="text-sm text-gray-600">{reporte.descripcion}</p>
                                     </motion.div>
                                 ))}
