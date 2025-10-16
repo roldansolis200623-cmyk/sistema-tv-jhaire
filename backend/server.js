@@ -4,6 +4,7 @@ const pool = require('./src/config/database');
 const ClienteModel = require('./src/models/clienteModel');
 const PagoModel = require('./src/models/pagoModel');
 const PerfilInternetModel = require('./src/models/perfilInternetModel'); // AGREGAR
+const UsuarioModel = require('./src/models/usuarioModel');
 const cronService = require('./src/services/cronService');
 
 const PORT = process.env.PORT || 5000;
@@ -17,6 +18,7 @@ const inicializarBD = async () => {
         await ClienteModel.crearTabla();
         await PagoModel.crearTabla();
         await PerfilInternetModel.crearTabla(); // AGREGAR
+        await UsuarioModel.crearTabla();
         console.log('✅ Tablas verificadas correctamente');
     } catch (error) {
         console.error('❌ Error en la base de datos:', error);
