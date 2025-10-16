@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     FileText, Download, Home, LogOut, Users, CreditCard,
-    BarChart3, Settings, Bell, Menu, X, Calendar
+    BarChart3, Settings, Bell, Menu, X, Calendar, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -32,20 +32,32 @@ const Reportes = () => {
             
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `reporte_${tipo}_${Date.now()}.pdf`;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
             
-            setTimeout(() => {
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            }, 100);
+            // DETECTAR SI ES MÓVIL
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // EN MÓVIL: Abrir en nueva pestaña
+                window.open(url, '_blank');
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } else {
+                // EN DESKTOP: Descargar directamente
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `reporte_${tipo}_${Date.now()}.pdf`;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 100);
+            }
             
         } catch (error) {
             console.error('Error descargando PDF:', error);
+            alert('Error al generar el reporte');
         } finally {
             setLoading({ ...loading, [tipo]: false });
         }
@@ -65,20 +77,32 @@ const Reportes = () => {
             
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `reporte_${tipoServicio.toLowerCase().replace(/ /g, '_')}_${Date.now()}.pdf`;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
             
-            setTimeout(() => {
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            }, 100);
+            // DETECTAR SI ES MÓVIL
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // EN MÓVIL: Abrir en nueva pestaña
+                window.open(url, '_blank');
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } else {
+                // EN DESKTOP: Descargar directamente
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `reporte_${tipoServicio.toLowerCase().replace(/ /g, '_')}_${Date.now()}.pdf`;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 100);
+            }
             
         } catch (error) {
             console.error('Error descargando PDF:', error);
+            alert('Error al generar el reporte');
         } finally {
             setLoading({ ...loading, [tipoServicio]: false });
         }
@@ -98,20 +122,32 @@ const Reportes = () => {
             
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `reporte_senal_${tipoSenal.toLowerCase()}_${Date.now()}.pdf`;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
             
-            setTimeout(() => {
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            }, 100);
+            // DETECTAR SI ES MÓVIL
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // EN MÓVIL: Abrir en nueva pestaña
+                window.open(url, '_blank');
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } else {
+                // EN DESKTOP: Descargar directamente
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `reporte_senal_${tipoSenal.toLowerCase()}_${Date.now()}.pdf`;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 100);
+            }
             
         } catch (error) {
             console.error('Error descargando PDF:', error);
+            alert('Error al generar el reporte');
         } finally {
             setLoading({ ...loading, [tipoSenal]: false });
         }
@@ -131,20 +167,32 @@ const Reportes = () => {
             
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `clientes_${Date.now()}.xlsx`;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
             
-            setTimeout(() => {
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            }, 100);
+            // DETECTAR SI ES MÓVIL
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // EN MÓVIL: Abrir en nueva pestaña
+                window.open(url, '_blank');
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } else {
+                // EN DESKTOP: Descargar directamente
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `clientes_${Date.now()}.xlsx`;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 100);
+            }
             
         } catch (error) {
             console.error('Error exportando Excel:', error);
+            alert('Error al exportar a Excel');
         } finally {
             setLoading({ ...loading, excel: false });
         }
@@ -155,6 +203,7 @@ const Reportes = () => {
         { icon: Users, label: 'Clientes', onClick: () => { navigate('/clientes'); setSidebarOpen(false); } },
         { icon: CreditCard, label: 'Pagos', onClick: () => { navigate('/pagos'); setSidebarOpen(false); } },
         { icon: Calendar, label: 'Calendario', onClick: () => { navigate('/calendario'); setSidebarOpen(false); } },
+        { icon: AlertTriangle, label: 'Incidencias', onClick: () => { navigate('/incidencias'); setSidebarOpen(false); } },
         { icon: FileText, label: 'Reportes', active: true },
         { icon: Settings, label: 'Perfiles Internet', onClick: () => { navigate('/perfiles-internet'); setSidebarOpen(false); } },
         { icon: BarChart3, label: 'Estadísticas', onClick: () => { navigate('/estadisticas'); setSidebarOpen(false); } },
