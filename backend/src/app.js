@@ -39,6 +39,7 @@ const pagoRoutes = require('./routes/pagoRoutes');
 const reportePdfRoutes = require('./routes/reportePdfRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const perfilInternetRoutes = require('./routes/perfilInternetRoutes'); // AGREGAR ESTA LÍNEA
+const incidenciaRoutes = require('./routes/incidenciaRoutes'); // 🆕 AGREGAR ESTA LÍNEA
 
 // Usar rutas
 app.use('/api/auth', authRoutes);
@@ -48,6 +49,7 @@ app.use('/api/pagos', pagoRoutes);
 app.use('/api/reportes', reportePdfRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/perfiles-internet', perfilInternetRoutes); // AGREGAR ESTA LÍNEA
+app.use('/api/incidencias', incidenciaRoutes); // 🆕 AGREGAR ESTA LÍNEA
 
 // Manejo de errores
 app.use((err, req, res, next) => {
