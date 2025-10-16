@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     DollarSign, Calendar, Plus, Filter, X, Trash2, TrendingUp, 
     Users, Search, CreditCard, Home, LogOut, FileText, BarChart3, 
-    Settings, Bell, Printer, Download, CheckCircle
+    Settings, Bell, Printer, Download, CheckCircle, Menu
 } from 'lucide-react';
 import pagoService from '../services/pagoService';
 import { clienteService } from '../services/api';
@@ -21,6 +21,7 @@ function Pagos() {
     const [clientes, setClientes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [clientePreseleccionado, setClientePreseleccionado] = useState(null);
     const [estadisticas, setEstadisticas] = useState({
         pagos_hoy: 0,
@@ -53,13 +54,11 @@ function Pagos() {
                 pagoService.getEstadisticas()
             ]);
             
-            // ✅ Crear mapa de clientes para búsqueda rápida
             const clienteMap = {};
             clientesData.forEach(c => {
                 clienteMap[c.id] = c;
             });
             
-            // ✅ Agregar datos del cliente a cada pago si no los tiene
             const pagosConClientes = pagosData.map(pago => ({
                 ...pago,
                 cliente: pago.cliente || clienteMap[pago.cliente_id] || {
@@ -87,11 +86,9 @@ function Pagos() {
     const handlePagoGuardado = async (pagoData, clienteData) => {
         setShowForm(false);
         setClientePreseleccionado(null);
-        
         setUltimoPago(pagoData);
         setClienteUltimoPago(clienteData);
         setShowReciboModal(true);
-        
         await cargarDatos();
     };
 
@@ -128,12 +125,13 @@ function Pagos() {
     };
 
     const menuItems = [
-        { icon: Home, label: 'Dashboard', onClick: () => navigate('/dashboard') },
-        { icon: Users, label: 'Clientes', onClick: () => navigate('/clientes') },
+        { icon: Home, label: 'Dashboard', onClick: () => { navigate('/dashboard'); setSidebarOpen(false); } },
+        { icon: Users, label: 'Clientes', onClick: () => { navigate('/clientes'); setSidebarOpen(false); } },
         { icon: CreditCard, label: 'Pagos', active: true },
-        { icon: FileText, label: 'Reportes', onClick: () => navigate('/reportes') },
-        { icon: Settings, label: 'Perfiles Internet', onClick: () => navigate('/perfiles-internet') },
-        { icon: BarChart3, label: 'Estadísticas', onClick: () => navigate('/estadisticas') },
+        { icon: Calendar, label: 'Calendario', onClick: () => { navigate('/calendario'); setSidebarOpen(false); } },
+        { icon: FileText, label: 'Reportes', onClick: () => { navigate('/reportes'); setSidebarOpen(false); } },
+        { icon: Settings, label: 'Perfiles Internet', onClick: () => { navigate('/perfiles-internet'); setSidebarOpen(false); } },
+        { icon: BarChart3, label: 'Estadísticas', onClick: () => { navigate('/estadisticas'); setSidebarOpen(false); } },
     ];
 
     const pagosFiltrados = pagos.filter(pago => {
@@ -153,8 +151,33 @@ function Pagos() {
 
     return (
         <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-            {/* Sidebar */}
-            <aside className="w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col shadow-2xl">
+            <AnimatePresence>
+                {sidebarOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setSidebarOpen(false)}
+                        className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    />
+                )}
+            </AnimatePresence>
+
+            <aside className={`
+                fixed lg:static
+                w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 
+                flex flex-col shadow-2xl z-50
+                transform transition-transform duration-300 ease-in-out
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+                h-full
+            `}>
+                <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="lg:hidden absolute top-4 right-4 text-white p-2 hover:bg-slate-700 rounded-lg"
+                >
+                    <X size={24} />
+                </button>
+
                 <div className="p-6 border-b border-slate-700/50">
                     <div className="flex items-center gap-3">
                         <motion.img 
@@ -171,7 +194,7 @@ function Pagos() {
                     </div>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-1">
+                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                     {menuItems.map((item, i) => (
                         <motion.button
                             key={i}
@@ -193,7 +216,7 @@ function Pagos() {
                 <div className="p-4 border-t border-slate-700/50">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
-                            {user?.nombre_completo?.charAt(0) || 'A'}
+                            {user?.nombre?.charAt(0) || 'A'}
                         </div>
                         <div className="flex-1">
                             <p className="text-sm font-semibold text-white">Administrador</p>
@@ -207,45 +230,43 @@ function Pagos() {
                         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white rounded-lg transition-all shadow-lg"
                     >
                         <LogOut size={18} />
-                        Cerrar Sesión
+                        <span className="hidden sm:inline">Cerrar Sesión</span>
+                        <span className="sm:hidden">Salir</span>
                     </motion.button>
                 </div>
             </aside>
 
-            {/* Main */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Header */}
-                <header className="bg-white/80 backdrop-blur-xl border-b border-indigo-100 px-8 py-4 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                Gestión de <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Pagos</span>
+            <div className="flex-1 flex flex-col overflow-hidden w-full">
+                <header className="bg-white/80 backdrop-blur-xl border-b border-indigo-100 px-4 lg:px-8 py-4 shadow-sm">
+                    <div className="flex items-center justify-between gap-4">
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="lg:hidden p-2 hover:bg-indigo-100 rounded-lg transition-colors"
+                        >
+                            <Menu size={24} className="text-gray-700" />
+                        </button>
+
+                        <div className="flex-1">
+                            <h1 className="text-lg lg:text-2xl font-bold text-gray-900">
+                                <span className="hidden sm:inline">Gestión de </span>
+                                <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Pagos</span>
                             </h1>
-                            <p className="text-sm text-gray-600">Administra los pagos de tus clientes</p>
+                            <p className="text-xs lg:text-sm text-gray-600 hidden sm:block">Administra los pagos de tus clientes</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <motion.button
-                                onClick={handleNuevoPago}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold shadow-lg shadow-green-500/50"
-                            >
-                                <Plus size={18} />
-                                Registrar Pago
-                            </motion.button>
-                            <motion.button 
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                className="relative p-2 bg-gradient-to-br from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 rounded-xl transition-all"
-                            >
-                                <Bell size={20} className="text-indigo-600" />
-                            </motion.button>
-                        </div>
+
+                        <motion.button
+                            onClick={handleNuevoPago}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="flex items-center gap-2 px-3 lg:px-5 py-2 lg:py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold shadow-lg text-sm"
+                        >
+                            <Plus size={18} />
+                            <span className="hidden sm:inline">Registrar</span>
+                        </motion.button>
                     </div>
                 </header>
 
-                {/* Content */}
-                <main className="flex-1 overflow-y-auto p-8">
+                <main className="flex-1 overflow-y-auto p-4 lg:p-8">
                     {loading ? (
                         <div className="flex justify-center items-center h-full">
                             <motion.div
@@ -256,8 +277,7 @@ function Pagos() {
                         </div>
                     ) : (
                         <>
-                            {/* Estadísticas */}
-                            <div className="grid grid-cols-3 gap-6 mb-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
                                 {[
                                     { 
                                         label: 'Pagos de Hoy', 
@@ -286,38 +306,36 @@ function Pagos() {
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: i * 0.1 }}
-                                        whileHover={{ y: -8, scale: 1.02 }}
-                                        className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${stat.bg} p-6 shadow-lg hover:shadow-2xl transition-all cursor-pointer border border-white/60`}
+                                        whileHover={{ y: -5, scale: 1.02 }}
+                                        className={`relative overflow-hidden rounded-xl lg:rounded-2xl bg-gradient-to-br ${stat.bg} p-4 lg:p-6 shadow-lg hover:shadow-2xl transition-all cursor-pointer border border-white/60`}
                                     >
-                                        <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-gradient-to-br from-white/30 to-transparent blur-2xl" />
                                         <div className="relative">
-                                            <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-start justify-between mb-3 lg:mb-4">
                                                 <motion.div 
                                                     whileHover={{ rotate: 360, scale: 1.1 }}
                                                     transition={{ duration: 0.6 }}
-                                                    className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
+                                                    className={`w-12 h-12 lg:w-14 lg:h-14 rounded-xl lg:rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
                                                 >
-                                                    <stat.icon className="text-white" size={26} />
+                                                    <stat.icon className="text-white" size={22} />
                                                 </motion.div>
                                             </div>
-                                            <p className="text-sm font-semibold text-gray-600 mb-1">{stat.label}</p>
-                                            <p className="text-3xl font-bold text-gray-900">S/ {stat.value.toFixed(2)}</p>
+                                            <p className="text-xs lg:text-sm font-semibold text-gray-600 mb-1">{stat.label}</p>
+                                            <p className="text-2xl lg:text-3xl font-bold text-gray-900">S/ {stat.value.toFixed(2)}</p>
                                         </div>
                                     </motion.div>
                                 ))}
                             </div>
 
-                            {/* Filtros */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 }}
-                                className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-indigo-100 p-6 mb-6"
+                                className="bg-white/80 backdrop-blur-xl rounded-xl lg:rounded-2xl shadow-lg border border-indigo-100 p-4 lg:p-6 mb-4 lg:mb-6"
                             >
                                 <div className="flex justify-between items-center mb-4">
                                     <div className="flex items-center gap-2 text-gray-900">
                                         <Filter size={20} />
-                                        <h3 className="text-lg font-bold">Filtros</h3>
+                                        <h3 className="text-base lg:text-lg font-bold">Filtros</h3>
                                         {filtrosActivos > 0 && (
                                             <span className="bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded-full">
                                                 {filtrosActivos}
@@ -342,7 +360,7 @@ function Pagos() {
                                             exit={{ height: 0, opacity: 0 }}
                                             className="overflow-hidden"
                                         >
-                                            <div className="grid grid-cols-4 gap-4 pt-4 border-t border-indigo-100">
+                                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 lg:gap-4 pt-4 border-t border-indigo-100">
                                                 <select
                                                     value={filtroCliente}
                                                     onChange={(e) => setFiltroCliente(e.target.value)}
@@ -385,12 +403,86 @@ function Pagos() {
                                 </AnimatePresence>
                             </motion.div>
 
-                            {/* Tabla */}
+                            {/* MÓVIL - CARDS */}
+                            <div className="lg:hidden space-y-4">
+                                {pagosFiltrados.length === 0 ? (
+                                    <div className="flex flex-col items-center gap-3 py-12">
+                                        <Search className="text-gray-400" size={48} />
+                                        <p className="text-gray-600 text-lg">No se encontraron pagos</p>
+                                    </div>
+                                ) : (
+                                    pagosFiltrados.map((pago, i) => (
+                                        <motion.div
+                                            key={pago.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: i * 0.05 }}
+                                            className="bg-white/80 backdrop-blur-xl rounded-xl shadow-lg border border-indigo-100 p-4"
+                                        >
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex-1">
+                                                    <h3 className="text-lg font-bold text-gray-900">
+                                                        {pago.cliente?.nombre || 'Desconocido'} {pago.cliente?.apellido || ''}
+                                                    </h3>
+                                                    <p className="text-sm text-gray-500">DNI: {pago.cliente?.dni || 'N/A'}</p>
+                                                </div>
+                                                <span className="text-lg font-bold text-green-600">
+                                                    S/ {parseFloat(pago.monto).toFixed(2)}
+                                                </span>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                                                <div>
+                                                    <span className="text-gray-500">Fecha:</span>
+                                                    <p className="font-medium text-gray-900">
+                                                        {new Date(pago.fecha_pago).toLocaleDateString('es-PE')}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-500">Método:</span>
+                                                    <p className="font-medium text-gray-900">{pago.metodo_pago}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-500">N° Recibo:</span>
+                                                    <p className="font-medium text-gray-900">{pago.numero_recibo || '-'}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-500">Meses:</span>
+                                                    <p className="font-medium text-gray-900">{pago.meses_pagados || 1}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <motion.button
+                                                    onClick={() => handleVerRecibo(pago)}
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-indigo-600 bg-indigo-100 hover:bg-indigo-200 rounded-lg text-sm font-medium"
+                                                >
+                                                    <FileText size={16} />
+                                                    <span>Ver Recibo</span>
+                                                </motion.button>
+
+                                                <motion.button
+                                                    onClick={() => handleEliminar(pago.id)}
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                    className="px-4 py-2 text-red-600 bg-red-100 hover:bg-red-200 rounded-lg"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </motion.button>
+                                            </div>
+                                        </motion.div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* DESKTOP - TABLA */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.4 }}
-                                className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-indigo-100 overflow-hidden"
+                                className="hidden lg:block bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-indigo-100 overflow-hidden"
                             >
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full">
@@ -426,14 +518,12 @@ function Pagos() {
                                                         }}
                                                         className="transition-all"
                                                     >
-                                                        {/* ✅ COLUMNA CLIENTE - Muestra nombre */}
                                                         <td className="px-6 py-4">
                                                             <div className="font-semibold text-gray-900">
                                                                 {pago.cliente?.nombre || 'Desconocido'} {pago.cliente?.apellido || ''}
                                                             </div>
                                                         </td>
 
-                                                        {/* ✅ COLUMNA DNI - Desde objeto cliente */}
                                                         <td className="px-6 py-4 text-sm font-medium text-gray-700">
                                                             {pago.cliente?.dni || 'N/A'}
                                                         </td>
@@ -474,7 +564,6 @@ function Pagos() {
                                                             {pago.observaciones || '-'}
                                                         </td>
 
-                                                        {/* ✅ COLUMNA ACCIONES - Solo UNA vez */}
                                                         <td className="px-6 py-4">
                                                             <div className="flex items-center gap-2">
                                                                 <motion.button
@@ -482,7 +571,6 @@ function Pagos() {
                                                                     whileHover={{ scale: 1.1 }}
                                                                     whileTap={{ scale: 0.9 }}
                                                                     className="p-2 text-indigo-600 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-all"
-                                                                    title="Ver Recibo"
                                                                 >
                                                                     <FileText size={16} />
                                                                 </motion.button>
@@ -492,7 +580,6 @@ function Pagos() {
                                                                     whileHover={{ scale: 1.1, rotate: 5 }}
                                                                     whileTap={{ scale: 0.9 }}
                                                                     className="p-2 text-red-600 bg-red-100 hover:bg-red-200 rounded-lg transition-all"
-                                                                    title="Eliminar"
                                                                 >
                                                                     <Trash2 size={16} />
                                                                 </motion.button>
@@ -510,7 +597,6 @@ function Pagos() {
                 </main>
             </div>
 
-            {/* Modal de Formulario */}
             <AnimatePresence>
                 {showForm && (
                     <PagoForm
@@ -525,7 +611,6 @@ function Pagos() {
                 )}
             </AnimatePresence>
 
-            {/* Modal de Recibo */}
             <AnimatePresence>
                 {showReciboModal && ultimoPago && clienteUltimoPago && (
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -533,12 +618,11 @@ function Pagos() {
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="bg-white rounded-2xl p-8 max-w-xl w-full shadow-2xl border border-indigo-200"
+                            className="bg-white rounded-2xl p-6 lg:p-8 max-w-xl w-full shadow-2xl border border-indigo-200"
                         >
-                            {/* Header */}
                             <div className="flex items-start justify-between mb-6">
                                 <div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                                    <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-1">
                                         Recibo de Pago
                                     </h3>
                                     <p className="text-sm text-gray-600">
@@ -559,30 +643,29 @@ function Pagos() {
                                 </motion.button>
                             </div>
 
-                            {/* Detalles del Pago */}
-                            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 mb-6 border border-indigo-100">
+                            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4 lg:p-6 mb-6 border border-indigo-100">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-xs text-gray-600 mb-1">Cliente</p>
-                                        <p className="font-bold text-gray-900">
+                                        <p className="font-bold text-gray-900 text-sm lg:text-base">
                                             {clienteUltimoPago.nombre} {clienteUltimoPago.apellido}
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-600 mb-1">DNI</p>
-                                        <p className="font-bold text-gray-900">
+                                        <p className="font-bold text-gray-900 text-sm lg:text-base">
                                             {clienteUltimoPago.dni}
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-600 mb-1">Monto</p>
-                                        <p className="text-2xl font-bold text-green-600">
+                                        <p className="text-xl lg:text-2xl font-bold text-green-600">
                                             S/ {parseFloat(ultimoPago.monto).toFixed(2)}
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-600 mb-1">Fecha</p>
-                                        <p className="font-bold text-gray-900">
+                                        <p className="font-bold text-gray-900 text-sm lg:text-base">
                                             {new Date(ultimoPago.fecha).toLocaleDateString('es-PE', { 
                                                 day: '2-digit', 
                                                 month: 'long', 
@@ -592,13 +675,13 @@ function Pagos() {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-600 mb-1">Método de Pago</p>
-                                        <p className="font-semibold text-gray-900">
+                                        <p className="font-semibold text-gray-900 text-sm">
                                             {ultimoPago.metodo_pago}
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-600 mb-1">Meses Pagados</p>
-                                        <p className="font-semibold text-gray-900">
+                                        <p className="font-semibold text-gray-900 text-sm">
                                             {ultimoPago.meses_pagados || 1} {ultimoPago.meses_pagados === 1 ? 'mes' : 'meses'}
                                         </p>
                                     </div>
@@ -614,7 +697,6 @@ function Pagos() {
                                 )}
                             </div>
 
-                            {/* Check de confirmación */}
                             <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
@@ -625,27 +707,22 @@ function Pagos() {
                                 <span className="font-semibold">Pago Verificado</span>
                             </motion.div>
 
-                            {/* Botones de Acción */}
                             <div className="space-y-3">
                                 <motion.button
-                                    onClick={() => {
-                                        imprimirRecibo(ultimoPago, clienteUltimoPago);
-                                    }}
+                                    onClick={() => imprimirRecibo(ultimoPago, clienteUltimoPago)}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
-                                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold shadow-lg transition-all"
+                                    className="w-full flex items-center justify-center gap-3 px-6 py-3 lg:py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-semibold shadow-lg transition-all text-sm lg:text-base"
                                 >
                                     <Printer size={20} />
                                     <span>Imprimir Recibo</span>
                                 </motion.button>
 
                                 <motion.button
-                                    onClick={() => {
-                                        generarReciboPDF(ultimoPago, clienteUltimoPago);
-                                    }}
+                                    onClick={() => generarReciboPDF(ultimoPago, clienteUltimoPago)}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
-                                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-xl font-semibold shadow-lg transition-all"
+                                    className="w-full flex items-center justify-center gap-3 px-6 py-3 lg:py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white rounded-xl font-semibold shadow-lg transition-all text-sm lg:text-base"
                                 >
                                     <Download size={20} />
                                     <span>Descargar PDF</span>
@@ -666,7 +743,6 @@ function Pagos() {
                             </div>
                         </motion.div>
 
-                        {/* Recibo oculto para generar PDF/Impresión */}
                         <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
                             <ReciboTemplate pago={ultimoPago} cliente={clienteUltimoPago} />
                         </div>
