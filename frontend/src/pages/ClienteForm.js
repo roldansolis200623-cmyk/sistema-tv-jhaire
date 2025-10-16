@@ -5,7 +5,7 @@ import {
     User, Mail, Phone, MapPin, CreditCard, Calendar,
     Wifi, Tv, DollarSign, AlertCircle, Save, X,
     CheckCircle, Info, Sparkles, ArrowLeft, Zap,
-    FileText, TrendingDown, Clock  // 👈 AGREGADO Clock aquí
+    FileText, TrendingDown, Clock, Hash
 } from 'lucide-react';
 import { clienteService } from '../services/api';
 import perfilInternetService from '../services/perfilInternetService';
@@ -28,6 +28,7 @@ const ClienteForm = () => {
         telefono: '',
         email: '',
         direccion: '',
+        suministro: '',  // 🆕 NUEVO CAMPO
         tipo_servicio: 'Solo Internet',
         tipo_senal: '',
         perfil_internet_id: '',
@@ -65,7 +66,8 @@ const ClienteForm = () => {
                 tipo_senal: data.tipo_senal || '',
                 estado_pago: data.estado_pago || 'deudor',
                 meses_deuda: data.meses_deuda || 0,
-                perfil_internet_id: data.perfil_internet_id || ''
+                perfil_internet_id: data.perfil_internet_id || '',
+                suministro: data.suministro || ''  // 🆕 NUEVO CAMPO
             });
         } catch (error) {
             setError('Error cargando cliente');
@@ -144,7 +146,6 @@ const ClienteForm = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 py-8 px-4 relative overflow-hidden">
-            {/* Partículas de fondo */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 {[...Array(15)].map((_, i) => (
                     <motion.div
@@ -168,7 +169,6 @@ const ClienteForm = () => {
             </div>
 
             <div className="max-w-5xl mx-auto relative z-10">
-                {/* Header */}
                 <motion.div
                     initial={{ y: -50, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
@@ -201,7 +201,6 @@ const ClienteForm = () => {
                     </div>
                 </motion.div>
 
-                {/* Notificaciones */}
                 <AnimatePresence>
                     {error && (
                         <motion.div
@@ -227,14 +226,12 @@ const ClienteForm = () => {
                     )}
                 </AnimatePresence>
 
-                {/* Formulario con Tabs */}
                 <motion.form
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     onSubmit={handleSubmit}
                     className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl overflow-hidden shadow-2xl"
                 >
-                    {/* Tabs Header */}
                     <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
                         <div className="flex gap-2">
                             {tabs.map((tab) => (
@@ -257,7 +254,6 @@ const ClienteForm = () => {
                         </div>
                     </div>
 
-                    {/* Tabs Content */}
                     <div className="p-8">
                         <AnimatePresence mode="wait">
                             {activeTab === 'personal' && (
@@ -273,6 +269,7 @@ const ClienteForm = () => {
                                         <InputField label="Apellido" name="apellido" value={formData.apellido} onChange={handleChange} icon={<User size={18} />} required />
                                         <InputField label="DNI" name="dni" value={formData.dni} onChange={handleChange} icon={<CreditCard size={18} />} maxLength="8" placeholder="8 dígitos" required />
                                         <InputField label="Teléfono" name="telefono" value={formData.telefono} onChange={handleChange} icon={<Phone size={18} />} placeholder="9 dígitos" />
+                                        <InputField label="Número de Suministro" name="suministro" value={formData.suministro} onChange={handleChange} icon={<Hash size={18} />} maxLength="8" placeholder="8 dígitos (opcional)" />
                                         <div className="md:col-span-2">
                                             <InputField label="Email" name="email" type="email" value={formData.email} onChange={handleChange} icon={<Mail size={18} />} placeholder="ejemplo@correo.com" />
                                         </div>
@@ -383,9 +380,7 @@ const ClienteForm = () => {
                         </AnimatePresence>
                     </div>
 
-                    {/* Botones */}
                     <div className="px-8 pb-8 flex gap-4">
-                        {/* Botón de Historial - Solo en modo edición */}
                         {id && (
                             <motion.button
                                 type="button"
@@ -432,7 +427,6 @@ const ClienteForm = () => {
                     </div>
                 </motion.form>
 
-                {/* Modal de Historial - AQUÍ VA, FUERA DEL FORM */}
                 <AnimatePresence>
                     {mostrarHistorial && (
                         <HistorialCliente 
