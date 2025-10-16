@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Filter, X, Users, Search, Plus, Edit, Trash2, Play, Pause,
     MessageCircle, History, Home, LogOut, FileText, CreditCard,
-    BarChart3, Settings, Bell
+    BarChart3, Settings, Bell, Menu, Calendar
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clienteService } from '../services/api';
@@ -19,6 +19,7 @@ const Clientes = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [showFilters, setShowFilters] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false); // 📱 NUEVO
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [whatsappModal, setWhatsappModal] = useState(null);
@@ -113,18 +114,46 @@ const Clientes = () => {
                           (filtros.soloDeudores ? 1 : 0);
 
     const menuItems = [
-        { icon: Home, label: 'Dashboard', onClick: () => navigate('/dashboard') },
+        { icon: Home, label: 'Dashboard', onClick: () => { navigate('/dashboard'); setSidebarOpen(false); } },
         { icon: Users, label: 'Clientes', active: true },
-        { icon: CreditCard, label: 'Pagos', onClick: () => navigate('/pagos') },
-        { icon: FileText, label: 'Reportes', onClick: () => navigate('/reportes') },
-        { icon: Settings, label: 'Perfiles Internet', onClick: () => navigate('/perfiles-internet') },
-        { icon: BarChart3, label: 'Estadísticas', onClick: () => navigate('/estadisticas') },
+        { icon: CreditCard, label: 'Pagos', onClick: () => { navigate('/pagos'); setSidebarOpen(false); } },
+        { icon: Calendar, label: 'Calendario', onClick: () => { navigate('/calendario'); setSidebarOpen(false); } },
+        { icon: FileText, label: 'Reportes', onClick: () => { navigate('/reportes'); setSidebarOpen(false); } },
+        { icon: Settings, label: 'Perfiles Internet', onClick: () => { navigate('/perfiles-internet'); setSidebarOpen(false); } },
+        { icon: BarChart3, label: 'Estadísticas', onClick: () => { navigate('/estadisticas'); setSidebarOpen(false); } },
     ];
 
     return (
         <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-            {/* Sidebar */}
-            <aside className="w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col shadow-2xl">
+            {/* 📱 OVERLAY MÓVIL */}
+            <AnimatePresence>
+                {sidebarOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setSidebarOpen(false)}
+                        className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* 📱 SIDEBAR RESPONSIVE */}
+            <aside className={`
+                fixed lg:static
+                w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 
+                flex flex-col shadow-2xl z-50
+                transform transition-transform duration-300 ease-in-out
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+                h-full
+            `}>
+                <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="lg:hidden absolute top-4 right-4 text-white p-2 hover:bg-slate-700 rounded-lg"
+                >
+                    <X size={24} />
+                </button>
+
                 <div className="p-6 border-b border-slate-700/50">
                     <div className="flex items-center gap-3">
                         <motion.img 
@@ -141,7 +170,7 @@ const Clientes = () => {
                     </div>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-1">
+                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                     {menuItems.map((item, i) => (
                         <motion.button
                             key={i}
@@ -163,7 +192,7 @@ const Clientes = () => {
                 <div className="p-4 border-t border-slate-700/50">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
-                            {user?.nombre_completo?.charAt(0) || 'A'}
+                            {user?.nombre?.charAt(0) || 'A'}
                         </div>
                         <div className="flex-1">
                             <p className="text-sm font-semibold text-white">Administrador</p>
@@ -177,62 +206,79 @@ const Clientes = () => {
                         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white rounded-lg transition-all shadow-lg"
                     >
                         <LogOut size={18} />
-                        Cerrar Sesión
+                        <span className="hidden sm:inline">Cerrar Sesión</span>
+                        <span className="sm:hidden">Salir</span>
                     </motion.button>
                 </div>
             </aside>
 
-            {/* Main */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Header */}
+            {/* MAIN */}
+            <div className="flex-1 flex flex-col overflow-hidden w-full">
+                {/* 📱 HEADER RESPONSIVE */}
                 <motion.header 
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
-                    className="bg-white/80 backdrop-blur-xl border-b border-indigo-100 px-8 py-4 shadow-sm"
+                    className="bg-white/80 backdrop-blur-xl border-b border-indigo-100 px-4 lg:px-8 py-4 shadow-sm"
                 >
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                Gestión de <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Clientes</span>
+                    <div className="flex items-center justify-between gap-4">
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="lg:hidden p-2 hover:bg-indigo-100 rounded-lg transition-colors"
+                        >
+                            <Menu size={24} className="text-gray-700" />
+                        </button>
+
+                        <div className="flex-1">
+                            <h1 className="text-lg lg:text-2xl font-bold text-gray-900">
+                                <span className="hidden sm:inline">Gestión de </span>
+                                <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Clientes</span>
                             </h1>
-                            <p className="text-sm text-gray-600">Administra todos tus clientes</p>
+                            <p className="text-xs lg:text-sm text-gray-600 hidden sm:block">Administra todos tus clientes</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="relative">
+
+                        <div className="flex items-center gap-2">
+                            <div className="relative hidden md:block">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
                                     type="text"
-                                    placeholder="Buscar cliente..."
+                                    placeholder="Buscar..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10 pr-4 py-2 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                    className="pl-10 pr-4 py-2 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48 lg:w-64"
                                 />
                             </div>
-                            <motion.button 
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                className="relative p-2 bg-gradient-to-br from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 rounded-xl transition-all"
-                            >
-                                <Bell size={20} className="text-indigo-600" />
-                            </motion.button>
+                        </div>
+                    </div>
+
+                    {/* 📱 BÚSQUEDA MÓVIL */}
+                    <div className="mt-3 md:hidden">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Buscar cliente..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
                         </div>
                     </div>
                 </motion.header>
 
-                {/* Content */}
-                <main className="flex-1 overflow-y-auto p-8">
-                    {/* Actions */}
+                {/* CONTENT */}
+                <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+                    {/* 📱 ACTIONS RESPONSIVE */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-indigo-100 p-6 mb-6"
+                        className="bg-white/80 backdrop-blur-xl rounded-xl lg:rounded-2xl shadow-lg border border-indigo-100 p-4 lg:p-6 mb-4 lg:mb-6"
                     >
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-col sm:flex-row gap-3">
                             <motion.button
                                 onClick={() => setShowFilters(!showFilters)}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all ${
+                                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold shadow-md transition-all ${
                                     filtrosActivos > 0
                                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-indigo-500/50'
                                         : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300'
@@ -246,23 +292,23 @@ const Clientes = () => {
                                 onClick={() => navigate('/clientes/nuevo')}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg shadow-indigo-500/50 hover:shadow-xl"
+                                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg shadow-indigo-500/50"
                             >
                                 <Plus size={18} />
                                 Nuevo Cliente
                             </motion.button>
                         </div>
 
-                        {/* Filtros Panel */}
+                        {/* 📱 FILTROS PANEL RESPONSIVE */}
                         <AnimatePresence>
                             {showFilters && (
                                 <motion.div
                                     initial={{ height: 0, opacity: 0 }}
                                     animate={{ height: 'auto', opacity: 1 }}
                                     exit={{ height: 0, opacity: 0 }}
-                                    className="border-t border-indigo-100 mt-6 pt-6 overflow-hidden"
+                                    className="border-t border-indigo-100 mt-4 lg:mt-6 pt-4 lg:pt-6 overflow-hidden"
                                 >
-                                    <div className="grid grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                         <div>
                                             <label className="block text-sm font-bold text-gray-700 mb-2">Estado</label>
                                             <div className="flex gap-2">
@@ -272,7 +318,7 @@ const Clientes = () => {
                                                         onClick={() => toggleFiltroEstado(estado)}
                                                         whileHover={{ scale: 1.05 }}
                                                         whileTap={{ scale: 0.95 }}
-                                                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                                        className={`flex-1 px-3 lg:px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                                                             filtros.estados.includes(estado)
                                                                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
                                                                 : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700'
@@ -293,7 +339,7 @@ const Clientes = () => {
                                                         onClick={() => toggleFiltroServicio(servicio)}
                                                         whileHover={{ scale: 1.05 }}
                                                         whileTap={{ scale: 0.95 }}
-                                                        className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                                                        className={`px-3 lg:px-4 py-2 rounded-lg text-xs lg:text-sm font-semibold ${
                                                             filtros.tiposServicio.includes(servicio)
                                                                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
                                                                 : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700'
@@ -344,12 +390,12 @@ const Clientes = () => {
                         </AnimatePresence>
                     </motion.div>
 
-                    {/* Indicador */}
+                    {/* INDICADOR */}
                     {filtrosActivos > 0 && (
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="mb-6 px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600 rounded-lg"
+                            className="mb-4 lg:mb-6 px-4 lg:px-6 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600 rounded-lg"
                         >
                             <p className="text-sm font-semibold text-blue-900">
                                 Mostrando <span className="text-blue-600 text-lg">{filteredClientes.length}</span> de <span className="text-gray-600">{clientes.length}</span> clientes
@@ -357,7 +403,7 @@ const Clientes = () => {
                         </motion.div>
                     )}
 
-                    {/* Tabla */}
+                    {/* 📱 TABLA/CARDS RESPONSIVE */}
                     {loading ? (
                         <div className="flex justify-center py-20">
                             <motion.div
@@ -367,103 +413,173 @@ const Clientes = () => {
                             />
                         </div>
                     ) : (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-indigo-100 overflow-hidden"
-                        >
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full">
-                                    <thead className="bg-gradient-to-r from-indigo-600 to-purple-600">
-                                        <tr>
-                                            {['DNI', 'Cliente', 'Teléfono', 'Plan', 'Precio', 'Estado', 'Acciones'].map((header) => (
-                                                <th key={header} className="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">
-                                                    {header}
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-indigo-100">
-                                        <AnimatePresence>
-                                            {filteredClientes.map((cliente, i) => (
-                                                <motion.tr
-                                                    key={cliente.id}
-                                                    initial={{ opacity: 0, x: -20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    exit={{ opacity: 0, x: 20 }}
-                                                    transition={{ delay: i * 0.05 }}
-                                                    whileHover={{ 
-                                                        scale: 1.01,
-                                                        backgroundColor: 'rgba(99, 102, 241, 0.05)',
-                                                        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.1)'
-                                                    }}
-                                                    className="cursor-pointer transition-all"
-                                                    onClick={(e) => {
-                                                        if (!e.target.closest('button')) {
-                                                            setClienteDetalle(cliente);
-                                                        }
-                                                    }}
-                                                >
-                                                    <td className="px-6 py-4 text-sm font-bold text-gray-900">{cliente.dni}</td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="text-sm font-bold text-gray-900">{cliente.nombre} {cliente.apellido}</div>
-                                                        <div className="text-xs text-indigo-600 font-medium">{cliente.tipo_servicio}</div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm font-medium text-gray-700">{cliente.telefono}</td>
-                                                    <td className="px-6 py-4 text-sm font-medium text-gray-700">{cliente.plan}</td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full">
-                                                            S/ {cliente.precio_mensual}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <motion.span 
-                                                            whileHover={{ scale: 1.1 }}
-                                                            className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
-                                                                cliente.estado === 'activo' ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/50' :
-                                                                cliente.estado === 'suspendido' ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/50' :
-                                                                'bg-gradient-to-r from-red-600 to-pink-600 text-white shadow-lg shadow-red-500/50'
-                                                            }`}
-                                                        >
-                                                            {cliente.estado.toUpperCase()}
-                                                        </motion.span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-2">
-                                                            {[
-                                                                { icon: Edit, color: 'blue', onClick: () => navigate(`/clientes/editar/${cliente.id}`) },
-                                                                { icon: cliente.estado === 'activo' ? Pause : Play, color: cliente.estado === 'activo' ? 'orange' : 'green', onClick: () => cliente.estado === 'activo' ? setSuspenderModal(cliente) : setReactivarModal(cliente) },
-                                                                { icon: MessageCircle, color: 'green', onClick: () => setWhatsappModal(cliente) },
-                                                                { icon: History, color: 'purple', onClick: () => navigate(`/historial-pagos/${cliente.id}`) },
-                                                                { icon: Trash2, color: 'red', onClick: () => handleDelete(cliente.id) }
-                                                            ].map((action, idx) => (
-                                                                <motion.button
-                                                                    key={idx}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        action.onClick();
-                                                                    }}
-                                                                    whileHover={{ scale: 1.2, rotate: 5 }}
-                                                                    whileTap={{ scale: 0.9 }}
-                                                                    className={`p-2 text-${action.color}-600 bg-${action.color}-100 hover:bg-${action.color}-200 rounded-lg transition-all`}
-                                                                >
-                                                                    <action.icon size={16} />
-                                                                </motion.button>
-                                                            ))}
-                                                        </div>
-                                                    </td>
-                                                </motion.tr>
-                                            ))}
-                                        </AnimatePresence>
-                                    </tbody>
-                                </table>
+                        <>
+                            {/* 📱 VISTA MÓVIL - CARDS */}
+                            <div className="lg:hidden space-y-4">
+                                <AnimatePresence>
+                                    {filteredClientes.map((cliente, i) => (
+                                        <motion.div
+                                            key={cliente.id}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -20 }}
+                                            transition={{ delay: i * 0.05 }}
+                                            className="bg-white/80 backdrop-blur-xl rounded-xl shadow-lg border border-indigo-100 p-4"
+                                            onClick={() => setClienteDetalle(cliente)}
+                                        >
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex-1">
+                                                    <h3 className="text-lg font-bold text-gray-900">{cliente.nombre} {cliente.apellido}</h3>
+                                                    <p className="text-sm text-indigo-600 font-medium">{cliente.tipo_servicio}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">DNI: {cliente.dni}</p>
+                                                </div>
+                                                <span className={`px-3 py-1 text-xs font-bold rounded-full ${
+                                                    cliente.estado === 'activo' ? 'bg-green-100 text-green-800' :
+                                                    cliente.estado === 'suspendido' ? 'bg-orange-100 text-orange-800' :
+                                                    'bg-red-100 text-red-800'
+                                                }`}>
+                                                    {cliente.estado.toUpperCase()}
+                                                </span>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                                                <div>
+                                                    <span className="text-gray-500">Teléfono:</span>
+                                                    <p className="font-medium text-gray-900">{cliente.telefono}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-500">Plan:</span>
+                                                    <p className="font-medium text-gray-900">{cliente.plan}</p>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <span className="text-gray-500">Precio:</span>
+                                                    <p className="text-lg font-bold text-green-600">S/ {cliente.precio_mensual}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-2">
+                                                {[
+                                                    { icon: Edit, label: 'Editar', color: 'blue', onClick: (e) => { e.stopPropagation(); navigate(`/clientes/editar/${cliente.id}`); } },
+                                                    { icon: cliente.estado === 'activo' ? Pause : Play, label: cliente.estado === 'activo' ? 'Suspender' : 'Activar', color: cliente.estado === 'activo' ? 'orange' : 'green', onClick: (e) => { e.stopPropagation(); cliente.estado === 'activo' ? setSuspenderModal(cliente) : setReactivarModal(cliente); } },
+                                                    { icon: MessageCircle, label: 'WhatsApp', color: 'green', onClick: (e) => { e.stopPropagation(); setWhatsappModal(cliente); } },
+                                                    { icon: History, label: 'Historial', color: 'purple', onClick: (e) => { e.stopPropagation(); navigate(`/historial-pagos/${cliente.id}`); } }
+                                                ].map((action, idx) => (
+                                                    <motion.button
+                                                        key={idx}
+                                                        onClick={action.onClick}
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-${action.color}-600 bg-${action.color}-100 hover:bg-${action.color}-200 rounded-lg text-sm font-medium transition-all`}
+                                                    >
+                                                        <action.icon size={16} />
+                                                        <span>{action.label}</span>
+                                                    </motion.button>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
                             </div>
-                        </motion.div>
+
+                            {/* 💻 VISTA DESKTOP - TABLA */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="hidden lg:block bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-indigo-100 overflow-hidden"
+                            >
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full">
+                                        <thead className="bg-gradient-to-r from-indigo-600 to-purple-600">
+                                            <tr>
+                                                {['DNI', 'Cliente', 'Teléfono', 'Plan', 'Precio', 'Estado', 'Acciones'].map((header) => (
+                                                    <th key={header} className="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                                        {header}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-indigo-100">
+                                            <AnimatePresence>
+                                                {filteredClientes.map((cliente, i) => (
+                                                    <motion.tr
+                                                        key={cliente.id}
+                                                        initial={{ opacity: 0, x: -20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        exit={{ opacity: 0, x: 20 }}
+                                                        transition={{ delay: i * 0.05 }}
+                                                        whileHover={{ 
+                                                            scale: 1.01,
+                                                            backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                                                            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.1)'
+                                                        }}
+                                                        className="cursor-pointer transition-all"
+                                                        onClick={(e) => {
+                                                            if (!e.target.closest('button')) {
+                                                                setClienteDetalle(cliente);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <td className="px-6 py-4 text-sm font-bold text-gray-900">{cliente.dni}</td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-sm font-bold text-gray-900">{cliente.nombre} {cliente.apellido}</div>
+                                                            <div className="text-xs text-indigo-600 font-medium">{cliente.tipo_servicio}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm font-medium text-gray-700">{cliente.telefono}</td>
+                                                        <td className="px-6 py-4 text-sm font-medium text-gray-700">{cliente.plan}</td>
+                                                        <td className="px-6 py-4">
+                                                            <span className="text-sm font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full">
+                                                                S/ {cliente.precio_mensual}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <motion.span 
+                                                                whileHover={{ scale: 1.1 }}
+                                                                className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
+                                                                    cliente.estado === 'activo' ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/50' :
+                                                                    cliente.estado === 'suspendido' ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/50' :
+                                                                    'bg-gradient-to-r from-red-600 to-pink-600 text-white shadow-lg shadow-red-500/50'
+                                                                }`}
+                                                            >
+                                                                {cliente.estado.toUpperCase()}
+                                                            </motion.span>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-2">
+                                                                {[
+                                                                    { icon: Edit, color: 'blue', onClick: () => navigate(`/clientes/editar/${cliente.id}`) },
+                                                                    { icon: cliente.estado === 'activo' ? Pause : Play, color: cliente.estado === 'activo' ? 'orange' : 'green', onClick: () => cliente.estado === 'activo' ? setSuspenderModal(cliente) : setReactivarModal(cliente) },
+                                                                    { icon: MessageCircle, color: 'green', onClick: () => setWhatsappModal(cliente) },
+                                                                    { icon: History, color: 'purple', onClick: () => navigate(`/historial-pagos/${cliente.id}`) },
+                                                                    { icon: Trash2, color: 'red', onClick: () => handleDelete(cliente.id) }
+                                                                ].map((action, idx) => (
+                                                                    <motion.button
+                                                                        key={idx}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            action.onClick();
+                                                                        }}
+                                                                        whileHover={{ scale: 1.2, rotate: 5 }}
+                                                                        whileTap={{ scale: 0.9 }}
+                                                                        className={`p-2 text-${action.color}-600 bg-${action.color}-100 hover:bg-${action.color}-200 rounded-lg transition-all`}
+                                                                    >
+                                                                        <action.icon size={16} />
+                                                                    </motion.button>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                    </motion.tr>
+                                                ))}
+                                            </AnimatePresence>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </motion.div>
+                        </>
                     )}
                 </main>
             </div>
 
-            {/* Modales */}
+            {/* MODALES */}
             {whatsappModal && <WhatsAppModal cliente={whatsappModal} onClose={() => setWhatsappModal(null)} />}
             {suspenderModal && <SuspenderClienteModal cliente={suspenderModal} onClose={() => setSuspenderModal(null)} onSuccess={loadClientes} />}
             {reactivarModal && <ReactivarClienteModal cliente={reactivarModal} onClose={() => setReactivarModal(null)} onSuccess={loadClientes} />}
