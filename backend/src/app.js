@@ -11,6 +11,7 @@ app.use(cors({
     'http://localhost:5173',
     'https://www.tvjhair.com',
     'https://tvjhair.com',
+    'https://sistema-tv-jhaire.vercel.app',
     'https://sistema-tv-jhaire-tlmy.vercel.app',
     'https://sistema-tv-jhaire-tlmy-git-main-gabriels-projects-697bb8c5.vercel.app'
   ],
