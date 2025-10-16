@@ -4,10 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Filter, X, Users, Search, Plus, Edit, Trash2, Play, Pause,
     MessageCircle, History, Home, LogOut, FileText, CreditCard,
-    BarChart3, Settings, Bell, Menu, Calendar
+    BarChart3, Settings, Bell, Menu, Calendar, AlertTriangle  // 🆕 NUEVO ÍCONO
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clienteService } from '../services/api';
+import incidenciaService from '../services/incidenciaService';  // 🆕 NUEVO
 import WhatsAppModal from '../components/WhatsAppModal';
 import SuspenderClienteModal from '../components/SuspenderClienteModal';
 import ReactivarClienteModal from '../components/ReactivarClienteModal';
@@ -19,7 +20,7 @@ const Clientes = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [showFilters, setShowFilters] = useState(false);
-    const [sidebarOpen, setSidebarOpen] = useState(false); // 📱 NUEVO
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [whatsappModal, setWhatsappModal] = useState(null);
@@ -27,6 +28,7 @@ const Clientes = () => {
     const [reactivarModal, setReactivarModal] = useState(null);
     const [historialModal, setHistorialModal] = useState(null);
     const [clienteDetalle, setClienteDetalle] = useState(null);
+    const [incidenciaModal, setIncidenciaModal] = useState(null);  // 🆕 NUEVO
 
     const [filtros, setFiltros] = useState({
         estados: [],
@@ -98,7 +100,8 @@ const Clientes = () => {
     const filteredClientes = clientes.filter(cliente => {
         const matchSearch = cliente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            cliente.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           cliente.dni.includes(searchTerm);
+                           cliente.dni.includes(searchTerm) ||
+                           (cliente.suministro && cliente.suministro.includes(searchTerm));  // 🆕 BUSCAR POR SUMINISTRO
         const matchEstado = filtros.estados.length === 0 || filtros.estados.includes(cliente.estado);
         const matchServicio = filtros.tiposServicio.length === 0 || filtros.tiposServicio.includes(cliente.tipo_servicio);
         const deuda = (cliente.precio_mensual || 0) * (cliente.meses_deuda || 0);
@@ -118,6 +121,7 @@ const Clientes = () => {
         { icon: Users, label: 'Clientes', active: true },
         { icon: CreditCard, label: 'Pagos', onClick: () => { navigate('/pagos'); setSidebarOpen(false); } },
         { icon: Calendar, label: 'Calendario', onClick: () => { navigate('/calendario'); setSidebarOpen(false); } },
+        { icon: AlertTriangle, label: 'Incidencias', onClick: () => { navigate('/incidencias'); setSidebarOpen(false); } },  // 🆕 NUEVO
         { icon: FileText, label: 'Reportes', onClick: () => { navigate('/reportes'); setSidebarOpen(false); } },
         { icon: Settings, label: 'Perfiles Internet', onClick: () => { navigate('/perfiles-internet'); setSidebarOpen(false); } },
         { icon: BarChart3, label: 'Estadísticas', onClick: () => { navigate('/estadisticas'); setSidebarOpen(false); } },
@@ -125,7 +129,7 @@ const Clientes = () => {
 
     return (
         <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-            {/* 📱 OVERLAY MÓVIL */}
+            {/* OVERLAY MÓVIL */}
             <AnimatePresence>
                 {sidebarOpen && (
                     <motion.div
@@ -138,7 +142,7 @@ const Clientes = () => {
                 )}
             </AnimatePresence>
 
-            {/* 📱 SIDEBAR RESPONSIVE */}
+            {/* SIDEBAR RESPONSIVE */}
             <aside className={`
                 fixed lg:static
                 w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 
@@ -214,7 +218,7 @@ const Clientes = () => {
 
             {/* MAIN */}
             <div className="flex-1 flex flex-col overflow-hidden w-full">
-                {/* 📱 HEADER RESPONSIVE */}
+                {/* HEADER RESPONSIVE */}
                 <motion.header 
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
@@ -241,22 +245,22 @@ const Clientes = () => {
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
                                     type="text"
-                                    placeholder="Buscar..."
+                                    placeholder="Buscar por nombre, DNI o suministro..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10 pr-4 py-2 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48 lg:w-64"
+                                    className="pl-10 pr-4 py-2 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48 lg:w-80"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* 📱 BÚSQUEDA MÓVIL */}
+                    {/* BÚSQUEDA MÓVIL */}
                     <div className="mt-3 md:hidden">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                             <input
                                 type="text"
-                                placeholder="Buscar cliente..."
+                                placeholder="Buscar por nombre, DNI o suministro..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -267,7 +271,7 @@ const Clientes = () => {
 
                 {/* CONTENT */}
                 <main className="flex-1 overflow-y-auto p-4 lg:p-8">
-                    {/* 📱 ACTIONS RESPONSIVE */}
+                    {/* ACTIONS RESPONSIVE */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -299,7 +303,7 @@ const Clientes = () => {
                             </motion.button>
                         </div>
 
-                        {/* 📱 FILTROS PANEL RESPONSIVE */}
+                        {/* FILTROS PANEL RESPONSIVE */}
                         <AnimatePresence>
                             {showFilters && (
                                 <motion.div
@@ -403,7 +407,7 @@ const Clientes = () => {
                         </motion.div>
                     )}
 
-                    {/* 📱 TABLA/CARDS RESPONSIVE */}
+                    {/* TABLA/CARDS RESPONSIVE */}
                     {loading ? (
                         <div className="flex justify-center py-20">
                             <motion.div
@@ -414,7 +418,7 @@ const Clientes = () => {
                         </div>
                     ) : (
                         <>
-                            {/* 📱 VISTA MÓVIL - CARDS */}
+                            {/* VISTA MÓVIL - CARDS */}
                             <div className="lg:hidden space-y-4">
                                 <AnimatePresence>
                                     {filteredClientes.map((cliente, i) => (
@@ -432,6 +436,9 @@ const Clientes = () => {
                                                     <h3 className="text-lg font-bold text-gray-900">{cliente.nombre} {cliente.apellido}</h3>
                                                     <p className="text-sm text-indigo-600 font-medium">{cliente.tipo_servicio}</p>
                                                     <p className="text-xs text-gray-500 mt-1">DNI: {cliente.dni}</p>
+                                                    {cliente.suministro && (
+                                                        <p className="text-xs text-gray-500">Suministro: {cliente.suministro}</p>
+                                                    )}
                                                 </div>
                                                 <span className={`px-3 py-1 text-xs font-bold rounded-full ${
                                                     cliente.estado === 'activo' ? 'bg-green-100 text-green-800' :
@@ -460,6 +467,7 @@ const Clientes = () => {
                                             <div className="flex flex-wrap gap-2">
                                                 {[
                                                     { icon: Edit, label: 'Editar', color: 'blue', onClick: (e) => { e.stopPropagation(); navigate(`/clientes/editar/${cliente.id}`); } },
+                                                    { icon: AlertTriangle, label: 'Avería', color: 'red', onClick: (e) => { e.stopPropagation(); setIncidenciaModal(cliente); } }, // 🆕 NUEVO
                                                     { icon: cliente.estado === 'activo' ? Pause : Play, label: cliente.estado === 'activo' ? 'Suspender' : 'Activar', color: cliente.estado === 'activo' ? 'orange' : 'green', onClick: (e) => { e.stopPropagation(); cliente.estado === 'activo' ? setSuspenderModal(cliente) : setReactivarModal(cliente); } },
                                                     { icon: MessageCircle, label: 'WhatsApp', color: 'green', onClick: (e) => { e.stopPropagation(); setWhatsappModal(cliente); } },
                                                     { icon: History, label: 'Historial', color: 'purple', onClick: (e) => { e.stopPropagation(); navigate(`/historial-pagos/${cliente.id}`); } }
@@ -472,7 +480,7 @@ const Clientes = () => {
                                                         className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-${action.color}-600 bg-${action.color}-100 hover:bg-${action.color}-200 rounded-lg text-sm font-medium transition-all`}
                                                     >
                                                         <action.icon size={16} />
-                                                        <span>{action.label}</span>
+                                                        <span className="hidden sm:inline">{action.label}</span>
                                                     </motion.button>
                                                 ))}
                                             </div>
@@ -481,7 +489,7 @@ const Clientes = () => {
                                 </AnimatePresence>
                             </div>
 
-                            {/* 💻 VISTA DESKTOP - TABLA */}
+                            {/* VISTA DESKTOP - TABLA */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -519,7 +527,12 @@ const Clientes = () => {
                                                             }
                                                         }}
                                                     >
-                                                        <td className="px-6 py-4 text-sm font-bold text-gray-900">{cliente.dni}</td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-sm font-bold text-gray-900">{cliente.dni}</div>
+                                                            {cliente.suministro && (
+                                                                <div className="text-xs text-gray-500">Sum: {cliente.suministro}</div>
+                                                            )}
+                                                        </td>
                                                         <td className="px-6 py-4">
                                                             <div className="text-sm font-bold text-gray-900">{cliente.nombre} {cliente.apellido}</div>
                                                             <div className="text-xs text-indigo-600 font-medium">{cliente.tipo_servicio}</div>
@@ -547,6 +560,7 @@ const Clientes = () => {
                                                             <div className="flex items-center gap-2">
                                                                 {[
                                                                     { icon: Edit, color: 'blue', onClick: () => navigate(`/clientes/editar/${cliente.id}`) },
+                                                                    { icon: AlertTriangle, color: 'red', onClick: () => setIncidenciaModal(cliente) }, // 🆕 NUEVO
                                                                     { icon: cliente.estado === 'activo' ? Pause : Play, color: cliente.estado === 'activo' ? 'orange' : 'green', onClick: () => cliente.estado === 'activo' ? setSuspenderModal(cliente) : setReactivarModal(cliente) },
                                                                     { icon: MessageCircle, color: 'green', onClick: () => setWhatsappModal(cliente) },
                                                                     { icon: History, color: 'purple', onClick: () => navigate(`/historial-pagos/${cliente.id}`) },
@@ -593,7 +607,176 @@ const Clientes = () => {
                     onWhatsApp={(c) => { setClienteDetalle(null); setWhatsappModal(c); }}
                 />
             )}
+            {/* 🆕 MODAL DE INCIDENCIA */}
+            {incidenciaModal && (
+                <ReportarIncidenciaModal
+                    cliente={incidenciaModal}
+                    onClose={() => setIncidenciaModal(null)}
+                    onSuccess={() => {
+                        setIncidenciaModal(null);
+                        alert('Incidencia reportada exitosamente');
+                    }}
+                />
+            )}
         </div>
+    );
+};
+
+// 🆕 COMPONENTE MODAL PARA REPORTAR INCIDENCIA
+const ReportarIncidenciaModal = ({ cliente, onClose, onSuccess }) => {
+    const [formData, setFormData] = useState({
+        tipo: 'averia',
+        titulo: '',
+        descripcion: '',
+        prioridad: 'media',
+        tecnico_asignado: ''
+    });
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            await incidenciaService.create({
+                ...formData,
+                cliente_id: cliente.id
+            });
+            onSuccess();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al reportar incidencia');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={onClose}
+        >
+            <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            >
+                <div className="sticky top-0 bg-gradient-to-r from-red-600 to-orange-600 p-6 rounded-t-2xl">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <h2 className="text-2xl font-bold text-white mb-2">Reportar Incidencia</h2>
+                            <p className="text-white/80">{cliente.nombre} {cliente.apellido}</p>
+                        </div>
+                        <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg text-white">
+                            <X size={24} />
+                        </button>
+                    </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Tipo de Incidencia</label>
+                        <select
+                            value={formData.tipo}
+                            onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            required
+                        >
+                            <option value="averia">Avería</option>
+                            <option value="soporte">Soporte Técnico</option>
+                            <option value="mantenimiento">Mantenimiento</option>
+                            <option value="instalacion">Instalación</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Título</label>
+                        <input
+                            type="text"
+                            value={formData.titulo}
+                            onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+                            placeholder="Ej: Sin señal de internet"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Descripción Detallada</label>
+                        <textarea
+                            value={formData.descripcion}
+                            onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                            placeholder="Describe el problema o incidencia..."
+                            rows="4"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                            required
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Prioridad</label>
+                            <select
+                                value={formData.prioridad}
+                                onChange={(e) => setFormData({ ...formData, prioridad: e.target.value })}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            >
+                                <option value="baja">Baja</option>
+                                <option value="media">Media</option>
+                                <option value="alta">Alta</option>
+                                <option value="urgente">Urgente</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Técnico (Opcional)</label>
+                            <input
+                                type="text"
+                                value={formData.tecnico_asignado}
+                                onChange={(e) => setFormData({ ...formData, tecnico_asignado: e.target.value })}
+                                placeholder="Nombre del técnico"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl font-semibold hover:from-red-700 hover:to-orange-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {loading ? (
+                                <>
+                                    <motion.div
+                                        animate={{ rotate: 360 }}
+                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                                    />
+                                    Reportando...
+                                </>
+                            ) : (
+                                <>
+                                    <AlertTriangle size={20} />
+                                    Reportar
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
+        </motion.div>
     );
 };
 

@@ -11,8 +11,7 @@ import ClienteForm from './pages/ClienteForm';
 import Pagos from './pages/Pagos';
 import HistorialPagos from './pages/HistorialPagos';
 import PerfilesInternet from './pages/PerfilesInternet';
-
-// 🆕 IMPORTAR COMPONENTES NUEVOS
+import Incidencias from './pages/Incidencias';  // 🆕 NUEVO
 import CalendarioCobros from './components/Calendario/CalendarioCobros';
 
 const ProtectedRoute = ({ children }) => {
@@ -59,7 +58,15 @@ function App() {
                                 </ProtectedRoute>
                             }
                         />
-                        {/* 🆕 RUTA DEL CALENDARIO */}
+                        {/* 🆕 RUTA DE INCIDENCIAS */}
+                        <Route
+                            path="/incidencias"
+                            element={
+                                <ProtectedRoute>
+                                    <Incidencias />
+                                </ProtectedRoute>
+                            }
+                        />
                         <Route
                             path="/calendario"
                             element={
