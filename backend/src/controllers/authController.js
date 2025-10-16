@@ -8,11 +8,10 @@ const authController = {
         try {
             const { username, password } = req.body;
 
-            // Buscar usuario por EMAIL (no username)
+            // Buscar usuario
             const query = 'SELECT * FROM usuarios WHERE username = $1';
             const result = await pool.query(query, [username]);
             
-
             if (result.rows.length === 0) {
                 return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
             }
@@ -22,13 +21,13 @@ const authController = {
             // Comparar contraseña con bcrypt
             const passwordValido = await bcrypt.compare(password, user.password);
             
-            if (password !== user.password) {
-    return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
-}
+            if (!passwordValido) {
+                return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+            }
 
             // Generar token
             const token = jwt.sign(
-                { id: user.id, email: user.email, rol: user.rol },
+                { id: user.id, username: user.username, rol: user.rol },
                 process.env.JWT_SECRET,
                 { expiresIn: '24h' }
             );
@@ -38,8 +37,8 @@ const authController = {
                 token,
                 user: {
                     id: user.id,
-                    email: user.email,
-                    nombre_completo: user.nombre_completo,
+                    username: user.username,
+                    nombre: user.nombre,
                     rol: user.rol
                 }
             });
@@ -52,10 +51,10 @@ const authController = {
     // Registro de nuevo usuario
     register: async (req, res) => {
         try {
-            const { username, password, nombre_completo, rol } = req.body;
+            const { username, password, nombre, rol } = req.body;
 
             // Verificar si el usuario ya existe
-            const checkQuery = 'SELECT * FROM usuarios WHERE email = $1';
+            const checkQuery = 'SELECT * FROM usuarios WHERE username = $1';
             const checkResult = await pool.query(checkQuery, [username]);
 
             if (checkResult.rows.length > 0) {
@@ -67,11 +66,11 @@ const authController = {
 
             // Insertar nuevo usuario
             const query = `
-                INSERT INTO usuarios (email, password, nombre_completo, rol)
+                INSERT INTO usuarios (username, password, nombre, rol)
                 VALUES ($1, $2, $3, $4)
-                RETURNING id, email, nombre_completo, rol
+                RETURNING id, username, nombre, rol
             `;
-            const result = await pool.query(query, [username, passwordHash, nombre_completo, rol || 'admin']);
+            const result = await pool.query(query, [username, passwordHash, nombre, rol || 'admin']);
 
             res.status(201).json({
                 message: 'Usuario creado exitosamente',
