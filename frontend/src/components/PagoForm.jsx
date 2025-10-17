@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    X, DollarSign, Calendar, CreditCard, FileText, 
-    Phone, Hash, CheckCircle, AlertCircle, ChevronRight,
-    Loader, Search, User, MapPin, CreditCard as CardIcon
+    X, DollarSign, Calendar, CheckCircle, AlertCircle,
+    Loader, Search, MapPin, CreditCard as CardIcon, Phone
 } from 'lucide-react';
 import pagoService from '../services/pagoService';
 
@@ -13,7 +12,6 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
     const [mesesDisponibles, setMesesDisponibles] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    
     const [busquedaCliente, setBusquedaCliente] = useState('');
     const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
     const [clientesFiltrados, setClientesFiltrados] = useState([]);
@@ -34,9 +32,7 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
     useEffect(() => {
         if (clientePreseleccionado) {
             const cliente = clientes.find(c => c.id === parseInt(clientePreseleccionado));
-            if (cliente) {
-                seleccionarCliente(cliente);
-            }
+            if (cliente) seleccionarCliente(cliente);
         }
     }, [clientePreseleccionado, clientes]);
 
@@ -46,46 +42,28 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
                 setMostrarSugerencias(false);
             }
         };
-
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     useEffect(() => {
-        if (clienteSeleccionado) {
-            generarMesesDisponibles();
-        }
+        if (clienteSeleccionado) generarMesesDisponibles();
     }, [clienteSeleccionado]);
 
     const buscarClientes = (texto) => {
         setBusquedaCliente(texto);
         setMostrarSugerencias(true);
-
         if (!texto.trim()) {
             setClientesFiltrados([]);
             return;
         }
-
-        const terminoBusqueda = texto.toLowerCase().trim();
-        
-        const resultados = clientes.filter(cliente => {
-            const nombreCompleto = `${cliente.nombre} ${cliente.apellido}`.toLowerCase();
-            if (nombreCompleto.includes(terminoBusqueda)) return true;
-            if (cliente.dni && cliente.dni.includes(terminoBusqueda)) return true;
-            if (cliente.direccion && cliente.direccion.toLowerCase().includes(terminoBusqueda)) return true;
-            if (cliente.telefono && cliente.telefono.includes(terminoBusqueda)) return true;
-            if (cliente.tipo_servicio && cliente.tipo_servicio.toLowerCase().includes(terminoBusqueda)) return true;
-            if (cliente.id && cliente.id.toString().includes(terminoBusqueda)) return true;
-            return false;
-        });
-
-        resultados.sort((a, b) => {
-            const deudaA = a.meses_deuda || 0;
-            const deudaB = b.meses_deuda || 0;
-            return deudaB - deudaA;
-        });
-
-        setClientesFiltrados(resultados.slice(0, 15)); // Mostrar 15 resultados
+        const term = texto.toLowerCase().trim();
+        const resultados = clientes.filter(c => {
+            const nombre = `${c.nombre} ${c.apellido}`.toLowerCase();
+            return nombre.includes(term) || c.dni?.includes(term) || c.direccion?.toLowerCase().includes(term) || 
+                   c.telefono?.includes(term) || c.id?.toString().includes(term);
+        }).sort((a, b) => (b.meses_deuda || 0) - (a.meses_deuda || 0)).slice(0, 15);
+        setClientesFiltrados(resultados);
     };
 
     const seleccionarCliente = (cliente) => {
@@ -94,7 +72,6 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
         setMostrarSugerencias(false);
         setMesesSeleccionados([]);
         setError('');
-        
         setFormData(prev => ({
             ...prev,
             cliente_id: cliente.id,
@@ -110,61 +87,35 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
         setClientesFiltrados([]);
         setMostrarSugerencias(false);
         setMesesSeleccionados([]);
-        setFormData(prev => ({
-            ...prev,
-            cliente_id: '',
-            meses_pagados: 0,
-            monto: '0.00'
-        }));
+        setFormData(prev => ({ ...prev, cliente_id: '', meses_pagados: 0, monto: '0.00' }));
     };
 
     const generarMesesDisponibles = () => {
-        const mesesNombres = [
-            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-        ];
-
+        const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         const hoy = new Date();
         const mesActual = hoy.getMonth();
         const añoActual = hoy.getFullYear();
         const mesesDeuda = clienteSeleccionado.meses_deuda || 0;
-
         const meses = [];
         let mesInicio = mesActual - mesesDeuda;
         let añoInicio = añoActual;
-        
-        while (mesInicio < 0) {
-            mesInicio += 12;
-            añoInicio--;
-        }
-
+        while (mesInicio < 0) { mesInicio += 12; añoInicio--; }
         const totalMeses = Math.max(mesesDeuda > 0 ? mesesDeuda + 12 : 12, 36);
-        
         for (let i = 0; i < totalMeses; i++) {
             let mes = mesInicio + i;
             let año = añoInicio;
-            
-            while (mes > 11) {
-                mes -= 12;
-                año++;
-            }
-
+            while (mes > 11) { mes -= 12; año++; }
             const esAtrasado = (año < añoActual) || (año === añoActual && mes < mesActual);
             const esActual = año === añoActual && mes === mesActual;
-            const esAdelantado = (año > añoActual) || (año === añoActual && mes > mesActual);
-
             meses.push({
-                mes: mes,
-                año: año,
+                mes, año,
                 nombre: mesesNombres[mes],
                 nombreCompleto: `${mesesNombres[mes]} ${año}`,
                 tipo: esAtrasado ? 'atrasado' : (esActual ? 'actual' : 'adelantado'),
                 indice: i
             });
         }
-
         setMesesDisponibles(meses);
-        
         if (meses.length > 0) {
             setMesesSeleccionados([meses[0]]);
             calcularMonto([meses[0]]);
@@ -172,512 +123,261 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
     };
 
     const toggleMes = (mes) => {
-        let nuevosSeleccionados = [...mesesSeleccionados];
-        
-        const index = nuevosSeleccionados.findIndex(m => 
-            m.mes === mes.mes && m.año === mes.año
-        );
-
-        if (index > -1) {
-            nuevosSeleccionados.splice(index, 1);
-        } else {
-            nuevosSeleccionados.push(mes);
-        }
-
-        nuevosSeleccionados.sort((a, b) => {
-            if (a.año !== b.año) return a.año - b.año;
-            return a.mes - b.mes;
-        });
-
-        setMesesSeleccionados(nuevosSeleccionados);
-        calcularMonto(nuevosSeleccionados);
+        let nuevos = [...mesesSeleccionados];
+        const index = nuevos.findIndex(m => m.mes === mes.mes && m.año === mes.año);
+        if (index > -1) nuevos.splice(index, 1);
+        else nuevos.push(mes);
+        nuevos.sort((a, b) => a.año !== b.año ? a.año - b.año : a.mes - b.mes);
+        setMesesSeleccionados(nuevos);
+        calcularMonto(nuevos);
     };
 
     const seleccionarRango = (hastaMes) => {
-        const primerMes = mesesDisponibles[0];
-        const indexFinal = mesesDisponibles.findIndex(m => 
-            m.mes === hastaMes.mes && m.año === hastaMes.año
-        );
-        
-        const rango = mesesDisponibles.slice(0, indexFinal + 1);
+        const idx = mesesDisponibles.findIndex(m => m.mes === hastaMes.mes && m.año === hastaMes.año);
+        const rango = mesesDisponibles.slice(0, idx + 1);
         setMesesSeleccionados(rango);
         calcularMonto(rango);
     };
 
     const calcularMonto = (mesesArray) => {
         if (!clienteSeleccionado) return;
-        
-        const cantidadMeses = mesesArray.length;
-        const montoTotal = clienteSeleccionado.precio_mensual * cantidadMeses;
-        
-        setFormData(prev => ({
-            ...prev,
-            meses_pagados: cantidadMeses,
-            monto: montoTotal.toFixed(2)
-        }));
+        const total = clienteSeleccionado.precio_mensual * mesesArray.length;
+        setFormData(prev => ({ ...prev, meses_pagados: mesesArray.length, monto: total.toFixed(2) }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
-        if (!formData.cliente_id) {
-            setError('Por favor seleccione un cliente');
-            return;
-        }
-
-        if (mesesSeleccionados.length === 0) {
-            setError('Por favor seleccione al menos un mes a pagar');
-            return;
-        }
-
-        if (!formData.numero_recibo || formData.numero_recibo.trim() === '') {
-            setError('El número de recibo es obligatorio');
-            return;
-        }
-
+        if (!formData.cliente_id) { setError('Seleccione un cliente'); return; }
+        if (mesesSeleccionados.length === 0) { setError('Seleccione al menos un mes'); return; }
+        if (!formData.numero_recibo?.trim()) { setError('Número de recibo obligatorio'); return; }
         const monto = parseFloat(formData.monto);
-        if (isNaN(monto) || monto <= 0) {
-            setError('El monto debe ser mayor a 0');
-            return;
-        }
-
-        if (monto > 999999.99) {
-            setError('El monto excede el límite permitido (S/ 999,999.99)');
-            return;
-        }
-
+        if (isNaN(monto) || monto <= 0) { setError('Monto debe ser mayor a 0'); return; }
+        if (monto > 999999.99) { setError('Monto excede el límite'); return; }
         setLoading(true);
         setError('');
-
         try {
-            const pagoData = {
-                ...formData,
-                meses_pagados: mesesSeleccionados.length,
-                monto: monto
-            };
-
-            const resultado = await pagoService.registrar(pagoData);
+            const resultado = await pagoService.registrar({ ...formData, meses_pagados: mesesSeleccionados.length, monto });
             onPagoGuardado(resultado, clienteSeleccionado);
         } catch (error) {
-            console.error('❌ Error registrando pago:', error);
-            
-            if (error.response?.data?.error) {
-                setError(error.response.data.error);
-            } else if (error.message) {
-                setError(error.message);
-            } else {
-                setError('Error al registrar el pago. Por favor intente nuevamente.');
-            }
+            setError(error.response?.data?.error || error.message || 'Error al registrar');
         } finally {
             setLoading(false);
         }
     };
 
     const getMesColor = (mes) => {
-        const isSelected = mesesSeleccionados.some(m => 
-            m.mes === mes.mes && m.año === mes.año
-        );
-
-        if (isSelected) {
+        const sel = mesesSeleccionados.some(m => m.mes === mes.mes && m.año === mes.año);
+        if (sel) {
             if (mes.tipo === 'atrasado') return 'bg-red-500 text-white border-red-600';
             if (mes.tipo === 'actual') return 'bg-blue-500 text-white border-blue-600';
-            if (mes.tipo === 'adelantado') return 'bg-green-500 text-white border-green-600';
+            return 'bg-green-500 text-white border-green-600';
         }
-
         if (mes.tipo === 'atrasado') return 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200';
         if (mes.tipo === 'actual') return 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200';
-        if (mes.tipo === 'adelantado') return 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200';
+        return 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200';
     };
 
     const resaltarTexto = (texto, busqueda) => {
         if (!busqueda.trim()) return texto;
-        
         const regex = new RegExp(`(${busqueda})`, 'gi');
-        const partes = texto.split(regex);
-        
-        return partes.map((parte, i) => 
-            regex.test(parte) ? 
-                <span key={i} className="bg-yellow-200 font-bold">{parte}</span> : 
-                parte
+        return texto.split(regex).map((p, i) => 
+            regex.test(p) ? <span key={i} className="bg-yellow-200 font-bold">{p}</span> : p
         );
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
             <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-[95vh] flex flex-col"
+                className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-6xl max-h-[98vh] flex flex-col"
             >
-                {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white rounded-t-3xl sticky top-0 z-10">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                                <DollarSign size={28} />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-bold">Registrar Pago</h2>
-                                <p className="text-sm text-white/90">Complete los datos del pago</p>
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-6 text-white rounded-t-2xl sm:rounded-t-3xl flex-shrink-0">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                            <DollarSign className="w-10 h-10 sm:w-14 sm:h-14 bg-white/20 rounded-xl p-2" />
+                            <div className="flex-1 min-w-0">
+                                <h2 className="text-lg sm:text-2xl font-bold truncate">Registrar Pago</h2>
+                                <p className="text-xs sm:text-sm hidden sm:block">Complete los datos</p>
                             </div>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 hover:bg-white/20 rounded-xl transition-all"
-                            disabled={loading}
-                        >
-                            <X size={24} />
+                        <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-xl" disabled={loading}>
+                            <X className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto">
-                    {/* MENSAJE DE ERROR */}
+                <form onSubmit={handleSubmit} className="p-3 sm:p-6 flex-1 overflow-y-auto">
                     <AnimatePresence>
                         {error && (
                             <motion.div
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="mb-4 p-4 bg-red-100 border-2 border-red-300 rounded-xl flex items-start gap-3"
+                                className="mb-3 p-3 bg-red-100 border-2 border-red-300 rounded-xl flex gap-2"
                             >
-                                <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
+                                <AlertCircle className="text-red-600 w-5 h-5 flex-shrink-0" />
                                 <div className="flex-1">
-                                    <p className="font-bold text-red-900">Error al registrar pago</p>
-                                    <p className="text-sm text-red-800">{error}</p>
+                                    <p className="font-bold text-red-900 text-sm">Error</p>
+                                    <p className="text-xs text-red-800">{error}</p>
                                 </div>
-                                <button type="button" onClick={() => setError('')} className="text-red-600 hover:text-red-800">
-                                    <X size={18} />
-                                </button>
+                                <button onClick={() => setError('')}><X className="w-4 h-4" /></button>
                             </motion.div>
                         )}
                     </AnimatePresence>
 
-                    {/* Cliente Info Card */}
                     {clienteSeleccionado && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-5 mb-4 border-2 border-blue-200"
-                        >
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
-                                        {clienteSeleccionado.nombre.charAt(0)}{clienteSeleccionado.apellido.charAt(0)}
+                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 sm:p-4 mb-3 border-2 border-blue-200">
+                            <div className="flex justify-between gap-2 mb-3">
+                                <div className="flex gap-2 flex-1 min-w-0">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                                        {clienteSeleccionado.nombre[0]}{clienteSeleccionado.apellido[0]}
                                     </div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-gray-900">
-                                            {clienteSeleccionado.nombre} {clienteSeleccionado.apellido}
-                                        </h3>
-                                        <p className="text-sm text-gray-600">DNI: {clienteSeleccionado.dni} • ID: #{clienteSeleccionado.id}</p>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold truncate">{clienteSeleccionado.nombre} {clienteSeleccionado.apellido}</h3>
+                                        <p className="text-xs text-gray-600">DNI: {clienteSeleccionado.dni}</p>
                                     </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={limpiarBusqueda}
-                                    className="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-semibold"
-                                >
-                                    Cambiar
-                                </button>
+                                <button type="button" onClick={limpiarBusqueda} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-lg font-semibold">Cambiar</button>
                             </div>
-                            <div className="grid grid-cols-3 gap-4 text-sm">
-                                <div>
-                                    <p className="text-gray-600">Estado:</p>
-                                    <p className="font-bold text-base">{clienteSeleccionado.estado_pago?.toUpperCase()}</p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-600">Deuda Total:</p>
-                                    <p className="font-bold text-base text-red-600">
-                                        S/ {((clienteSeleccionado.meses_deuda || 0) * clienteSeleccionado.precio_mensual).toFixed(2)}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-600">Meses Adeudados:</p>
-                                    <p className="font-bold text-base">
-                                        {clienteSeleccionado.meses_deuda || 0} {clienteSeleccionado.meses_deuda === 1 ? 'mes' : 'meses'}
-                                    </p>
-                                </div>
+                            <div className="grid grid-cols-3 gap-2 text-xs">
+                                <div><p className="text-gray-600">Deuda:</p><p className="font-bold text-red-600">S/ {((clienteSeleccionado.meses_deuda || 0) * clienteSeleccionado.precio_mensual).toFixed(2)}</p></div>
+                                <div><p className="text-gray-600">Meses:</p><p className="font-bold">{clienteSeleccionado.meses_deuda || 0}</p></div>
+                                <div><p className="text-gray-600">Plan:</p><p className="font-bold">S/ {clienteSeleccionado.precio_mensual}</p></div>
                             </div>
-                        </motion.div>
+                        </div>
                     )}
 
-                    {/* BUSCADOR DE CLIENTES */}
                     {!clientePreseleccionado && !clienteSeleccionado && (
-                        <div className="mb-4" ref={searchRef}>
-                            <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-                                <Search size={18} className="text-blue-600" />
-                                Buscar Cliente *
+                        <div className="mb-3" ref={searchRef}>
+                            <label className="block text-xs font-bold text-gray-700 mb-2 flex items-center gap-2">
+                                <Search className="w-4 h-4" /> Buscar Cliente *
                             </label>
                             <div className="relative">
-                                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                                 <input
                                     type="text"
                                     value={busquedaCliente}
                                     onChange={(e) => buscarClientes(e.target.value)}
                                     onFocus={() => setMostrarSugerencias(true)}
-                                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-                                    placeholder="Busca por nombre, DNI, dirección..."
-                                    disabled={loading}
+                                    className="w-full pl-10 pr-3 py-2.5 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm"
+                                    placeholder="Nombre, DNI..."
                                 />
-
-                                {/* SUGERENCIAS */}
                                 <AnimatePresence>
                                     {mostrarSugerencias && clientesFiltrados.length > 0 && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -10 }}
-                                            className="absolute z-20 w-full mt-2 bg-white border-2 border-gray-300 rounded-xl shadow-2xl max-h-[65vh] overflow-y-auto"
-                                        >
-                                            {clientesFiltrados.map((cliente) => (
-                                                <motion.button
-                                                    key={cliente.id}
+                                        <div className="absolute z-20 w-full mt-2 bg-white border-2 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto">
+                                            {clientesFiltrados.map(c => (
+                                                <button
+                                                    key={c.id}
                                                     type="button"
-                                                    onClick={() => seleccionarCliente(cliente)}
-                                                    whileHover={{ backgroundColor: '#eff6ff' }}
-                                                    className="w-full px-4 py-3 text-left border-b border-gray-200 last:border-b-0 hover:bg-blue-50 transition-all"
+                                                    onClick={() => seleccionarCliente(c)}
+                                                    className="w-full px-3 py-2.5 text-left border-b hover:bg-blue-50"
                                                 >
-                                                    <div className="flex items-center justify-between gap-4">
-                                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold flex-shrink-0">
-                                                                {cliente.nombre.charAt(0)}{cliente.apellido.charAt(0)}
+                                                    <div className="flex justify-between gap-2">
+                                                        <div className="flex gap-2 flex-1 min-w-0">
+                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs">
+                                                                {c.nombre[0]}{c.apellido[0]}
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="font-bold text-gray-900 text-base">
-                                                                    {resaltarTexto(`${cliente.nombre} ${cliente.apellido}`, busquedaCliente)}
-                                                                </p>
-                                                                <div className="flex items-center gap-4 text-sm text-gray-600 mt-0.5">
-                                                                    <span className="flex items-center gap-1">
-                                                                        <CardIcon size={14} className="flex-shrink-0" />
-                                                                        DNI: {resaltarTexto(cliente.dni, busquedaCliente)}
-                                                                    </span>
-                                                                    {cliente.telefono && (
-                                                                        <span className="flex items-center gap-1">
-                                                                            <Phone size={14} className="flex-shrink-0" />
-                                                                            {resaltarTexto(cliente.telefono, busquedaCliente)}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                {cliente.direccion && (
-                                                                    <p className="text-sm text-gray-500 truncate mt-0.5 flex items-center gap-1">
-                                                                        <MapPin size={14} className="flex-shrink-0" />
-                                                                        {resaltarTexto(cliente.direccion, busquedaCliente)}
-                                                                    </p>
-                                                                )}
+                                                                <p className="font-bold text-sm truncate">{resaltarTexto(`${c.nombre} ${c.apellido}`, busquedaCliente)}</p>
+                                                                <p className="text-xs text-gray-600">{c.dni}</p>
                                                             </div>
                                                         </div>
-                                                        <div className="flex-shrink-0">
-                                                            {(cliente.meses_deuda || 0) > 0 ? (
-                                                                <span className="inline-flex px-3 py-1 bg-red-100 text-red-800 rounded-lg font-bold text-sm whitespace-nowrap">
-                                                                    DEBE {cliente.meses_deuda}
-                                                                </span>
-                                                            ) : (
-                                                                <span className="inline-flex px-3 py-1 bg-green-100 text-green-800 rounded-lg font-bold text-sm whitespace-nowrap">
-                                                                    AL DÍA
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                        <span className={`text-xs px-2 py-1 rounded-lg font-bold ${(c.meses_deuda || 0) > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                                            {(c.meses_deuda || 0) > 0 ? `DEBE ${c.meses_deuda}` : 'AL DÍA'}
+                                                        </span>
                                                     </div>
-                                                </motion.button>
+                                                </button>
                                             ))}
-                                        </motion.div>
+                                        </div>
                                     )}
                                 </AnimatePresence>
-
-                                {mostrarSugerencias && busquedaCliente && clientesFiltrados.length === 0 && (
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        className="absolute z-20 w-full mt-2 bg-white border-2 border-gray-300 rounded-xl shadow-lg p-4 text-center text-gray-600"
-                                    >
-                                        <Search className="mx-auto mb-2 text-gray-400" size={32} />
-                                        <p className="text-sm">No se encontraron clientes con "{busquedaCliente}"</p>
-                                    </motion.div>
-                                )}
                             </div>
-                            <p className="text-xs text-gray-500 mt-1.5">
-                                💡 Busca por nombre, DNI, dirección, teléfono o ID
-                            </p>
                         </div>
                     )}
 
-                    {/* Selector de Meses */}
-                    {clienteSeleccionado && (
-                        <div className="mb-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                    <Calendar size={18} />
-                                    Meses a Pagar *
-                                </label>
-                                <div className="flex gap-2 text-xs">
-                                    <span className="flex items-center gap-1">
-                                        <div className="w-3 h-3 bg-red-200 border border-red-400 rounded"></div>
-                                        Atrasado
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                        <div className="w-3 h-3 bg-blue-200 border border-blue-400 rounded"></div>
-                                        Actual
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                        <div className="w-3 h-3 bg-green-200 border border-green-400 rounded"></div>
-                                        Adelanto
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-6 gap-2 p-4 bg-gray-50 rounded-xl border-2 border-gray-200 max-h-64 overflow-y-auto">
-                                {mesesDisponibles.map((mes, index) => (
-                                    <motion.button
-                                        key={index}
-                                        type="button"
-                                        onClick={() => toggleMes(mes)}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                        disabled={loading}
-                                        className={`p-2.5 rounded-lg border-2 font-semibold text-xs transition-all ${getMesColor(mes)} ${loading ? 'opacity-50' : ''}`}
-                                    >
-                                        <div className="font-bold">{mes.nombre}</div>
-                                        <div className="opacity-75 text-[10px]">{mes.año}</div>
-                                    </motion.button>
-                                ))}
-                            </div>
-
-                            <div className="flex gap-2 mt-2 flex-wrap">
-                                <button
-                                    type="button"
-                                    onClick={() => seleccionarRango(mesesDisponibles[0])}
-                                    disabled={loading}
-                                    className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg font-semibold"
-                                >
-                                    Solo este mes
-                                </button>
-                                {clienteSeleccionado.meses_deuda > 0 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const hasta = mesesDisponibles[clienteSeleccionado.meses_deuda - 1];
-                                            seleccionarRango(hasta);
-                                        }}
-                                        disabled={loading}
-                                        className="px-3 py-1 text-xs bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-lg font-semibold"
-                                    >
-                                        TODO ({clienteSeleccionado.meses_deuda} meses)
-                                    </button>
-                                )}
-                            </div>
-
-                            {mesesSeleccionados.length > 0 && (
-                                <div className="mt-3 p-3 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                                    <div className="flex items-start gap-2">
-                                        <CheckCircle className="text-blue-600 mt-0.5 flex-shrink-0" size={18} />
-                                        <div className="flex-1">
-                                            <p className="font-bold text-blue-900 text-sm">
-                                                Pagando {mesesSeleccionados.length} {mesesSeleccionados.length === 1 ? 'mes' : 'meses'}
-                                            </p>
-                                            <p className="text-xs text-blue-800">
-                                                {mesesSeleccionados.map(m => m.nombreCompleto).join(', ')}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Formulario */}
                     {clienteSeleccionado && (
                         <>
-                            <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="mb-3">
+                                <div className="flex justify-between mb-2">
+                                    <label className="text-xs font-bold flex items-center gap-1">
+                                        <Calendar className="w-4 h-4" /> Meses *
+                                    </label>
+                                    <div className="flex gap-1 text-[10px]">
+                                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-red-200 border border-red-400"></div></span>
+                                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-blue-200 border border-blue-400"></div></span>
+                                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-green-200 border border-green-400"></div></span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 p-3 bg-gray-50 rounded-xl border-2 max-h-48 overflow-y-auto">
+                                    {mesesDisponibles.map((mes, i) => (
+                                        <button
+                                            key={i}
+                                            type="button"
+                                            onClick={() => toggleMes(mes)}
+                                            className={`p-1.5 rounded-lg border-2 font-semibold text-[10px] ${getMesColor(mes)}`}
+                                        >
+                                            <div className="font-bold">{mes.nombre}</div>
+                                            <div className="text-[9px]">{mes.año}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex gap-1.5 mt-2">
+                                    <button type="button" onClick={() => seleccionarRango(mesesDisponibles[0])} className="px-2 py-1 text-[10px] bg-blue-100 text-blue-800 rounded-lg font-semibold">Este mes</button>
+                                    {clienteSeleccionado.meses_deuda > 0 && (
+                                        <button type="button" onClick={() => seleccionarRango(mesesDisponibles[clienteSeleccionado.meses_deuda - 1])} className="px-2 py-1 text-[10px] bg-orange-100 text-orange-800 rounded-lg font-semibold">TODO ({clienteSeleccionado.meses_deuda})</button>
+                                    )}
+                                </div>
+                                {mesesSeleccionados.length > 0 && (
+                                    <div className="mt-2 p-2 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                                        <div className="flex gap-2">
+                                            <CheckCircle className="text-blue-600 w-4 h-4" />
+                                            <div className="flex-1">
+                                                <p className="font-bold text-blue-900 text-xs">Pagando {mesesSeleccionados.length} mes(es)</p>
+                                                <p className="text-[10px] text-blue-800 line-clamp-2">{mesesSeleccionados.map(m => m.nombreCompleto).join(', ')}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="grid sm:grid-cols-2 gap-3 mb-3">
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Monto Total (S/) *</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        value={formData.monto}
-                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-lg"
-                                        required
-                                        readOnly
-                                    />
+                                    <label className="block text-xs font-bold mb-2">Monto (S/) *</label>
+                                    <input type="number" step="0.01" value={formData.monto} className="w-full px-3 py-2.5 border-2 rounded-xl font-bold" readOnly />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Método de Pago *</label>
-                                    <select
-                                        value={formData.metodo_pago}
-                                        onChange={(e) => setFormData({...formData, metodo_pago: e.target.value})}
-                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        required
-                                    >
-                                        <option value="Efectivo">Efectivo</option>
-                                        <option value="Transferencia">Transferencia</option>
-                                        <option value="Yape">Yape</option>
-                                        <option value="Plin">Plin</option>
+                                    <label className="block text-xs font-bold mb-2">Método *</label>
+                                    <select value={formData.metodo_pago} onChange={(e) => setFormData({...formData, metodo_pago: e.target.value})} className="w-full px-3 py-2.5 border-2 rounded-xl text-sm">
+                                        <option>Efectivo</option>
+                                        <option>Transferencia</option>
+                                        <option>Yape</option>
+                                        <option>Plin</option>
                                     </select>
                                 </div>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="grid sm:grid-cols-2 gap-3 mb-3">
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Número de Recibo *</label>
-                                    <input
-                                        type="text"
-                                        value={formData.numero_recibo}
-                                        onChange={(e) => setFormData({...formData, numero_recibo: e.target.value})}
-                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        required
-                                        placeholder="REC-20251011-001"
-                                    />
+                                    <label className="block text-xs font-bold mb-2">Recibo *</label>
+                                    <input type="text" value={formData.numero_recibo} onChange={(e) => setFormData({...formData, numero_recibo: e.target.value})} className="w-full px-3 py-2.5 border-2 rounded-xl text-sm" placeholder="REC-001" required />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Teléfono</label>
-                                    <input
-                                        type="tel"
-                                        value={formData.telefono_contacto}
-                                        onChange={(e) => setFormData({...formData, telefono_contacto: e.target.value})}
-                                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="+51 987 654 321"
-                                    />
+                                    <label className="block text-xs font-bold mb-2">Teléfono</label>
+                                    <input type="tel" value={formData.telefono_contacto} onChange={(e) => setFormData({...formData, telefono_contacto: e.target.value})} className="w-full px-3 py-2.5 border-2 rounded-xl text-sm" placeholder="+51 987 654 321" />
                                 </div>
                             </div>
-
-                            <div className="mb-4">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Observaciones</label>
-                                <textarea
-                                    value={formData.observaciones}
-                                    onChange={(e) => setFormData({...formData, observaciones: e.target.value})}
-                                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    rows="3"
-                                    placeholder="Notas adicionales..."
-                                />
+                            <div className="mb-3">
+                                <label className="block text-xs font-bold mb-2">Observaciones</label>
+                                <textarea value={formData.observaciones} onChange={(e) => setFormData({...formData, observaciones: e.target.value})} className="w-full px-3 py-2.5 border-2 rounded-xl text-sm" rows="2" placeholder="Notas..." />
                             </div>
-
-                            <div className="flex gap-3">
-                                <motion.button
+                            <div className="flex gap-2">
+                                <button
                                     type="submit"
-                                    whileHover={{ scale: loading ? 1 : 1.02 }}
-                                    whileTap={{ scale: loading ? 1 : 0.98 }}
-                                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3.5 px-6 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
-                                    disabled={mesesSeleccionados.length === 0 || loading}
+                                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                                    disabled={loading || mesesSeleccionados.length === 0}
                                 >
-                                    {loading ? (
-                                        <>
-                                            <Loader className="animate-spin" size={20} />
-                                            Registrando...
-                                        </>
-                                    ) : (
-                                        'Registrar Pago'
-                                    )}
-                                </motion.button>
-                                <motion.button
-                                    type="button"
-                                    onClick={onClose}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="px-6 py-3.5 bg-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-400"
-                                    disabled={loading}
-                                >
-                                    Cancelar
-                                </motion.button>
+                                    {loading ? <><Loader className="animate-spin w-4 h-4" /> ...</> : 'Registrar'}
+                                </button>
+                                <button type="button" onClick={onClose} className="px-4 py-2.5 bg-gray-300 text-gray-700 rounded-xl font-bold text-sm" disabled={loading}>Cancelar</button>
                             </div>
                         </>
                     )}
@@ -688,13 +388,3 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
 };
 
 export default PagoForm;
-
-
-
-
-
-
-
-
-
-
