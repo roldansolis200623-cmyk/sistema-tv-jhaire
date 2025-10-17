@@ -24,7 +24,11 @@ class PDFService {
     agregarEncabezado(doc, titulo) {
         // Logo (si existe)
         if (fs.existsSync(this.logoPath)) {
-            doc.image(this.logoPath, 50, 45, { width: 80 });
+            try {
+                doc.image(this.logoPath, 50, 45, { width: 80 });
+            } catch (error) {
+                console.log('Logo no disponible');
+            }
         }
 
         // Título
@@ -61,9 +65,9 @@ class PDFService {
         doc.fillColor('#ffffff')
            .text('DNI', 55, y + 5, { width: 60 })
            .text('Nombre', 115, y + 5, { width: 80 })
-           .text('Teléfono', 195, y + 5, { width: 70 })
+           .text('Telefono', 195, y + 5, { width: 70 })
            .text('Servicio', 265, y + 5, { width: 70 })
-           .text('Señal', 335, y + 5, { width: 50 })
+           .text('Senal', 335, y + 5, { width: 50 })
            .text('Precio', 385, y + 5, { width: 50 })
            .text('Deuda', 435, y + 5, { width: 40 })
            .text('Estado', 475, y + 5, { width: 70 });
@@ -85,9 +89,9 @@ class PDFService {
                 doc.fillColor('#ffffff')
                    .text('DNI', 55, y + 5, { width: 60 })
                    .text('Nombre', 115, y + 5, { width: 80 })
-                   .text('Teléfono', 195, y + 5, { width: 70 })
+                   .text('Telefono', 195, y + 5, { width: 70 })
                    .text('Servicio', 265, y + 5, { width: 70 })
-                   .text('Señal', 335, y + 5, { width: 50 })
+                   .text('Senal', 335, y + 5, { width: 50 })
                    .text('Precio', 385, y + 5, { width: 50 })
                    .text('Deuda', 435, y + 5, { width: 40 })
                    .text('Estado', 475, y + 5, { width: 70 });
@@ -107,14 +111,14 @@ class PDFService {
             else if (cliente.estado_pago === 'pagado') colorTexto = '#388e3c';
 
             doc.fillColor(colorTexto)
-               .text(cliente.dni, 55, y + 5, { width: 60 })
-               .text(`${cliente.nombre} ${cliente.apellido}`, 115, y + 5, { width: 80 })
+               .text(cliente.dni || '-', 55, y + 5, { width: 60 })
+               .text(`${cliente.nombre || ''} ${cliente.apellido || ''}`.trim(), 115, y + 5, { width: 80 })
                .text(cliente.telefono || '-', 195, y + 5, { width: 70 })
-               .text(cliente.tipo_servicio, 265, y + 5, { width: 70 })
+               .text(cliente.tipo_servicio || '-', 265, y + 5, { width: 70 })
                .text(cliente.tipo_senal || '-', 335, y + 5, { width: 50 })
-               .text(`S/ ${parseFloat(cliente.precio_mensual).toFixed(2)}`, 385, y + 5, { width: 50 })
-               .text(cliente.meses_deuda || '0', 435, y + 5, { width: 40 })
-               .text(cliente.estado_pago.toUpperCase(), 475, y + 5, { width: 70 });
+               .text(`S/ ${parseFloat(cliente.precio_mensual || 0).toFixed(2)}`, 385, y + 5, { width: 50 })
+               .text((cliente.meses_deuda || '0').toString(), 435, y + 5, { width: 40 })
+               .text((cliente.estado_pago || 'PAGADO').toUpperCase(), 475, y + 5, { width: 70 });
 
             y += alturaFila;
         });
@@ -198,9 +202,30 @@ class PDFService {
         return doc;
     }
 
-    // Generar reporte por tipo de servicio
+    // Generar reporte por tipo de servicio - ARREGLADO CON NORMALIZACIÓN
     async generarReportePorServicio(clientes, tipoServicio) {
-        const filtrados = clientes.filter(c => c.tipo_servicio === tipoServicio);
+        // Normalizar para comparación (quitar tildes y convertir a minúsculas)
+        const tipoNormalizado = tipoServicio
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+        
+        console.log('🔍 Buscando servicio:', tipoServicio, '→ Normalizado:', tipoNormalizado);
+        
+        const filtrados = clientes.filter(c => {
+            if (!c.tipo_servicio) return false;
+            
+            const servicioCliente = c.tipo_servicio
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
+            
+            return servicioCliente === tipoNormalizado;
+        });
+        
+        console.log('✅ Clientes encontrados:', filtrados.length);
         
         const doc = this.crearDocumento();
         this.agregarEncabezado(doc, `REPORTE - ${tipoServicio.toUpperCase()}`);
@@ -219,9 +244,30 @@ class PDFService {
         return doc;
     }
 
-    // Generar reporte por tipo de señal
+    // Generar reporte por tipo de señal - ARREGLADO CON NORMALIZACIÓN
     async generarReportePorSenal(clientes, tipoSenal) {
-        const filtrados = clientes.filter(c => c.tipo_senal === tipoSenal);
+        // Normalizar para comparación
+        const senalNormalizada = tipoSenal
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+        
+        console.log('🔍 Buscando señal:', tipoSenal, '→ Normalizada:', senalNormalizada);
+        
+        const filtrados = clientes.filter(c => {
+            if (!c.tipo_senal) return false;
+            
+            const senalCliente = c.tipo_senal
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
+            
+            return senalCliente === senalNormalizada;
+        });
+        
+        console.log('✅ Clientes encontrados:', filtrados.length);
         
         const doc = this.crearDocumento();
         this.agregarEncabezado(doc, `REPORTE - SEÑAL ${tipoSenal.toUpperCase()}`);
