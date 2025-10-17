@@ -5,6 +5,7 @@ const ClienteModel = require('./src/models/clienteModel');
 const PagoModel = require('./src/models/pagoModel');
 const PerfilInternetModel = require('./src/models/perfilInternetModel');
 const UsuarioModel = require('./src/models/usuarioModel');
+const NotificacionModel = require('./src/models/NotificacionModel');
 const cronService = require('./src/services/cronService');
 
 const PORT = process.env.PORT || 5000;
@@ -15,11 +16,13 @@ const inicializarBD = async () => {
         console.log('🔄 Verificando conexión a la base de datos...');
         await pool.query('SELECT NOW()');
         console.log('✅ Conexión exitosa a PostgreSQL');
+        
         console.log('📝 Creando/verificando tablas...');
         await ClienteModel.crearTabla();
         await PagoModel.crearTabla();
         await PerfilInternetModel.crearTabla();
         await UsuarioModel.crearTabla();
+        await NotificacionModel.crearTabla();
         console.log('✅ Tablas verificadas correctamente');
     } catch (error) {
         console.error('❌ Error en la base de datos:', error);

@@ -40,6 +40,7 @@ const reportePdfRoutes = require('./routes/reportePdfRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const perfilInternetRoutes = require('./routes/perfilInternetRoutes');
 const incidenciaRoutes = require('./routes/incidenciaRoutes');
+const notificacionRoutes = require('./routes/notificacionRoutes');
 
 // Usar rutas
 app.use('/api/auth', authRoutes);
@@ -48,6 +49,7 @@ app.use('/api/pagos', pagoRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/perfiles-internet', perfilInternetRoutes);
 app.use('/api/incidencias', incidenciaRoutes);
+app.use('/api/notificaciones', notificacionRoutes);
 
 // ✅ RUTAS DE REPORTES - ORDEN IMPORTANTE
 app.use('/api/reportes', reportePdfRoutes);  // PRIMERO los PDFs (tiene /pdf/ en sus rutas)

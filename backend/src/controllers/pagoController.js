@@ -1,4 +1,6 @@
 const PagoModel = require('../models/pagoModel');
+const ClienteModel = require('../models/clienteModel');
+const notificacionService = require('../services/notificacionService');
 
 const pagoController = {
     /**
@@ -90,6 +92,12 @@ const pagoController = {
                 observaciones,
                 meses_pagados: mesesPagadosNum
             });
+
+            // 🔔 NOTIFICACIÓN: Pago recibido
+            const cliente = await ClienteModel.getById(cliente_id);
+            if (cliente) {
+                await notificacionService.notificarPagoRecibido(cliente, nuevoPago);
+            }
 
             res.status(201).json({
                 message: `Pago de ${mesesPagadosNum} mes(es) registrado correctamente`,

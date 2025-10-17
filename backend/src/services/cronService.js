@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const whatsappService = require('./whatsappService');
+const notificacionService = require('./notificacionService');
 const pool = require('../config/database');
 
 class CronService {
@@ -22,10 +23,24 @@ class CronService {
             await this.enviarSaludoMensual();
         });
 
+        // 🔔 NUEVO: Verificar pagos vencidos - Diario a las 8:00 AM
+        cron.schedule('0 8 * * *', async () => {
+            console.log('🔔 Verificando pagos vencidos para notificaciones...');
+            await notificacionService.verificarPagosVencidos();
+        });
+
+        // 🔔 NUEVO: Verificar pagos próximos a vencer - Diario a las 8:30 AM
+        cron.schedule('30 8 * * *', async () => {
+            console.log('🔔 Verificando pagos próximos para notificaciones...');
+            await notificacionService.verificarPagosProximos();
+        });
+
         console.log('✅ Tareas programadas iniciadas');
         console.log('   - Día 1: Saludo mensual');
         console.log('   - Día 28: Recordatorio amigable');
         console.log('   - Día 30: Recordatorio final');
+        console.log('   - Diario 8:00 AM: Verificar pagos vencidos');
+        console.log('   - Diario 8:30 AM: Verificar pagos próximos');
     }
 
     obtenerMediosPago() {
