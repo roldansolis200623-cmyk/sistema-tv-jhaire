@@ -22,7 +22,8 @@ const Reportes = () => {
         setLoading({ ...loading, [tipo]: true });
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://sistema-tv-jhaire-production-1248.up.railway.app'}/api/reportes/pdf/${tipo}`, {
+            const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-tv-jhaire-production.up.railway.app/api';
+            const response = await fetch(`${API_URL}/reportes/pdf/${tipo}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -67,7 +68,8 @@ const Reportes = () => {
         setLoading({ ...loading, [tipoServicio]: true });
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://sistema-tv-jhaire-production-1248.up.railway.app'}/api/reportes/pdf/servicio/${encodeURIComponent(tipoServicio)}`, {
+            const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-tv-jhaire-production.up.railway.app/api';
+            const response = await fetch(`${API_URL}/reportes/pdf/servicio/${encodeURIComponent(tipoServicio)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -112,7 +114,8 @@ const Reportes = () => {
         setLoading({ ...loading, [tipoSenal]: true });
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://sistema-tv-jhaire-production-1248.up.railway.app'}/api/reportes/pdf/senal/${encodeURIComponent(tipoSenal)}`, {
+            const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-tv-jhaire-production.up.railway.app/api';
+            const response = await fetch(`${API_URL}/reportes/pdf/senal/${encodeURIComponent(tipoSenal)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -157,7 +160,8 @@ const Reportes = () => {
         setLoading({ ...loading, excel: true });
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://sistema-tv-jhaire-production-1248.up.railway.app'}/api/reportes/exportar-excel`, {
+            const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-tv-jhaire-production.up.railway.app/api';
+            const response = await fetch(`${API_URL}/reportes/exportar-excel`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
