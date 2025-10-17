@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://sistema-tv-jhaire-production-1248.up.railway.app/api';
 
 const perfilInternetService = {
     getAll: async () => {

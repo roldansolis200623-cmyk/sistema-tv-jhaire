@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/pagos';
+const API_URL = 'https://sistema-tv-jhaire-production-1248.up.railway.app/api/pagos';
 
 // Crear instancia de axios con token
 const getAuthHeader = () => {
