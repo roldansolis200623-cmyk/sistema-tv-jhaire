@@ -62,7 +62,7 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
             const nombre = `${c.nombre} ${c.apellido}`.toLowerCase();
             return nombre.includes(term) || c.dni?.includes(term) || c.direccion?.toLowerCase().includes(term) || 
                    c.telefono?.includes(term) || c.id?.toString().includes(term);
-        }).sort((a, b) => (b.meses_deuda || 0) - (a.meses_deuda || 0)).slice(0, 15);
+        }).sort((a, b) => (b.meses_deuda || 0) - (a.meses_deuda || 0)).slice(0, 20); // AUMENTADO A 20 RESULTADOS
         setClientesFiltrados(resultados);
     };
 
@@ -91,7 +91,7 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
     };
 
     const generarMesesDisponibles = () => {
-        const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const mesesNombres = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
         const hoy = new Date();
         const mesActual = hoy.getMonth();
         const añoActual = hoy.getFullYear();
@@ -190,14 +190,15 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
             <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-6xl max-h-[98vh] flex flex-col"
+                className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-7xl h-[92vh] flex flex-col"
             >
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-6 text-white rounded-t-2xl sm:rounded-t-3xl flex-shrink-0">
+                {/* HEADER MÁS COMPACTO */}
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-5 text-white rounded-t-2xl sm:rounded-t-3xl flex-shrink-0">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                            <DollarSign className="w-10 h-10 sm:w-14 sm:h-14 bg-white/20 rounded-xl p-2" />
+                            <DollarSign className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-xl p-2" />
                             <div className="flex-1 min-w-0">
-                                <h2 className="text-lg sm:text-2xl font-bold truncate">Registrar Pago</h2>
+                                <h2 className="text-xl sm:text-2xl font-bold truncate">Registrar Pago</h2>
                                 <p className="text-xs sm:text-sm hidden sm:block">Complete los datos</p>
                             </div>
                         </div>
@@ -207,7 +208,8 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-3 sm:p-6 flex-1 overflow-y-auto">
+                <form onSubmit={handleSubmit} className="p-3 sm:p-5 flex-1 overflow-y-auto">
+                    {/* ERROR */}
                     <AnimatePresence>
                         {error && (
                             <motion.div
@@ -225,64 +227,84 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
                         )}
                     </AnimatePresence>
 
+                    {/* CLIENTE CARD */}
                     {clienteSeleccionado && (
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 sm:p-4 mb-3 border-2 border-blue-200">
+                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 mb-3 border-2 border-blue-200">
                             <div className="flex justify-between gap-2 mb-3">
                                 <div className="flex gap-2 flex-1 min-w-0">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm sm:text-base">
                                         {clienteSeleccionado.nombre[0]}{clienteSeleccionado.apellido[0]}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold truncate">{clienteSeleccionado.nombre} {clienteSeleccionado.apellido}</h3>
-                                        <p className="text-xs text-gray-600">DNI: {clienteSeleccionado.dni}</p>
+                                        <h3 className="font-bold text-base sm:text-lg truncate">{clienteSeleccionado.nombre} {clienteSeleccionado.apellido}</h3>
+                                        <p className="text-xs sm:text-sm text-gray-600">DNI: {clienteSeleccionado.dni} • ID: #{clienteSeleccionado.id}</p>
                                     </div>
                                 </div>
-                                <button type="button" onClick={limpiarBusqueda} className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-lg font-semibold">Cambiar</button>
+                                <button type="button" onClick={limpiarBusqueda} className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-100 text-red-700 rounded-lg font-semibold whitespace-nowrap">Cambiar</button>
                             </div>
-                            <div className="grid grid-cols-3 gap-2 text-xs">
-                                <div><p className="text-gray-600">Deuda:</p><p className="font-bold text-red-600">S/ {((clienteSeleccionado.meses_deuda || 0) * clienteSeleccionado.precio_mensual).toFixed(2)}</p></div>
-                                <div><p className="text-gray-600">Meses:</p><p className="font-bold">{clienteSeleccionado.meses_deuda || 0}</p></div>
-                                <div><p className="text-gray-600">Plan:</p><p className="font-bold">S/ {clienteSeleccionado.precio_mensual}</p></div>
+                            <div className="grid grid-cols-3 gap-2 text-xs sm:text-sm">
+                                <div><p className="text-gray-600 text-xs">Estado:</p><p className="font-bold">{clienteSeleccionado.estado_pago?.toUpperCase()}</p></div>
+                                <div><p className="text-gray-600 text-xs">Deuda:</p><p className="font-bold text-red-600">S/ {((clienteSeleccionado.meses_deuda || 0) * clienteSeleccionado.precio_mensual).toFixed(2)}</p></div>
+                                <div><p className="text-gray-600 text-xs">Meses:</p><p className="font-bold">{clienteSeleccionado.meses_deuda || 0}</p></div>
                             </div>
                         </div>
                     )}
 
+                    {/* BUSCADOR MEJORADO - MÁS RESULTADOS VISIBLES */}
                     {!clientePreseleccionado && !clienteSeleccionado && (
                         <div className="mb-3" ref={searchRef}>
-                            <label className="block text-xs font-bold text-gray-700 mb-2 flex items-center gap-2">
-                                <Search className="w-4 h-4" /> Buscar Cliente *
+                            <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                                <Search className="w-4 h-4 sm:w-5 sm:h-5" /> Buscar Cliente *
                             </label>
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                                 <input
                                     type="text"
                                     value={busquedaCliente}
                                     onChange={(e) => buscarClientes(e.target.value)}
                                     onFocus={() => setMostrarSugerencias(true)}
-                                    className="w-full pl-10 pr-3 py-2.5 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm"
-                                    placeholder="Nombre, DNI..."
+                                    className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                                    placeholder="Nombre, DNI, dirección..."
                                 />
+                                {/* SUGERENCIAS MÁS GRANDES - SIN LÍMITE DE ALTURA */}
                                 <AnimatePresence>
                                     {mostrarSugerencias && clientesFiltrados.length > 0 && (
-                                        <div className="absolute z-20 w-full mt-2 bg-white border-2 rounded-xl shadow-2xl max-h-[50vh] overflow-y-auto">
+                                        <div className="absolute z-20 w-full mt-2 bg-white border-2 rounded-xl shadow-2xl max-h-[60vh] overflow-y-auto">
                                             {clientesFiltrados.map(c => (
                                                 <button
                                                     key={c.id}
                                                     type="button"
                                                     onClick={() => seleccionarCliente(c)}
-                                                    className="w-full px-3 py-2.5 text-left border-b hover:bg-blue-50"
+                                                    className="w-full px-3 sm:px-4 py-3 text-left border-b hover:bg-blue-50 transition-colors"
                                                 >
                                                     <div className="flex justify-between gap-2">
-                                                        <div className="flex gap-2 flex-1 min-w-0">
-                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs">
+                                                        <div className="flex gap-2 sm:gap-3 flex-1 min-w-0">
+                                                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
                                                                 {c.nombre[0]}{c.apellido[0]}
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="font-bold text-sm truncate">{resaltarTexto(`${c.nombre} ${c.apellido}`, busquedaCliente)}</p>
-                                                                <p className="text-xs text-gray-600">{c.dni}</p>
+                                                                <p className="font-bold text-sm sm:text-base truncate">{resaltarTexto(`${c.nombre} ${c.apellido}`, busquedaCliente)}</p>
+                                                                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600">
+                                                                    <span className="flex items-center gap-1">
+                                                                        <CardIcon className="w-3 h-3" />
+                                                                        {c.dni}
+                                                                    </span>
+                                                                    {c.telefono && (
+                                                                        <span className="hidden sm:flex items-center gap-1">
+                                                                            <Phone className="w-3 h-3" />
+                                                                            {c.telefono}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {c.direccion && (
+                                                                    <p className="text-xs text-gray-500 truncate mt-0.5 hidden sm:flex items-center gap-1">
+                                                                        <MapPin className="w-3 h-3" />
+                                                                        {c.direccion}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                        <span className={`text-xs px-2 py-1 rounded-lg font-bold ${(c.meses_deuda || 0) > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                                        <span className={`text-xs px-2 py-1 rounded-lg font-bold whitespace-nowrap self-start ${(c.meses_deuda || 0) > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                                                             {(c.meses_deuda || 0) > 0 ? `DEBE ${c.meses_deuda}` : 'AL DÍA'}
                                                         </span>
                                                     </div>
@@ -292,61 +314,64 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
                                     )}
                                 </AnimatePresence>
                             </div>
+                            <p className="text-xs text-gray-500 mt-1.5">💡 Busca por nombre, DNI, dirección o teléfono</p>
                         </div>
                     )}
 
+                    {/* SELECTOR DE MESES */}
                     {clienteSeleccionado && (
                         <>
                             <div className="mb-3">
                                 <div className="flex justify-between mb-2">
-                                    <label className="text-xs font-bold flex items-center gap-1">
+                                    <label className="text-xs sm:text-sm font-bold flex items-center gap-1">
                                         <Calendar className="w-4 h-4" /> Meses *
                                     </label>
-                                    <div className="flex gap-1 text-[10px]">
-                                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-red-200 border border-red-400"></div></span>
-                                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-blue-200 border border-blue-400"></div></span>
-                                        <span className="flex items-center gap-1"><div className="w-2 h-2 bg-green-200 border border-green-400"></div></span>
+                                    <div className="flex gap-1.5 text-[10px] sm:text-xs">
+                                        <span className="flex items-center gap-1"><div className="w-2.5 h-2.5 bg-red-200 border border-red-400 rounded"></div><span className="hidden sm:inline">Atrasado</span></span>
+                                        <span className="flex items-center gap-1"><div className="w-2.5 h-2.5 bg-blue-200 border border-blue-400 rounded"></div><span className="hidden sm:inline">Actual</span></span>
+                                        <span className="flex items-center gap-1"><div className="w-2.5 h-2.5 bg-green-200 border border-green-400 rounded"></div><span className="hidden sm:inline">Adelanto</span></span>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 p-3 bg-gray-50 rounded-xl border-2 max-h-48 overflow-y-auto">
+                                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5 sm:gap-2 p-3 bg-gray-50 rounded-xl border-2 max-h-44 overflow-y-auto">
                                     {mesesDisponibles.map((mes, i) => (
                                         <button
                                             key={i}
                                             type="button"
                                             onClick={() => toggleMes(mes)}
-                                            className={`p-1.5 rounded-lg border-2 font-semibold text-[10px] ${getMesColor(mes)}`}
+                                            className={`p-2 rounded-lg border-2 font-semibold text-[10px] sm:text-xs ${getMesColor(mes)}`}
                                         >
                                             <div className="font-bold">{mes.nombre}</div>
-                                            <div className="text-[9px]">{mes.año}</div>
+                                            <div className="text-[9px] sm:text-[10px] opacity-75">{mes.año}</div>
                                         </button>
                                     ))}
                                 </div>
                                 <div className="flex gap-1.5 mt-2">
-                                    <button type="button" onClick={() => seleccionarRango(mesesDisponibles[0])} className="px-2 py-1 text-[10px] bg-blue-100 text-blue-800 rounded-lg font-semibold">Este mes</button>
+                                    <button type="button" onClick={() => seleccionarRango(mesesDisponibles[0])} className="px-2 sm:px-3 py-1 text-[10px] sm:text-xs bg-blue-100 text-blue-800 rounded-lg font-semibold">Este mes</button>
                                     {clienteSeleccionado.meses_deuda > 0 && (
-                                        <button type="button" onClick={() => seleccionarRango(mesesDisponibles[clienteSeleccionado.meses_deuda - 1])} className="px-2 py-1 text-[10px] bg-orange-100 text-orange-800 rounded-lg font-semibold">TODO ({clienteSeleccionado.meses_deuda})</button>
+                                        <button type="button" onClick={() => seleccionarRango(mesesDisponibles[clienteSeleccionado.meses_deuda - 1])} className="px-2 sm:px-3 py-1 text-[10px] sm:text-xs bg-orange-100 text-orange-800 rounded-lg font-semibold">TODO ({clienteSeleccionado.meses_deuda})</button>
                                     )}
                                 </div>
                                 {mesesSeleccionados.length > 0 && (
-                                    <div className="mt-2 p-2 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                                    <div className="mt-2 p-2.5 bg-blue-50 border-2 border-blue-200 rounded-xl">
                                         <div className="flex gap-2">
                                             <CheckCircle className="text-blue-600 w-4 h-4" />
                                             <div className="flex-1">
-                                                <p className="font-bold text-blue-900 text-xs">Pagando {mesesSeleccionados.length} mes(es)</p>
-                                                <p className="text-[10px] text-blue-800 line-clamp-2">{mesesSeleccionados.map(m => m.nombreCompleto).join(', ')}</p>
+                                                <p className="font-bold text-blue-900 text-xs sm:text-sm">Pagando {mesesSeleccionados.length} mes(es)</p>
+                                                <p className="text-[10px] sm:text-xs text-blue-800 line-clamp-2">{mesesSeleccionados.map(m => m.nombreCompleto).join(', ')}</p>
                                             </div>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="grid sm:grid-cols-2 gap-3 mb-3">
+                            {/* FORMULARIO COMPACTO */}
+                            <div className="grid sm:grid-cols-2 gap-2 sm:gap-3 mb-3">
                                 <div>
-                                    <label className="block text-xs font-bold mb-2">Monto (S/) *</label>
-                                    <input type="number" step="0.01" value={formData.monto} className="w-full px-3 py-2.5 border-2 rounded-xl font-bold" readOnly />
+                                    <label className="block text-xs font-bold mb-1.5">Monto (S/) *</label>
+                                    <input type="number" step="0.01" value={formData.monto} className="w-full px-3 py-2.5 border-2 rounded-xl font-bold text-base" readOnly />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold mb-2">Método *</label>
+                                    <label className="block text-xs font-bold mb-1.5">Método *</label>
                                     <select value={formData.metodo_pago} onChange={(e) => setFormData({...formData, metodo_pago: e.target.value})} className="w-full px-3 py-2.5 border-2 rounded-xl text-sm">
                                         <option>Efectivo</option>
                                         <option>Transferencia</option>
@@ -355,29 +380,29 @@ const PagoForm = ({ clientes, clientePreseleccionado, onClose, onPagoGuardado })
                                     </select>
                                 </div>
                             </div>
-                            <div className="grid sm:grid-cols-2 gap-3 mb-3">
+                            <div className="grid sm:grid-cols-2 gap-2 sm:gap-3 mb-3">
                                 <div>
-                                    <label className="block text-xs font-bold mb-2">Recibo *</label>
+                                    <label className="block text-xs font-bold mb-1.5">Recibo *</label>
                                     <input type="text" value={formData.numero_recibo} onChange={(e) => setFormData({...formData, numero_recibo: e.target.value})} className="w-full px-3 py-2.5 border-2 rounded-xl text-sm" placeholder="REC-001" required />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold mb-2">Teléfono</label>
+                                    <label className="block text-xs font-bold mb-1.5">Teléfono</label>
                                     <input type="tel" value={formData.telefono_contacto} onChange={(e) => setFormData({...formData, telefono_contacto: e.target.value})} className="w-full px-3 py-2.5 border-2 rounded-xl text-sm" placeholder="+51 987 654 321" />
                                 </div>
                             </div>
                             <div className="mb-3">
-                                <label className="block text-xs font-bold mb-2">Observaciones</label>
+                                <label className="block text-xs font-bold mb-1.5">Observaciones</label>
                                 <textarea value={formData.observaciones} onChange={(e) => setFormData({...formData, observaciones: e.target.value})} className="w-full px-3 py-2.5 border-2 rounded-xl text-sm" rows="2" placeholder="Notas..." />
                             </div>
                             <div className="flex gap-2">
                                 <button
                                     type="submit"
-                                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2.5 sm:py-3 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 disabled:opacity-50"
                                     disabled={loading || mesesSeleccionados.length === 0}
                                 >
-                                    {loading ? <><Loader className="animate-spin w-4 h-4" /> ...</> : 'Registrar'}
+                                    {loading ? <><Loader className="animate-spin w-4 h-4" /> Registrando...</> : 'Registrar Pago'}
                                 </button>
-                                <button type="button" onClick={onClose} className="px-4 py-2.5 bg-gray-300 text-gray-700 rounded-xl font-bold text-sm" disabled={loading}>Cancelar</button>
+                                <button type="button" onClick={onClose} className="px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-300 text-gray-700 rounded-xl font-bold text-sm sm:text-base" disabled={loading}>Cancelar</button>
                             </div>
                         </>
                     )}
