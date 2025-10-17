@@ -21,7 +21,7 @@ const CalendarioCobros = () => {
       const inicioMes = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1);
       const finMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0);
 
-      const response = await axios.get('http://localhost:5000/api/clientes/vencimientos', {
+      const response = await axios.get('https://sistema-tv-jhaire-production-1248.up.railway.app/api/clientes/vencimientos', {
         params: {
           fechaInicio: inicioMes.toISOString().split('T')[0],
           fechaFin: finMes.toISOString().split('T')[0]

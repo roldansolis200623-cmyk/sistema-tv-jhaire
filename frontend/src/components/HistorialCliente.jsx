@@ -21,7 +21,7 @@ const HistorialCliente = ({ clienteId, isOpen, onClose }) => {
         console.log('📱 1. Cargando historial para cliente:', clienteId);
         
         const response = await axios.get(
-            `http://localhost:5000/api/clientes/${clienteId}/historial-completo`,
+            `https://sistema-tv-jhaire-production-1248.up.railway.app/api/clientes/${clienteId}/historial-completo`,
             { headers: { Authorization: `Bearer ${token}` } }
         );
         

@@ -23,7 +23,7 @@ const CampanaNotificaciones = () => {
   const cargarContador = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/notificaciones/contador', {
+      const response = await axios.get('https://sistema-tv-jhaire-production-1248.up.railway.app/api/notificaciones/contador', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNoLeidas(response.data.no_leidas);
@@ -36,7 +36,7 @@ const CampanaNotificaciones = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/notificaciones', {
+      const response = await axios.get('https://sistema-tv-jhaire-production-1248.up.railway.app/api/notificaciones', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setNotificaciones(response.data);
@@ -50,7 +50,7 @@ const CampanaNotificaciones = () => {
   const marcarComoLeida = async (notifId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(`http://localhost:5000/api/notificaciones/${notifId}/leer`, {}, {
+      await axios.patch(`https://sistema-tv-jhaire-production-1248.up.railway.app/api/notificaciones/${notifId}/leer`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -66,7 +66,7 @@ const CampanaNotificaciones = () => {
   const marcarTodasLeidas = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch('http://localhost:5000/api/notificaciones/marcar-todas-leidas', {}, {
+      await axios.patch('https://sistema-tv-jhaire-production-1248.up.railway.app/api/notificaciones/marcar-todas-leidas', {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -80,7 +80,7 @@ const CampanaNotificaciones = () => {
   const eliminarNotificacion = async (notifId) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/notificaciones/${notifId}`, {
+      await axios.delete(`https://sistema-tv-jhaire-production-1248.up.railway.app/api/notificaciones/${notifId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

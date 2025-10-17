@@ -67,7 +67,7 @@ const BusquedaGlobal = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/clientes/buscar', {
+      const response = await axios.get('https://sistema-tv-jhaire-production-1248.up.railway.app/api/clientes/buscar', {
         params: { q: query },
         headers: { Authorization: `Bearer ${token}` }
       });

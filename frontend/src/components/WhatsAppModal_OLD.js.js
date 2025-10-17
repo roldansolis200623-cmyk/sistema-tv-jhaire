@@ -10,7 +10,7 @@ const WhatsAppModal = ({ cliente, onClose }) => {
         setEnviando(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/whatsapp/recordatorio/${cliente.id}`, {
+            const response = await fetch(`https://sistema-tv-jhaire-production-1248.up.railway.app/api/whatsapp/recordatorio/${cliente.id}`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -38,7 +38,7 @@ const WhatsAppModal = ({ cliente, onClose }) => {
         setEnviando(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/whatsapp/mensaje-personalizado', {
+            const response = await fetch('https://sistema-tv-jhaire-production-1248.up.railway.app/api/whatsapp/mensaje-personalizado', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
