@@ -38,18 +38,20 @@ const reporteRoutes = require('./routes/reporteRoutes');
 const pagoRoutes = require('./routes/pagoRoutes');
 const reportePdfRoutes = require('./routes/reportePdfRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
-const perfilInternetRoutes = require('./routes/perfilInternetRoutes'); // AGREGAR ESTA LÍNEA
-const incidenciaRoutes = require('./routes/incidenciaRoutes'); // 🆕 AGREGAR ESTA LÍNEA
+const perfilInternetRoutes = require('./routes/perfilInternetRoutes');
+const incidenciaRoutes = require('./routes/incidenciaRoutes');
 
 // Usar rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/clientes', clienteRoutes);
-app.use('/api/reportes', reporteRoutes);
 app.use('/api/pagos', pagoRoutes);
-app.use('/api/reportes', reportePdfRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api/perfiles-internet', perfilInternetRoutes); // AGREGAR ESTA LÍNEA
-app.use('/api/incidencias', incidenciaRoutes); // 🆕 AGREGAR ESTA LÍNEA
+app.use('/api/perfiles-internet', perfilInternetRoutes);
+app.use('/api/incidencias', incidenciaRoutes);
+
+// ✅ RUTAS DE REPORTES - ORDEN IMPORTANTE
+app.use('/api/reportes', reportePdfRoutes);  // PRIMERO los PDFs (tiene /pdf/ en sus rutas)
+app.use('/api/reportes', reporteRoutes);     // DESPUÉS el Excel
 
 // Manejo de errores
 app.use((err, req, res, next) => {
