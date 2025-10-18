@@ -9,13 +9,15 @@ const NotificationBell = () => {
     const [notificaciones, setNotificaciones] = useState([]);
     const [contador, setContador] = useState(0);
     const [loading, setLoading] = useState(false);
+    const buttonRef = useRef(null);
     const panelRef = useRef(null);
     const navigate = useNavigate();
 
     // Cerrar panel al hacer click fuera
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (panelRef.current && !panelRef.current.contains(event.target)) {
+            if (panelRef.current && !panelRef.current.contains(event.target) && 
+                buttonRef.current && !buttonRef.current.contains(event.target)) {
                 setIsOpen(false);
             }
         };
@@ -131,9 +133,10 @@ const NotificationBell = () => {
     };
 
     return (
-        <div className="relative" ref={panelRef}>
+        <>
             {/* BOTÓN DE CAMPANA */}
             <button
+                ref={buttonRef}
                 onClick={handleToggle}
                 className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
@@ -151,15 +154,16 @@ const NotificationBell = () => {
                 )}
             </button>
 
-            {/* PANEL DE NOTIFICACIONES */}
+            {/* PANEL DE NOTIFICACIONES - POSICIONADO CON FIXED */}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
+                        ref={panelRef}
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50"
+                        className="fixed right-4 top-20 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[9999]"
                     >
                         {/* HEADER */}
                         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white">
@@ -185,7 +189,7 @@ const NotificationBell = () => {
                         </div>
 
                         {/* LISTA DE NOTIFICACIONES */}
-                        <div className="max-h-96 overflow-y-auto">
+                        <div className="max-h-[500px] overflow-y-auto">
                             {loading ? (
                                 <div className="p-8 text-center text-gray-500">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
@@ -242,7 +246,7 @@ const NotificationBell = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </>
     );
 };
 
