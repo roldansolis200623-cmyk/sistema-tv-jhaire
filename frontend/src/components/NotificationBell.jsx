@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { Bell, X, CheckCheck, Trash2, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -9,22 +10,18 @@ const NotificationBell = () => {
     const [notificaciones, setNotificaciones] = useState([]);
     const [contador, setContador] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [buttonPosition, setButtonPosition] = useState({ top: 0, right: 0 });
     const buttonRef = useRef(null);
-    const panelRef = useRef(null);
     const navigate = useNavigate();
 
-    // Cerrar panel al hacer click fuera
+    // Calcular posición del botón
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (panelRef.current && !panelRef.current.contains(event.target) && 
-                buttonRef.current && !buttonRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-
-        if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-            return () => document.removeEventListener('mousedown', handleClickOutside);
+        if (buttonRef.current && isOpen) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            setButtonPosition({
+                top: rect.bottom + 8,
+                right: window.innerWidth - rect.right
+            });
         }
     }, [isOpen]);
 
@@ -139,39 +136,29 @@ const NotificationBell = () => {
         return date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
     };
 
-    return (
-        <div className="relative">
-            {/* BOTÓN DE CAMPANA */}
-            <button
-                ref={buttonRef}
-                onClick={handleToggle}
-                className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-                <Bell size={24} className="text-gray-700" />
-                
-                {/* BADGE */}
-                {contador > 0 && (
-                    <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
-                    >
-                        {contador > 99 ? '99+' : contador}
-                    </motion.span>
-                )}
-            </button>
-
-            {/* PORTAL PARA EL PANEL */}
-            {isOpen && (
-                <div className="fixed inset-0 z-[99999] pointer-events-none">
+    // Componente del Panel
+    const NotificationPanel = () => (
+        <AnimatePresence>
+            {isOpen && ReactDOM.createPortal(
+                <>
+                    {/* OVERLAY INVISIBLE PARA CERRAR */}
+                    <div 
+                        className="fixed inset-0 z-[999998]"
+                        onClick={() => setIsOpen(false)}
+                    />
+                    
+                    {/* PANEL */}
                     <motion.div
-                        ref={panelRef}
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute right-4 top-20 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden pointer-events-auto"
-                        style={{ maxHeight: 'calc(100vh - 6rem)' }}
+                        className="fixed w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[999999]"
+                        style={{ 
+                            top: `${buttonPosition.top}px`,
+                            right: `${buttonPosition.right}px`,
+                            maxHeight: 'calc(100vh - 6rem)'
+                        }}
                     >
                         {/* HEADER */}
                         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white sticky top-0 z-10">
@@ -252,9 +239,37 @@ const NotificationBell = () => {
                             )}
                         </div>
                     </motion.div>
-                </div>
+                </>,
+                document.body
             )}
-        </div>
+        </AnimatePresence>
+    );
+
+    return (
+        <>
+            {/* BOTÓN DE CAMPANA */}
+            <button
+                ref={buttonRef}
+                onClick={handleToggle}
+                className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+                <Bell size={24} className="text-gray-700" />
+                
+                {/* BADGE */}
+                {contador > 0 && (
+                    <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
+                    >
+                        {contador > 99 ? '99+' : contador}
+                    </motion.span>
+                )}
+            </button>
+
+            {/* PANEL (RENDERIZADO CON PORTAL) */}
+            <NotificationPanel />
+        </>
     );
 };
 
