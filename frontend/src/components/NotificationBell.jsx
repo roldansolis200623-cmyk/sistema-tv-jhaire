@@ -163,7 +163,7 @@ const NotificationBell = () => {
 
             {/* PORTAL PARA EL PANEL */}
             {isOpen && (
-                <div className="fixed inset-0 z-[9999] pointer-events-none">
+                <div className="fixed inset-0 z-[99999] pointer-events-none">
                     <motion.div
                         ref={panelRef}
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
