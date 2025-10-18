@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, X, Check, CheckCheck, Trash2, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
+import { Bell, X, CheckCheck, Trash2, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import notificacionService from '../services/notificacionService';
@@ -22,39 +22,46 @@ const NotificationBell = () => {
             }
         };
 
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [isOpen]);
 
     // Cargar contador inicial
     useEffect(() => {
         cargarContador();
-        const interval = setInterval(cargarContador, 30000); // Cada 30 segundos
+        const interval = setInterval(cargarContador, 30000);
         return () => clearInterval(interval);
     }, []);
 
     const cargarContador = async () => {
         try {
             const data = await notificacionService.getContador();
-            setContador(data.total);
+            console.log('📊 Contador:', data);
+            setContador(data.total || 0);
         } catch (error) {
-            console.error('Error cargando contador:', error);
+            console.error('❌ Error cargando contador:', error);
         }
     };
 
     const cargarNotificaciones = async () => {
         try {
             setLoading(true);
+            console.log('🔄 Cargando notificaciones...');
             const data = await notificacionService.getNoLeidas();
-            setNotificaciones(data);
+            console.log('📬 Notificaciones recibidas:', data);
+            setNotificaciones(data || []);
         } catch (error) {
-            console.error('Error cargando notificaciones:', error);
+            console.error('❌ Error cargando notificaciones:', error);
+            setNotificaciones([]);
         } finally {
             setLoading(false);
         }
     };
 
     const handleToggle = () => {
+        console.log('🔔 Toggle notificaciones');
         setIsOpen(!isOpen);
         if (!isOpen) {
             cargarNotificaciones();
@@ -133,7 +140,7 @@ const NotificationBell = () => {
     };
 
     return (
-        <>
+        <div className="relative">
             {/* BOTÓN DE CAMPANA */}
             <button
                 ref={buttonRef}
@@ -154,19 +161,20 @@ const NotificationBell = () => {
                 )}
             </button>
 
-            {/* PANEL DE NOTIFICACIONES - POSICIONADO CON FIXED */}
-            <AnimatePresence>
-                {isOpen && (
+            {/* PORTAL PARA EL PANEL */}
+            {isOpen && (
+                <div className="fixed inset-0 z-[9999] pointer-events-none">
                     <motion.div
                         ref={panelRef}
                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="fixed right-4 top-20 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[9999]"
+                        className="absolute right-4 top-20 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden pointer-events-auto"
+                        style={{ maxHeight: 'calc(100vh - 6rem)' }}
                     >
                         {/* HEADER */}
-                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white">
+                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white sticky top-0 z-10">
                             <div className="flex items-center justify-between mb-2">
                                 <h3 className="font-bold text-lg">Notificaciones</h3>
                                 <button
@@ -189,11 +197,11 @@ const NotificationBell = () => {
                         </div>
 
                         {/* LISTA DE NOTIFICACIONES */}
-                        <div className="max-h-[500px] overflow-y-auto">
+                        <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 14rem)' }}>
                             {loading ? (
                                 <div className="p-8 text-center text-gray-500">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
-                                    Cargando...
+                                    <p>Cargando...</p>
                                 </div>
                             ) : notificaciones.length === 0 ? (
                                 <div className="p-8 text-center text-gray-500">
@@ -213,7 +221,7 @@ const NotificationBell = () => {
                                             className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors border-l-4 ${getColorClasses(notif.color)}`}
                                         >
                                             <div className="flex items-start gap-3">
-                                                <div className={`mt-1 ${notif.color === 'red' ? 'text-red-600' : notif.color === 'green' ? 'text-green-600' : notif.color === 'yellow' ? 'text-yellow-600' : 'text-blue-600'}`}>
+                                                <div className={`mt-1 flex-shrink-0 ${notif.color === 'red' ? 'text-red-600' : notif.color === 'green' ? 'text-green-600' : notif.color === 'yellow' ? 'text-yellow-600' : 'text-blue-600'}`}>
                                                     {getIcono(notif.icono)}
                                                 </div>
                                                 
@@ -221,7 +229,7 @@ const NotificationBell = () => {
                                                     <h4 className="font-semibold text-sm text-gray-900 mb-1">
                                                         {notif.titulo}
                                                     </h4>
-                                                    <p className="text-xs text-gray-600 mb-2">
+                                                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">
                                                         {notif.mensaje}
                                                     </p>
                                                     <div className="flex items-center justify-between">
@@ -231,7 +239,7 @@ const NotificationBell = () => {
                                                         
                                                         <button
                                                             onClick={(e) => handleEliminar(notif.id, e)}
-                                                            className="p-1 hover:bg-red-100 rounded transition-colors text-red-500"
+                                                            className="p-1 hover:bg-red-100 rounded transition-colors text-red-500 flex-shrink-0"
                                                         >
                                                             <Trash2 size={14} />
                                                         </button>
@@ -244,9 +252,9 @@ const NotificationBell = () => {
                             )}
                         </div>
                     </motion.div>
-                )}
-            </AnimatePresence>
-        </>
+                </div>
+            )}
+        </div>
     );
 };
 
