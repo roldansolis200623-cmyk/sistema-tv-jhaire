@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { Bell, X, CheckCheck, Trash2, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import notificacionService from '../services/notificacionService';
 
@@ -136,23 +136,39 @@ const NotificationBell = () => {
         return date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
     };
 
-    // Componente del Panel
-    const NotificationPanel = () => (
-        <AnimatePresence>
+    return (
+        <>
+            {/* BOTÓN DE CAMPANA */}
+            <button
+                ref={buttonRef}
+                onClick={handleToggle}
+                className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+                <Bell size={24} className="text-gray-700" />
+                
+                {/* BADGE */}
+                {contador > 0 && (
+                    <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
+                    >
+                        {contador > 99 ? '99+' : contador}
+                    </motion.span>
+                )}
+            </button>
+
+            {/* PANEL CON PORTAL */}
             {isOpen && ReactDOM.createPortal(
                 <>
-                    {/* OVERLAY INVISIBLE PARA CERRAR */}
+                    {/* OVERLAY */}
                     <div 
                         className="fixed inset-0 z-[999998]"
                         onClick={() => setIsOpen(false)}
                     />
                     
                     {/* PANEL */}
-                    <motion.div
-                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
+                    <div
                         className="fixed w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[999999]"
                         style={{ 
                             top: `${buttonPosition.top}px`,
@@ -183,7 +199,7 @@ const NotificationBell = () => {
                             )}
                         </div>
 
-                        {/* LISTA DE NOTIFICACIONES */}
+                        {/* LISTA */}
                         <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 14rem)' }}>
                             {loading ? (
                                 <div className="p-8 text-center text-gray-500">
@@ -199,11 +215,8 @@ const NotificationBell = () => {
                             ) : (
                                 <div className="divide-y divide-gray-100">
                                     {notificaciones.map((notif) => (
-                                        <motion.div
+                                        <div
                                             key={notif.id}
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: 20 }}
                                             onClick={() => handleMarcarLeida(notif.id, notif.url)}
                                             className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors border-l-4 ${getColorClasses(notif.color)}`}
                                         >
@@ -216,7 +229,7 @@ const NotificationBell = () => {
                                                     <h4 className="font-semibold text-sm text-gray-900 mb-1">
                                                         {notif.titulo}
                                                     </h4>
-                                                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                                                    <p className="text-xs text-gray-600 mb-2">
                                                         {notif.mensaje}
                                                     </p>
                                                     <div className="flex items-center justify-between">
@@ -233,42 +246,15 @@ const NotificationBell = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                        </motion.div>
+                                        </div>
                                     ))}
                                 </div>
                             )}
                         </div>
-                    </motion.div>
+                    </div>
                 </>,
                 document.body
             )}
-        </AnimatePresence>
-    );
-
-    return (
-        <>
-            {/* BOTÓN DE CAMPANA */}
-            <button
-                ref={buttonRef}
-                onClick={handleToggle}
-                className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-                <Bell size={24} className="text-gray-700" />
-                
-                {/* BADGE */}
-                {contador > 0 && (
-                    <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
-                    >
-                        {contador > 99 ? '99+' : contador}
-                    </motion.span>
-                )}
-            </button>
-
-            {/* PANEL (RENDERIZADO CON PORTAL) */}
-            <NotificationPanel />
         </>
     );
 };
