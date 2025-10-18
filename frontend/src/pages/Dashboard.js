@@ -9,11 +9,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clienteService } from '../services/api';
+import NotificationBell from '../components/NotificationBell';
 
 const Dashboard = () => {
     const [clientes, setClientes] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [sidebarOpen, setSidebarOpen] = useState(false); // 📱 NUEVO: Estado del menú móvil
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
 
@@ -63,7 +64,6 @@ const Dashboard = () => {
 
     return (
         <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-            {/* 📱 OVERLAY MÓVIL */}
             <AnimatePresence>
                 {sidebarOpen && (
                     <motion.div
@@ -76,7 +76,6 @@ const Dashboard = () => {
                 )}
             </AnimatePresence>
 
-            {/* 📱 SIDEBAR RESPONSIVE */}
             <aside className={`
                 fixed lg:static
                 w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 
@@ -85,7 +84,6 @@ const Dashboard = () => {
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
                 h-full
             `}>
-                {/* 📱 BOTÓN CERRAR (SOLO MÓVIL) */}
                 <button
                     onClick={() => setSidebarOpen(false)}
                     className="lg:hidden absolute top-4 right-4 text-white p-2 hover:bg-slate-700 rounded-lg"
@@ -150,16 +148,13 @@ const Dashboard = () => {
                 </div>
             </aside>
 
-            {/* MAIN CONTENT */}
             <div className="flex-1 flex flex-col overflow-hidden w-full">
-                {/* 📱 HEADER RESPONSIVE */}
                 <motion.header 
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     className="bg-white/80 backdrop-blur-xl border-b border-indigo-100 px-4 lg:px-8 py-4 shadow-sm"
                 >
-                    <div className="flex items-center justify-between">
-                        {/* 📱 BOTÓN MENÚ (SOLO MÓVIL) */}
+                    <div className="flex items-center justify-between gap-4">
                         <button
                             onClick={() => setSidebarOpen(true)}
                             className="lg:hidden p-2 hover:bg-indigo-100 rounded-lg transition-colors"
@@ -167,18 +162,20 @@ const Dashboard = () => {
                             <Menu size={24} className="text-gray-700" />
                         </button>
 
-                        <div className="flex-1 lg:flex-none">
+                        <div className="flex-1">
                             <h1 className="text-lg lg:text-2xl font-bold text-gray-900">
-                                Bienvenido, <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">{user?.nombre || 'Admin'}</span>
+                                <span className="hidden sm:inline">Panel de </span>
+                                <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Control</span>
                             </h1>
-                            <p className="text-xs lg:text-sm text-gray-600 hidden sm:block">Gestiona tus clientes y servicios</p>
+                            <p className="text-xs lg:text-sm text-gray-600 hidden sm:block">Bienvenido al sistema de gestión</p>
                         </div>
+
+                        {/* 🔔 CAMPANA DE NOTIFICACIONES */}
+                        <NotificationBell />
                     </div>
                 </motion.header>
 
-                {/* 📱 CONTENT RESPONSIVE */}
                 <main className="flex-1 overflow-y-auto p-4 lg:p-8">
-                    {/* 📱 STATS CARDS - RESPONSIVE GRID */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8">
                         {[
                             { label: 'Total', fullLabel: 'Total Clientes', value: stats.total, icon: Users, gradient: 'from-blue-500 to-cyan-500', bg: 'from-blue-50 to-cyan-50', trend: '+12%' },
@@ -218,9 +215,7 @@ const Dashboard = () => {
                         ))}
                     </div>
 
-                    {/* 📱 WIDGETS GRID - RESPONSIVE */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
-                        {/* Clientes con Deuda */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -259,7 +254,6 @@ const Dashboard = () => {
                             </div>
                         </motion.div>
 
-                        {/* Top Clientes */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -303,7 +297,6 @@ const Dashboard = () => {
                             </div>
                         </motion.div>
 
-                        {/* Actividad Reciente */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -349,7 +342,6 @@ const Dashboard = () => {
                         </motion.div>
                     </div>
 
-                    {/* 📱 ACCESOS RÁPIDOS - RESPONSIVE */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
