@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Filter, X, Users, Search, Plus, Edit, Trash2, Play, Pause,
     MessageCircle, History, Home, LogOut, FileText, CreditCard,
-    BarChart3, Settings, Bell, Menu, Calendar, AlertTriangle  // 🆕 NUEVO ÍCONO
+    BarChart3, Settings, Bell, Menu, Calendar, AlertTriangle, Printer
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clienteService } from '../services/api';
@@ -14,6 +14,7 @@ import SuspenderClienteModal from '../components/SuspenderClienteModal';
 import ReactivarClienteModal from '../components/ReactivarClienteModal';
 import ClienteDetallePanel from '../components/ClienteDetallePanel';
 import HistorialSuspensionesModal from '../components/HistorialSuspensionesModal';
+import ReciboRecordatorio from '../components/ReciboRecordatorio';
 
 const Clientes = () => {
     const [clientes, setClientes] = useState([]);
@@ -29,6 +30,7 @@ const Clientes = () => {
     const [historialModal, setHistorialModal] = useState(null);
     const [clienteDetalle, setClienteDetalle] = useState(null);
     const [incidenciaModal, setIncidenciaModal] = useState(null);  // 🆕 NUEVO
+    const [clienteParaRecibo, setClienteParaRecibo] = useState(null);  // 🆕 RECIBO
 
     const [filtros, setFiltros] = useState({
         estados: [],
@@ -301,6 +303,28 @@ const Clientes = () => {
                                 <Plus size={18} />
                                 Nuevo Cliente
                             </motion.button>
+
+                            {/* 🆕 BOTÓN IMPRIMIR RECIBOS MOROSOS */}
+                            {clientes.filter(c => c.meses_deuda > 0).length > 0 && (
+                                <motion.button
+                                    onClick={() => {
+                                        const morosos = clientes.filter(c => c.meses_deuda > 0);
+                                        if (morosos.length > 0) {
+                                            setClienteParaRecibo(morosos[0]);
+                                        }
+                                    }}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl font-semibold shadow-lg shadow-red-500/50"
+                                >
+                                    <Printer size={18} />
+                                    <span className="hidden lg:inline">Recibos Morosos</span>
+                                    <span className="lg:hidden">Recibos</span>
+                                    <span className="bg-white text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                                        {clientes.filter(c => c.meses_deuda > 0).length}
+                                    </span>
+                                </motion.button>
+                            )}
                         </div>
 
                         {/* FILTROS PANEL RESPONSIVE */}
@@ -470,7 +494,8 @@ const Clientes = () => {
                                                     { icon: AlertTriangle, label: 'Avería', color: 'red', onClick: (e) => { e.stopPropagation(); setIncidenciaModal(cliente); } }, // 🆕 NUEVO
                                                     { icon: cliente.estado === 'activo' ? Pause : Play, label: cliente.estado === 'activo' ? 'Suspender' : 'Activar', color: cliente.estado === 'activo' ? 'orange' : 'green', onClick: (e) => { e.stopPropagation(); cliente.estado === 'activo' ? setSuspenderModal(cliente) : setReactivarModal(cliente); } },
                                                     { icon: MessageCircle, label: 'WhatsApp', color: 'green', onClick: (e) => { e.stopPropagation(); setWhatsappModal(cliente); } },
-                                                    { icon: History, label: 'Historial', color: 'purple', onClick: (e) => { e.stopPropagation(); navigate(`/historial-pagos/${cliente.id}`); } }
+                                                    { icon: History, label: 'Historial', color: 'purple', onClick: (e) => { e.stopPropagation(); navigate(`/historial-pagos/${cliente.id}`); } },
+                                                    ...(cliente.meses_deuda > 0 ? [{ icon: FileText, label: 'Recibo', color: 'red', onClick: (e) => { e.stopPropagation(); setClienteParaRecibo(cliente); } }] : [])
                                                 ].map((action, idx) => (
                                                     <motion.button
                                                         key={idx}
@@ -616,6 +641,13 @@ const Clientes = () => {
                         setIncidenciaModal(null);
                         alert('Incidencia reportada exitosamente');
                     }}
+                />
+            )}
+            {/* 🆕 MODAL DE RECIBO */}
+            {clienteParaRecibo && (
+                <ReciboRecordatorio
+                    cliente={clienteParaRecibo}
+                    onClose={() => setClienteParaRecibo(null)}
                 />
             )}
         </div>
