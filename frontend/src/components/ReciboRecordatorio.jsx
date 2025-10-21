@@ -1,10 +1,18 @@
 import React from 'react';
-import { AlertTriangle, Phone, MessageCircle, CreditCard, Building2, DollarSign } from 'lucide-react';
+import { AlertTriangle, Phone, MessageCircle, CreditCard, Building2, Scan } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const ReciboRecordatorio = ({ cliente, onClose }) => {
     const mesesDeuda = cliente.meses_deuda || 0;
     const montoMensual = parseFloat(cliente.precio_mensual) || 0;
     const totalDeuda = mesesDeuda * montoMensual;
+
+    // Número principal de Yape/Plin (Francisca)
+    const numeroYape = '991569419';
+    
+    // Generar texto para QR de Yape/Plin
+    // Formato: número de teléfono para que se abra directo en la app
+    const qrData = numeroYape;
 
     const handlePrint = () => {
         window.print();
@@ -126,19 +134,94 @@ const ReciboRecordatorio = ({ cliente, onClose }) => {
                             </div>
                         </div>
 
-                        {/* MÉTODOS DE PAGO */}
+                        {/* 🆕 SECCIÓN DE PAGO RÁPIDO CON QR */}
                         <div className="px-4 pb-4">
-                            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                                <h3 className="font-bold text-green-900 mb-4 text-lg flex items-center gap-2">
+                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border-4 border-green-400 shadow-xl">
+                                <div className="text-center mb-4">
+                                    <h3 className="text-2xl font-bold text-green-800 flex items-center justify-center gap-2 mb-2">
+                                        <Scan size={32} className="text-green-600" />
+                                        ⚡ PAGO RÁPIDO
+                                    </h3>
+                                    <p className="text-sm text-gray-700 font-semibold">
+                                        Escanea el QR y paga en segundos con Yape o Plin
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-col md:flex-row items-center gap-6">
+                                    {/* QR CODE */}
+                                    <div className="flex-shrink-0">
+                                        <div className="bg-white p-4 rounded-xl shadow-lg border-4 border-green-400">
+                                            <QRCodeSVG 
+                                                value={qrData}
+                                                size={180}
+                                                level="H"
+                                                includeMargin={true}
+                                            />
+                                        </div>
+                                        <div className="mt-3 text-center">
+                                            <p className="text-xs text-gray-600 font-bold">Número de contacto</p>
+                                            <p className="text-lg font-bold text-green-700">991-569-419</p>
+                                            <p className="text-xs text-gray-500">(Francisca)</p>
+                                        </div>
+                                    </div>
+
+                                    {/* INSTRUCCIONES */}
+                                    <div className="flex-1">
+                                        <div className="bg-white rounded-lg p-4 border-2 border-green-300">
+                                            <h4 className="font-bold text-green-800 mb-3 text-lg">📱 Cómo pagar:</h4>
+                                            <ol className="space-y-2 text-sm">
+                                                <li className="flex items-start gap-2">
+                                                    <span className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold flex-shrink-0">1</span>
+                                                    <span className="text-gray-700">Abre tu app de <span className="font-bold">Yape</span> o <span className="font-bold">Plin</span></span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <span className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold flex-shrink-0">2</span>
+                                                    <span className="text-gray-700">Toca el botón <span className="font-bold">"Escanear QR"</span></span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <span className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold flex-shrink-0">3</span>
+                                                    <span className="text-gray-700">Escanea el código QR de arriba</span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <span className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold flex-shrink-0">4</span>
+                                                    <span className="text-gray-700">Ingresa el monto: <span className="font-bold text-green-700">S/ {totalDeuda.toFixed(2)}</span></span>
+                                                </li>
+                                                <li className="flex items-start gap-2">
+                                                    <span className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold flex-shrink-0">5</span>
+                                                    <span className="text-gray-700">¡Envía el pago y listo! ✅</span>
+                                                </li>
+                                            </ol>
+                                            
+                                            <div className="mt-4 p-3 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+                                                <p className="text-xs text-gray-700 font-bold">
+                                                    📸 Recuerda enviarnos tu voucher por WhatsApp al <span className="text-green-700">951-451-453</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* MONTO DESTACADO */}
+                                <div className="mt-4 text-center bg-white rounded-lg p-4 border-2 border-green-400">
+                                    <p className="text-sm text-gray-600 mb-1">Monto a pagar:</p>
+                                    <p className="text-4xl font-bold text-green-700">S/ {totalDeuda.toFixed(2)}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* MÉTODOS DE PAGO TRADICIONALES */}
+                        <div className="px-4 pb-4">
+                            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                <h3 className="font-bold text-blue-900 mb-4 text-lg flex items-center gap-2">
                                     <CreditCard size={24} />
-                                    💳 MEDIOS DE PAGO
+                                    💳 OTROS MEDIOS DE PAGO
                                 </h3>
 
-                                {/* YAPE/PLIN */}
+                                {/* YAPE/PLIN ALTERNATIVO */}
                                 <div className="mb-4 bg-white rounded-lg p-3 border border-green-300">
                                     <h4 className="font-bold text-green-700 mb-2 flex items-center gap-2">
                                         <Phone size={18} />
-                                        📱 YAPE / PLIN
+                                        📱 YAPE / PLIN (Sin QR)
                                     </h4>
                                     <div className="text-sm space-y-1">
                                         <p>• <span className="font-bold">991-569-419</span> (Francisca)</p>
