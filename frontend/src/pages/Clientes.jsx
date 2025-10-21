@@ -99,6 +99,14 @@ const Clientes = () => {
         });
     };
 
+    // 🎨 FUNCIÓN PARA OBTENER COLOR SEGÚN DEUDA
+    const getColorByDeuda = (mesesDeuda) => {
+        if (mesesDeuda === 0) return 'bg-green-50 hover:bg-green-100 border-l-4 border-green-400';
+        if (mesesDeuda === 1) return 'bg-yellow-50 hover:bg-yellow-100 border-l-4 border-yellow-400';
+        if (mesesDeuda === 2) return 'bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-400';
+        return 'bg-red-50 hover:bg-red-100 border-l-4 border-red-400'; // 3+ meses
+    };
+
     const filteredClientes = clientes.filter(cliente => {
         const matchSearch = cliente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            cliente.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -279,6 +287,27 @@ const Clientes = () => {
                         animate={{ opacity: 1, y: 0 }}
                         className="bg-white/80 backdrop-blur-xl rounded-xl lg:rounded-2xl shadow-lg border border-indigo-100 p-4 lg:p-6 mb-4 lg:mb-6"
                     >
+                        {/* 🎨 LEYENDA DE COLORES */}
+                        <div className="mb-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xs font-bold text-gray-700">🎨 Colores por estado financiero:</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                                <div className="flex items-center gap-1 px-2 py-1 bg-green-100 border-l-4 border-green-400 rounded">
+                                    <span className="font-semibold">🟢 Al día</span>
+                                </div>
+                                <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 border-l-4 border-yellow-400 rounded">
+                                    <span className="font-semibold">🟡 1 mes</span>
+                                </div>
+                                <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 border-l-4 border-orange-400 rounded">
+                                    <span className="font-semibold">🟠 2 meses</span>
+                                </div>
+                                <div className="flex items-center gap-1 px-2 py-1 bg-red-100 border-l-4 border-red-400 rounded">
+                                    <span className="font-semibold">🔴 3+ meses</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="flex flex-col sm:flex-row gap-3">
                             <motion.button
                                 onClick={() => setShowFilters(!showFilters)}
@@ -452,7 +481,7 @@ const Clientes = () => {
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -20 }}
                                             transition={{ delay: i * 0.05 }}
-                                            className="bg-white/80 backdrop-blur-xl rounded-xl shadow-lg border border-indigo-100 p-4"
+                                            className={`backdrop-blur-xl rounded-xl shadow-lg border p-4 ${getColorByDeuda(cliente.meses_deuda || 0)}`}
                                             onClick={() => setClienteDetalle(cliente)}
                                         >
                                             <div className="flex items-start justify-between mb-3">
@@ -542,10 +571,9 @@ const Clientes = () => {
                                                         transition={{ delay: i * 0.05 }}
                                                         whileHover={{ 
                                                             scale: 1.01,
-                                                            backgroundColor: 'rgba(99, 102, 241, 0.05)',
                                                             boxShadow: '0 4px 12px rgba(99, 102, 241, 0.1)'
                                                         }}
-                                                        className="cursor-pointer transition-all"
+                                                        className={`cursor-pointer transition-all ${getColorByDeuda(cliente.meses_deuda || 0)}`}
                                                         onClick={(e) => {
                                                             if (!e.target.closest('button')) {
                                                                 setClienteDetalle(cliente);
@@ -589,6 +617,7 @@ const Clientes = () => {
                                                                     { icon: cliente.estado === 'activo' ? Pause : Play, color: cliente.estado === 'activo' ? 'orange' : 'green', onClick: () => cliente.estado === 'activo' ? setSuspenderModal(cliente) : setReactivarModal(cliente) },
                                                                     { icon: MessageCircle, color: 'green', onClick: () => setWhatsappModal(cliente) },
                                                                     { icon: History, color: 'purple', onClick: () => navigate(`/historial-pagos/${cliente.id}`) },
+                                                                    ...(cliente.meses_deuda > 0 ? [{ icon: FileText, color: 'red', onClick: () => setClienteParaRecibo(cliente) }] : []),
                                                                     { icon: Trash2, color: 'red', onClick: () => handleDelete(cliente.id) }
                                                                 ].map((action, idx) => (
                                                                     <motion.button
