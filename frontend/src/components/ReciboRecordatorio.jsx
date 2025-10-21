@@ -1,21 +1,106 @@
-import React from 'react';
-import { AlertTriangle, Phone, MessageCircle, CreditCard, Building2, Scan } from 'lucide-react';
+import React, { useRef } from 'react';
+import { AlertTriangle, Phone, MessageCircle, CreditCard, Building2, Scan, Download } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const ReciboRecordatorio = ({ cliente, onClose }) => {
     const mesesDeuda = cliente.meses_deuda || 0;
     const montoMensual = parseFloat(cliente.precio_mensual) || 0;
     const totalDeuda = mesesDeuda * montoMensual;
+    const reciboRef = useRef(null);
 
     // Número principal de Yape/Plin (Francisca)
     const numeroYape = '991569419';
-    
-    // Generar texto para QR de Yape/Plin
-    // Formato: número de teléfono para que se abra directo en la app
     const qrData = numeroYape;
 
     const handlePrint = () => {
         window.print();
+    };
+
+    // 🆕 GENERAR PDF Y ENVIAR POR WHATSAPP
+    const enviarPorWhatsApp = async () => {
+        try {
+            // Mostrar loading
+            const loadingDiv = document.createElement('div');
+            loadingDiv.innerHTML = `
+                <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                     background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); 
+                     z-index: 99999; text-align: center;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">📄</div>
+                    <div style="font-weight: bold; color: #4F46E5;">Generando PDF...</div>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px;">Esto tomará unos segundos</div>
+                </div>
+            `;
+            document.body.appendChild(loadingDiv);
+
+            // Esperar un poco para que el loading sea visible
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Capturar el recibo como imagen
+            const canvas = await html2canvas(reciboRef.current, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+
+            // Crear PDF
+            const imgWidth = 210; // A4 width in mm
+            const pageHeight = 297; // A4 height in mm
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgData = canvas.toDataURL('image/png');
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+
+            // Generar nombre del archivo
+            const nombreArchivo = `recibo_${cliente.nombre}_${cliente.apellido}`.toLowerCase().replace(/\s+/g, '_');
+            
+            // Descargar PDF
+            pdf.save(`${nombreArchivo}.pdf`);
+
+            // Remover loading
+            document.body.removeChild(loadingDiv);
+
+            // Esperar un poco para que el usuario vea que se descargó
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            // Preparar mensaje de WhatsApp
+            const nombreCompleto = `${cliente.nombre} ${cliente.apellido}`;
+            const numeroCliente = cliente.telefono?.replace(/\D/g, '') || '';
+            
+            const mensaje = `Hola *${nombreCompleto}*,
+
+📄 Te envío tu recibo de pago.
+
+⚠️ *Deuda pendiente:* S/ ${totalDeuda.toFixed(2)}
+📅 *Meses:* ${mesesDeuda}
+
+Por favor revisa el documento adjunto y realiza tu pago para evitar la suspensión del servicio.
+
+💳 *Puedes pagar escaneando el QR del recibo con Yape/Plin*
+
+Gracias,
+*TV Jhaire* 📺`;
+
+            const mensajeCodificado = encodeURIComponent(mensaje);
+            
+            // Abrir WhatsApp
+            const url = numeroCliente 
+                ? `https://wa.me/51${numeroCliente}?text=${mensajeCodificado}`
+                : `https://wa.me/?text=${mensajeCodificado}`;
+            
+            window.open(url, '_blank');
+
+            // Mostrar instrucción
+            alert('✅ PDF descargado exitosamente!\n\n📲 WhatsApp se abrirá en una nueva ventana.\n\n📎 Adjunta el PDF descargado y envíalo al cliente.');
+
+        } catch (error) {
+            console.error('Error generando PDF:', error);
+            alert('❌ Error al generar el PDF. Por favor intenta de nuevo.');
+        }
     };
 
     return (
@@ -23,6 +108,13 @@ const ReciboRecordatorio = ({ cliente, onClose }) => {
             <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 {/* BOTONES DE ACCIÓN (NO SE IMPRIMEN) */}
                 <div className="flex justify-end gap-3 p-4 border-b print:hidden">
+                    <button
+                        onClick={enviarPorWhatsApp}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                        <MessageCircle size={18} />
+                        📲 WhatsApp
+                    </button>
                     <button
                         onClick={handlePrint}
                         className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
@@ -38,7 +130,7 @@ const ReciboRecordatorio = ({ cliente, onClose }) => {
                 </div>
 
                 {/* RECIBO PARA IMPRIMIR */}
-                <div className="p-8 bg-white" id="recibo-print">
+                <div ref={reciboRef} className="p-8 bg-white" id="recibo-print">
                     {/* HEADER CON LOGO Y EMPRESA */}
                     <div className="border-4 border-indigo-600 rounded-lg overflow-hidden">
                         {/* CABECERA */}
@@ -49,6 +141,7 @@ const ReciboRecordatorio = ({ cliente, onClose }) => {
                                         src="/logo.png" 
                                         alt="TV Jhaire" 
                                         className="h-16 w-auto bg-white rounded-lg p-2"
+                                        crossOrigin="anonymous"
                                     />
                                     <div>
                                         <h1 className="text-2xl font-bold">TV JHAIRE</h1>
