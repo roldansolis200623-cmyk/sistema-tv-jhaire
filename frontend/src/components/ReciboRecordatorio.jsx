@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { AlertTriangle, Phone, MessageCircle, CreditCard, Building2, Scan } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -9,10 +8,6 @@ const ReciboRecordatorio = ({ cliente, onClose }) => {
     const montoMensual = parseFloat(cliente.precio_mensual) || 0;
     const totalDeuda = mesesDeuda * montoMensual;
     const reciboRef = useRef(null);
-
-    // Número principal de Yape/Plin (Francisca)
-    const numeroYape = '991569419';
-    const qrData = numeroYape;
 
     const handlePrint = () => {
         window.print();
@@ -40,7 +35,8 @@ const ReciboRecordatorio = ({ cliente, onClose }) => {
                 scale: 2,
                 useCORS: true,
                 logging: false,
-                backgroundColor: '#ffffff'
+                backgroundColor: '#ffffff',
+                allowTaint: true
             });
 
             const imgWidth = 210;
@@ -186,26 +182,26 @@ Gracias,
                             </div>
                         </div>
 
-                        {/* PAGO RÁPIDO COMPACTO */}
+                        {/* PAGO RÁPIDO CON QR REAL */}
                         <div className="px-2 pb-2">
                             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border-2 border-green-400">
                                 <h3 className="text-base font-bold text-green-800 text-center mb-2">
-                                    ⚡ PAGO RÁPIDO CON YAPE/PLIN
+                                    ⚡ PAGO RÁPIDO CON YAPE
                                 </h3>
 
                                 <div className="grid grid-cols-2 gap-3">
-                                    {/* QR */}
+                                    {/* QR REAL DE YAPE */}
                                     <div className="flex flex-col items-center">
-                                        <div className="bg-white p-2 rounded-lg border-2 border-green-400">
-                                            <QRCodeSVG 
-                                                value={qrData}
-                                                size={120}
-                                                level="H"
-                                                includeMargin={true}
+                                        <div className="bg-white p-2 rounded-lg border-2 border-green-400 overflow-hidden">
+                                            <img 
+                                                src="/qr_yape_damian.jpg" 
+                                                alt="QR Yape Damian"
+                                                className="w-[120px] h-[120px] object-contain"
+                                                crossOrigin="anonymous"
                                             />
                                         </div>
-                                        <p className="text-xs font-bold text-green-700 mt-1">991-569-419</p>
-                                        <p className="text-[9px] text-gray-500">(Francisca)</p>
+                                        <p className="text-xs font-bold text-green-700 mt-1">995-151-453</p>
+                                        <p className="text-[9px] text-gray-500">(Damian)</p>
                                     </div>
 
                                     {/* Instrucciones */}
@@ -213,7 +209,7 @@ Gracias,
                                         <div className="text-[10px] space-y-1">
                                             <p className="flex items-start gap-1">
                                                 <span className="bg-green-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold flex-shrink-0">1</span>
-                                                <span>Abre Yape/Plin</span>
+                                                <span>Abre Yape</span>
                                             </p>
                                             <p className="flex items-start gap-1">
                                                 <span className="bg-green-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold flex-shrink-0">2</span>
