@@ -5,6 +5,18 @@ const pool = require('../config/database');
 
 class CronService {
     iniciar() {
+        // 🆕 CRÍTICO: Recalcular deudas - Día 1 a las 7:00 AM (ANTES del saludo)
+        cron.schedule('0 7 1 * *', async () => {
+            console.log('🔧 Recalculando todas las deudas del mes...');
+            await this.recalcularDeudas();
+        });
+
+        // Recordatorio de bienvenida al mes - Día 1 a las 9:00 AM
+        cron.schedule('0 9 1 * *', async () => {
+            console.log('👋 Enviando saludo de inicio de mes...');
+            await this.enviarSaludoMensual();
+        });
+
         // Recordatorio amigable - Día 28 a las 9:00 AM
         cron.schedule('0 9 28 * *', async () => {
             console.log('📅 Enviando recordatorio amigable (día 28)...');
@@ -17,30 +29,129 @@ class CronService {
             await this.enviarRecordatorioFinal();
         });
 
-        // Recordatorio de bienvenida al mes - Día 1 a las 9:00 AM
-        cron.schedule('0 9 1 * *', async () => {
-            console.log('👋 Enviando saludo de inicio de mes...');
-            await this.enviarSaludoMensual();
-        });
-
-        // 🔔 NUEVO: Verificar pagos vencidos - Diario a las 8:00 AM
+        // 🔔 Verificar pagos vencidos - Diario a las 8:00 AM
         cron.schedule('0 8 * * *', async () => {
             console.log('🔔 Verificando pagos vencidos para notificaciones...');
             await notificacionService.verificarPagosVencidos();
         });
 
-        // 🔔 NUEVO: Verificar pagos próximos a vencer - Diario a las 8:30 AM
+        // 🔔 Verificar pagos próximos a vencer - Diario a las 8:30 AM
         cron.schedule('30 8 * * *', async () => {
             console.log('🔔 Verificando pagos próximos para notificaciones...');
             await notificacionService.verificarPagosProximos();
         });
 
         console.log('✅ Tareas programadas iniciadas');
-        console.log('   - Día 1: Saludo mensual');
-        console.log('   - Día 28: Recordatorio amigable');
-        console.log('   - Día 30: Recordatorio final');
-        console.log('   - Diario 8:00 AM: Verificar pagos vencidos');
-        console.log('   - Diario 8:30 AM: Verificar pagos próximos');
+        console.log('   - Día 1 (7:00 AM): 🔧 Recalcular deudas automáticamente');
+        console.log('   - Día 1 (9:00 AM): 👋 Saludo mensual');
+        console.log('   - Día 28 (9:00 AM): 📅 Recordatorio amigable');
+        console.log('   - Día 30 (10:00 AM): ⚠️ Recordatorio final');
+        console.log('   - Diario (8:00 AM): 🔔 Verificar pagos vencidos');
+        console.log('   - Diario (8:30 AM): 🔔 Verificar pagos próximos');
+    }
+
+    // 🆕 MÉTODO PARA RECALCULAR DEUDAS AUTOMÁTICAMENTE
+    async recalcularDeudas() {
+        const client = await pool.connect();
+        
+        try {
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('🔧 INICIO: Recálculo automático de deudas');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+            
+            // Obtener todos los clientes activos
+            const clientesQuery = 'SELECT id, nombre, apellido, fecha_instalacion FROM clientes WHERE estado = $1';
+            const clientesResult = await client.query(clientesQuery, ['activo']);
+            
+            console.log(`📊 Total de clientes activos: ${clientesResult.rows.length}\n`);
+            
+            let clientesCorregidos = 0;
+            let clientesAdelantados = 0;
+            let clientesNuevosDeudores = 0;
+            
+            for (const cliente of clientesResult.rows) {
+                const { id, nombre, apellido, fecha_instalacion } = cliente;
+                
+                if (!fecha_instalacion) {
+                    console.log(`⚠️  Cliente ${nombre} ${apellido} (ID: ${id}) - Sin fecha de instalación, saltando...`);
+                    continue;
+                }
+                
+                // Calcular meses desde la instalación
+                const hoy = new Date();
+                const instalacion = new Date(fecha_instalacion);
+                
+                // Normalizar a primer día del mes
+                instalacion.setDate(1);
+                instalacion.setHours(0, 0, 0, 0);
+                hoy.setDate(1);
+                hoy.setHours(0, 0, 0, 0);
+                
+                // Calcular meses transcurridos (mínimo 1)
+                const mesesDesdeInstalacion = Math.max(1, 
+                    (hoy.getFullYear() - instalacion.getFullYear()) * 12 + 
+                    (hoy.getMonth() - instalacion.getMonth()) + 1
+                );
+                
+                // Obtener total de meses pagados
+                const pagosQuery = 'SELECT COALESCE(SUM(meses_pagados), 0) as total_pagado FROM pagos WHERE cliente_id = $1';
+                const pagosResult = await client.query(pagosQuery, [id]);
+                const totalMesesPagados = parseInt(pagosResult.rows[0].total_pagado) || 0;
+                
+                // Calcular deuda real (puede ser negativa = adelanto)
+                const deudaReal = mesesDesdeInstalacion - totalMesesPagados;
+                
+                // Obtener deuda actual en BD
+                const deudaActualQuery = 'SELECT meses_deuda FROM clientes WHERE id = $1';
+                const deudaActualResult = await client.query(deudaActualQuery, [id]);
+                const deudaActual = deudaActualResult.rows[0].meses_deuda;
+                
+                // Solo actualizar si hay diferencia
+                if (deudaActual !== deudaReal) {
+                    const updateQuery = `
+                        UPDATE clientes 
+                        SET meses_deuda = $1,
+                            estado_pago = CASE 
+                                WHEN $1 < 0 THEN 'adelantado'
+                                WHEN $1 = 0 THEN 'pagado'
+                                WHEN $1 <= 1 THEN 'al_dia'
+                                ELSE 'deudor'
+                            END,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = $2
+                    `;
+                    await client.query(updateQuery, [deudaReal, id]);
+                    
+                    if (deudaReal < 0) {
+                        console.log(`✅ ${nombre} ${apellido} - ADELANTADO (${Math.abs(deudaReal)} meses)`);
+                        clientesAdelantados++;
+                    } else if (deudaReal > deudaActual) {
+                        console.log(`📈 ${nombre} ${apellido} - Deuda: ${deudaActual} → ${deudaReal} meses`);
+                        if (deudaActual === 0 && deudaReal > 0) {
+                            clientesNuevosDeudores++;
+                        }
+                    } else {
+                        console.log(`📉 ${nombre} ${apellido} - Deuda: ${deudaActual} → ${deudaReal} meses`);
+                    }
+                    
+                    clientesCorregidos++;
+                }
+            }
+            
+            console.log('\n' + '━'.repeat(60));
+            console.log('✅ PROCESO COMPLETADO');
+            console.log('━'.repeat(60));
+            console.log(`📊 Clientes procesados: ${clientesResult.rows.length}`);
+            console.log(`🔧 Clientes actualizados: ${clientesCorregidos}`);
+            console.log(`🚀 Clientes adelantados: ${clientesAdelantados}`);
+            console.log(`⚠️  Nuevos deudores: ${clientesNuevosDeudores}`);
+            console.log('━'.repeat(60) + '\n');
+            
+        } catch (error) {
+            console.error('❌ Error durante el recálculo de deudas:', error);
+        } finally {
+            client.release();
+        }
     }
 
     obtenerMediosPago() {
