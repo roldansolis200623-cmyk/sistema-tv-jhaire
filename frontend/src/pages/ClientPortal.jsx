@@ -11,7 +11,7 @@ function ClientPortal() {
     const [error, setError] = useState('');
 
     // 🔥 CORREGIDO: URL sin /api al final
-    const API_URL = process.env.REACT_APP_API_URL || 'https://sistema-tv-jhaire-production-1248.up.railway.app';
+    const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://sistema-tv-jhaire-production-1248.up.railway.app';
 
     const consultarDeuda = async (e) => {
         e.preventDefault();
@@ -26,7 +26,7 @@ function ClientPortal() {
 
         try {
             // 🔥 URL correcta: API_URL + /api/public/consultar-deuda
-            const response = await axios.post(`${API_URL}/api/public/consultar-deuda`, {
+            const response = await axios.post(`${API_URL}/public/consultar-deuda`, {
                 dni: dni.trim()
             });
 
