@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import Landing from './pages/Landing'; // 🆕 LANDING PAGE
-import ClientPortal from './pages/ClientPortal'; // 🆕 PORTAL CLIENTE
+import AOS from 'aos';
+import 'aos/dist/aos.css';
+import Landing from './pages/Landing';
+import ClientPortal from './pages/ClientPortal';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
@@ -22,6 +24,16 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
+    // 🎨 Inicializar AOS para animaciones
+    useEffect(() => {
+        AOS.init({
+            duration: 800,
+            easing: 'ease-in-out',
+            once: true,
+            mirror: false
+        });
+    }, []);
+
     return (
         <ThemeProvider>
             <Router>
