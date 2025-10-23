@@ -10,7 +10,7 @@ function ClientPortal() {
     const [clientData, setClientData] = useState(null);
     const [error, setError] = useState('');
 
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const API_URL = process.env.REACT_APP_API_URL || 'https://sistema-tv-jhaire-production-1248.up.railway.app';
 
     const consultarDeuda = async (e) => {
         e.preventDefault();
