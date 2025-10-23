@@ -10,8 +10,8 @@ function ClientPortal() {
     const [clientData, setClientData] = useState(null);
     const [error, setError] = useState('');
 
-    // 🔥 CORREGIDO: URL sin /api al final
-    const API_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://sistema-tv-jhaire-production-1248.up.railway.app';
+    // 🔥 USA VITE_API_URL (ya incluye /api al final)
+    const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-tv-jhaire-production-1248.up.railway.app/api';
 
     const consultarDeuda = async (e) => {
         e.preventDefault();
@@ -25,7 +25,7 @@ function ClientPortal() {
         setError('');
 
         try {
-            // 🔥 URL correcta: API_URL + /api/public/consultar-deuda
+            // 🔥 API_URL ya tiene /api, solo agregamos /public/consultar-deuda
             const response = await axios.post(`${API_URL}/public/consultar-deuda`, {
                 dni: dni.trim()
             });
