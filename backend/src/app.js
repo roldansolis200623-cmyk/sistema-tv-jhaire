@@ -26,12 +26,13 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => {
     res.json({ 
         message: '🚀 API Sistema de Clientes', 
-        version: '1.0.0',
+        version: '2.0.0',  // 🆕 Actualizado a v2.0
         status: 'online' 
     });
 });
 
 // Importar rutas
+const publicRoutes = require('./routes/publicRoutes'); // 🆕 RUTAS PÚBLICAS
 const authRoutes = require('./routes/authRoutes');
 const clienteRoutes = require('./routes/clienteRoutes');
 const reporteRoutes = require('./routes/reporteRoutes');
@@ -43,6 +44,7 @@ const incidenciaRoutes = require('./routes/incidenciaRoutes');
 const notificacionRoutes = require('./routes/notificacionRoutes');
 
 // Usar rutas
+app.use('/api/public', publicRoutes); // 🆕 RUTAS PÚBLICAS (sin autenticación)
 app.use('/api/auth', authRoutes);
 app.use('/api/clientes', clienteRoutes);
 app.use('/api/pagos', pagoRoutes);

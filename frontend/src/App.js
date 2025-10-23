@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import Landing from './pages/Landing'; // 🆕 LANDING PAGE
+import ClientPortal from './pages/ClientPortal'; // 🆕 PORTAL CLIENTE
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
@@ -11,12 +13,12 @@ import ClienteForm from './pages/ClienteForm';
 import Pagos from './pages/Pagos';
 import HistorialPagos from './pages/HistorialPagos';
 import PerfilesInternet from './pages/PerfilesInternet';
-import Incidencias from './pages/Incidencias';  // 🆕 NUEVO
+import Incidencias from './pages/Incidencias';
 import CalendarioCobros from './components/Calendario/CalendarioCobros';
 
 const ProtectedRoute = ({ children }) => {
     const { isAuthenticated } = useAuth();
-    return isAuthenticated ? children : <Navigate to="/" />;
+    return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
 function App() {
@@ -25,7 +27,14 @@ function App() {
             <Router>
                 <AuthProvider>
                     <Routes>
-                        <Route path="/" element={<Login />} />
+                        {/* 🆕 RUTAS PÚBLICAS */}
+                        <Route path="/" element={<Landing />} />
+                        <Route path="/cliente/consulta" element={<ClientPortal />} />
+                        
+                        {/* RUTA DE LOGIN */}
+                        <Route path="/login" element={<Login />} />
+                        
+                        {/* RUTAS PROTEGIDAS (ADMIN) */}
                         <Route
                             path="/dashboard"
                             element={
@@ -58,7 +67,6 @@ function App() {
                                 </ProtectedRoute>
                             }
                         />
-                        {/* 🆕 RUTA DE INCIDENCIAS */}
                         <Route
                             path="/incidencias"
                             element={

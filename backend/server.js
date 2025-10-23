@@ -6,6 +6,7 @@ const PagoModel = require('./src/models/pagoModel');
 const PerfilInternetModel = require('./src/models/perfilInternetModel');
 const UsuarioModel = require('./src/models/usuarioModel');
 const NotificacionModel = require('./src/models/NotificacionModel');
+const LogConsultaModel = require('./src/models/logConsultaModel'); // 🆕
 const cronService = require('./src/services/cronService');
 
 const PORT = process.env.PORT || 5000;
@@ -23,6 +24,7 @@ const inicializarBD = async () => {
         await PerfilInternetModel.crearTabla();
         await UsuarioModel.crearTabla();
         await NotificacionModel.crearTabla();
+        await LogConsultaModel.crearTabla(); // 🆕
         console.log('✅ Tablas verificadas correctamente');
     } catch (error) {
         console.error('❌ Error en la base de datos:', error);
