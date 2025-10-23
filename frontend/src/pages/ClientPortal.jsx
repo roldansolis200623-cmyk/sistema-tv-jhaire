@@ -11,7 +11,8 @@ function ClientPortal() {
     const [error, setError] = useState('');
 
     // 🔥 USA VITE_API_URL (ya incluye /api al final)
-    const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-tv-jhaire-production-1248.up.railway.app/api';
+    // Línea 14 - HARDCODE directo
+const API_URL = 'https://sistema-tv-jhaire-production-1248.up.railway.app/api';
 
     const consultarDeuda = async (e) => {
         e.preventDefault();
