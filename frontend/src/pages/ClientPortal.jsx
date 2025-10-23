@@ -46,7 +46,7 @@ const API_URL = 'https://sistema-tv-jhaire-production-1248.up.railway.app/api';
 
     const confirmarPago = () => {
         const mensaje = `Hola, soy ${clientData.nombre} (DNI: ${dni}).\n\nAcabo de realizar el pago de S/ ${clientData.deuda_total.toFixed(2)}.\n\nAdjunto mi comprobante de pago.`;
-        const whatsappUrl = `https://wa.me/51991569419?text=${encodeURIComponent(mensaje)}`;
+        const whatsappUrl = `https://wa.me/51995151453?text=${encodeURIComponent(mensaje)}`;
         window.open(whatsappUrl, '_blank');
     };
 
