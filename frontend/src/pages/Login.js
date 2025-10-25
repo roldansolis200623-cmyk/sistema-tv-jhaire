@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Lock, Wifi, Radio, Smartphone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import '../Apple-White-Theme.css'; 
 
 const Login = () => {
     const [credentials, setCredentials] = useState({ usuario: '', password: '' });

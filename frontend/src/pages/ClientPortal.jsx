@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './ClientPortal.css';
+import '../Apple-White-Theme.css'; 
 
 function ClientPortal() {
     const navigate = useNavigate();

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Landing.css';
+import '../Apple-White-Theme.css'; 
 
 function Landing() {
     const navigate = useNavigate();
