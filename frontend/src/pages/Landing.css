@@ -1,4 +1,49 @@
 /* ==========================================
+   🚀 LANDING FUTURISTA - VERSION CORREGIDA
+   Sin errores de compilación
+   ========================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --black: #000000;
+  --white: #ffffff;
+  --gray-900: #0a0a0a;
+  --gray-800: #1a1a1a;
+  --gray-700: #2a2a2a;
+  --gray-600: #3a3a3a;
+  --gray-500: #6b7280;
+  --gray-400: #9ca3af;
+  --gray-300: #d1d5db;
+  --gray-200: #e5e7eb;
+  --gray-100: #f3f4f6;
+  --gray-50: #f9fafb;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --purple-500: #8b5cf6;
+  --purple-600: #7c3aed;
+  --pink-500: #ec4899;
+  --cyan-500: #06b6d4;
+  --green-500: #10b981;
+  --orange-500: #f97316;
+  --red-500: #ef4444;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #ffffff;
+  color: #1a1a1a;
+  overflow-x: hidden;
+}
+/* ==========================================
    🚀 FUTURISTIC LANDING 2050 - PARTE 1
    Diseño ultra moderno que causa IMPACTO
    ========================================== */
@@ -1675,11 +1720,11 @@ body {
 /* Scrollbar */
 ::-webkit-scrollbar-track {
   background: #f3f4f6 !important;
-}
 
 /* Logo en nav */
 .logo-image {
-  filter: none !impor
+  filter: none !important;
+}
 /* ==========================================
    🚀 MEJORAS ULTRA NIVEL 2050+
    Testimonios, FAQ, Social Links
