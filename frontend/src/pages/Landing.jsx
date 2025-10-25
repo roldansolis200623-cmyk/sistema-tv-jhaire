@@ -9,6 +9,7 @@ function Landing() {
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const [hoveredCard, setHoveredCard] = useState(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [activeTestimonial, setActiveTestimonial] = useState(0);
     const containerRef = useRef(null);
     const { scrollYProgress } = useScroll();
     
@@ -31,9 +32,15 @@ function Landing() {
         window.addEventListener('scroll', handleScroll);
         window.addEventListener('mousemove', handleMouseMove);
         
+        // Auto-rotate testimonials
+        const interval = setInterval(() => {
+            setActiveTestimonial((prev) => (prev + 1) % 3);
+        }, 5000);
+        
         return () => {
             window.removeEventListener('scroll', handleScroll);
             window.removeEventListener('mousemove', handleMouseMove);
+            clearInterval(interval);
         };
     }, []);
 
@@ -45,7 +52,8 @@ function Landing() {
             price: '45', 
             features: ['20 Mbps', 'WiFi básico', 'Soporte 24/7', '1 dispositivo'],
             color: 'from-blue-500 to-cyan-500',
-            icon: '🚀'
+            icon: '🚀',
+            recommended: false
         },
         { 
             name: 'Premium', 
@@ -54,7 +62,8 @@ function Landing() {
             features: ['50 Mbps', 'WiFi Mesh', 'Soporte prioritario', '5 dispositivos'], 
             popular: true,
             color: 'from-purple-500 to-pink-500',
-            icon: '⚡'
+            icon: '⚡',
+            recommended: true
         },
         { 
             name: 'Ultra', 
@@ -62,7 +71,8 @@ function Landing() {
             price: '120', 
             features: ['100 Mbps', 'WiFi Pro', 'Soporte VIP', 'Ilimitado'],
             color: 'from-orange-500 to-red-500',
-            icon: '🔥'
+            icon: '🔥',
+            recommended: false
         }
     ];
 
@@ -88,6 +98,51 @@ function Landing() {
             description: 'Cobertura total sin zonas muertas',
             features: ['Cobertura amplia', 'Roaming automático', 'App control'],
             gradient: 'from-pink-500 to-orange-500'
+        }
+    ];
+
+    // Testimonios
+    const testimonios = [
+        {
+            nombre: 'Carlos Rodríguez',
+            avatar: '👨‍💼',
+            comentario: 'El mejor servicio de internet que he tenido. Rápido, estable y con excelente atención al cliente.',
+            rating: 5,
+            plan: 'Premium'
+        },
+        {
+            nombre: 'María González',
+            avatar: '👩‍💻',
+            comentario: 'Perfecto para trabajar desde casa. No he tenido ningún corte en 6 meses.',
+            rating: 5,
+            plan: 'Ultra'
+        },
+        {
+            nombre: 'Jorge Mendoza',
+            avatar: '👨‍🎓',
+            comentario: 'Excelente relación calidad-precio. Lo recomiendo totalmente.',
+            rating: 5,
+            plan: 'Básico'
+        }
+    ];
+
+    // FAQ
+    const faqs = [
+        {
+            pregunta: '¿Cuál es el tiempo de instalación?',
+            respuesta: 'La instalación se realiza en 24-48 horas después de la contratación.'
+        },
+        {
+            pregunta: '¿Tienen contrato de permanencia?',
+            respuesta: 'No, todos nuestros planes son sin contrato. Puedes cancelar cuando quieras.'
+        },
+        {
+            pregunta: '¿Cómo puedo pagar mi servicio?',
+            respuesta: 'Aceptamos Yape, Plin, transferencias bancarias y efectivo en oficina.'
+        },
+        {
+            pregunta: '¿Qué incluye la instalación?',
+            respuesta: 'La instalación incluye router WiFi, cableado necesario y configuración completa.'
         }
     ];
 
@@ -129,9 +184,10 @@ function Landing() {
                         className="nav-logo"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                     >
                         <div className="logo-glow">
-                            <img src="/logo.png" alt="TV Jhaire" className="logo-image" />
+                            <span className="logo-icon">📡</span>
                         </div>
                         <span className="logo-text">TV Jhaire</span>
                     </motion.div>
@@ -382,6 +438,7 @@ function Landing() {
                                     className="service-btn"
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
+                                    onClick={() => window.open('https://wa.me/51995151453', '_blank')}
                                 >
                                     Más info
                                 </motion.button>
@@ -482,6 +539,86 @@ function Landing() {
                 </div>
             </section>
 
+            {/* TESTIMONIOS */}
+            <section className="testimonials-section">
+                <div className="section-container">
+                    <motion.div
+                        className="section-header"
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        viewport={{ once: true }}
+                    >
+                        <h2 className="section-title">Lo Que Dicen Nuestros Clientes</h2>
+                        <p className="section-subtitle">Testimonios reales de usuarios satisfechos</p>
+                    </motion.div>
+
+                    <div className="testimonials-slider">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeTestimonial}
+                                className="testimonial-card"
+                                initial={{ opacity: 0, x: 100 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -100 }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                <div className="testimonial-avatar">{testimonios[activeTestimonial].avatar}</div>
+                                <div className="testimonial-rating">
+                                    {[...Array(testimonios[activeTestimonial].rating)].map((_, i) => (
+                                        <span key={i}>⭐</span>
+                                    ))}
+                                </div>
+                                <p className="testimonial-comment">"{testimonios[activeTestimonial].comentario}"</p>
+                                <h4 className="testimonial-name">{testimonios[activeTestimonial].nombre}</h4>
+                                <p className="testimonial-plan">Plan {testimonios[activeTestimonial].plan}</p>
+                            </motion.div>
+                        </AnimatePresence>
+                        
+                        <div className="testimonial-dots">
+                            {testimonios.map((_, i) => (
+                                <button
+                                    key={i}
+                                    className={`dot ${i === activeTestimonial ? 'active' : ''}`}
+                                    onClick={() => setActiveTestimonial(i)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* FAQ */}
+            <section className="faq-section">
+                <div className="section-container">
+                    <motion.div
+                        className="section-header"
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        viewport={{ once: true }}
+                    >
+                        <h2 className="section-title">Preguntas Frecuentes</h2>
+                        <p className="section-subtitle">Todo lo que necesitas saber</p>
+                    </motion.div>
+
+                    <div className="faq-grid">
+                        {faqs.map((faq, index) => (
+                            <motion.div
+                                key={index}
+                                className="faq-item"
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ delay: index * 0.1 }}
+                                whileHover={{ scale: 1.02 }}
+                            >
+                                <h4 className="faq-question">❓ {faq.pregunta}</h4>
+                                <p className="faq-answer">{faq.respuesta}</p>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
             {/* CTA FUTURISTA */}
             <section className="cta-futuristic" id="contacto">
                 <motion.div
@@ -525,10 +662,17 @@ function Landing() {
                 <div className="footer-content">
                     <div className="footer-brand">
                         <div className="footer-logo">
-                            <img src="/logo.png" alt="TV Jhaire" className="logo-image" />
+                            <span className="footer-icon">📡</span>
                             <span>TV Jhaire</span>
                         </div>
                         <p>Conectando el futuro, hoy.</p>
+                        <div className="social-links">
+                            <a href="https://wa.me/51995151453" target="_blank" rel="noopener noreferrer">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                                </svg>
+                            </a>
+                        </div>
                     </div>
                     <div className="footer-links">
                         <div className="footer-column">
@@ -561,7 +705,7 @@ function Landing() {
 
 // COMPONENTE: MODAL DE PAGO FUTURISTA
 function PaymentModal({ isOpen, onClose }) {
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState(0);
 
     const paymentMethods = [
         {
