@@ -706,18 +706,26 @@ function Landing() {
 // COMPONENTE: MODAL DE PAGO FUTURISTA
 function PaymentModal({ isOpen, onClose }) {
     const [step, setStep] = useState(0);
+    const [copiedField, setCopiedField] = useState(null);
+
+    const copyToClipboard = (text, field) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedField(field);
+            setTimeout(() => setCopiedField(null), 2000);
+        });
+    };
 
     const paymentMethods = [
         {
             name: 'Yape',
             icon: '💳',
             number: '995 151 453',
-            holder: 'JHAIRE MAMANI',
+            holder: 'DAMIAN CAMPOS UGARTE',
             color: 'from-purple-500 to-pink-500',
             steps: [
                 'Abre tu app Yape',
                 'Envía el monto a 995 151 453',
-                'Nombre: JHAIRE MAMANI',
+                'Nombre: DAMIAN CAMPOS UGARTE',
                 'Toma captura del comprobante',
                 'Envíala por WhatsApp'
             ]
@@ -726,12 +734,12 @@ function PaymentModal({ isOpen, onClose }) {
             name: 'Plin',
             icon: '📱',
             number: '995 151 453',
-            holder: 'JHAIRE MAMANI',
+            holder: 'DAMIAN CAMPOS UGARTE',
             color: 'from-blue-500 to-cyan-500',
             steps: [
                 'Abre tu app Plin',
                 'Envía el monto a 995 151 453',
-                'Nombre: JHAIRE MAMANI',
+                'Nombre: DAMIAN CAMPOS UGARTE',
                 'Toma captura del comprobante',
                 'Envíala por WhatsApp'
             ]
@@ -741,13 +749,13 @@ function PaymentModal({ isOpen, onClose }) {
             icon: '🏦',
             bank: 'BCP',
             account: 'xxx-xxxxxxxx-x-xx',
-            holder: 'JHAIRE MAMANI',
+            holder: 'DAMIAN CAMPOS UGARTE',
             color: 'from-green-500 to-emerald-500',
             steps: [
                 'Ingresa a tu banca online',
                 'Transfiere al BCP',
                 'Cuenta: xxx-xxxxxxxx-x-xx',
-                'Titular: JHAIRE MAMANI',
+                'Titular: DAMIAN CAMPOS UGARTE',
                 'Envía comprobante por WhatsApp'
             ]
         },
@@ -784,6 +792,7 @@ function PaymentModal({ isOpen, onClose }) {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.8, y: 100 }}
                         transition={{ type: "spring", damping: 25 }}
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <div className="modal-header">
                             <h2>💳 Medios de Pago</h2>
@@ -831,6 +840,68 @@ function PaymentModal({ isOpen, onClose }) {
                                 exit={{ opacity: 0, height: 0 }}
                             >
                                 <h3>📋 Pasos para pagar con {paymentMethods[step - 1].name}</h3>
+                                
+                                {/* Información copiable */}
+                                {paymentMethods[step - 1].number && (
+                                    <div className="copyable-info">
+                                        <div style={{ flex: 1 }}>
+                                            <div className="copyable-label">Número</div>
+                                            <div className="copyable-text">{paymentMethods[step - 1].number}</div>
+                                        </div>
+                                        <motion.button
+                                            className={`copy-button ${copiedField === 'number' ? 'copied' : ''}`}
+                                            onClick={() => copyToClipboard(paymentMethods[step - 1].number, 'number')}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                        >
+                                            <span className="copy-icon">
+                                                {copiedField === 'number' ? '✓' : '📋'}
+                                            </span>
+                                            <span>{copiedField === 'number' ? 'Copiado' : 'Copiar'}</span>
+                                        </motion.button>
+                                    </div>
+                                )}
+
+                                {paymentMethods[step - 1].holder && (
+                                    <div className="copyable-info">
+                                        <div style={{ flex: 1 }}>
+                                            <div className="copyable-label">Titular</div>
+                                            <div className="copyable-text">{paymentMethods[step - 1].holder}</div>
+                                        </div>
+                                        <motion.button
+                                            className={`copy-button ${copiedField === 'holder' ? 'copied' : ''}`}
+                                            onClick={() => copyToClipboard(paymentMethods[step - 1].holder, 'holder')}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                        >
+                                            <span className="copy-icon">
+                                                {copiedField === 'holder' ? '✓' : '📋'}
+                                            </span>
+                                            <span>{copiedField === 'holder' ? 'Copiado' : 'Copiar'}</span>
+                                        </motion.button>
+                                    </div>
+                                )}
+
+                                {paymentMethods[step - 1].account && (
+                                    <div className="copyable-info">
+                                        <div style={{ flex: 1 }}>
+                                            <div className="copyable-label">Cuenta</div>
+                                            <div className="copyable-text">{paymentMethods[step - 1].account}</div>
+                                        </div>
+                                        <motion.button
+                                            className={`copy-button ${copiedField === 'account' ? 'copied' : ''}`}
+                                            onClick={() => copyToClipboard(paymentMethods[step - 1].account, 'account')}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                        >
+                                            <span className="copy-icon">
+                                                {copiedField === 'account' ? '✓' : '📋'}
+                                            </span>
+                                            <span>{copiedField === 'account' ? 'Copiado' : 'Copiar'}</span>
+                                        </motion.button>
+                                    </div>
+                                )}
+
                                 <ol className="steps-list">
                                     {paymentMethods[step - 1].steps.map((stepText, i) => (
                                         <motion.li

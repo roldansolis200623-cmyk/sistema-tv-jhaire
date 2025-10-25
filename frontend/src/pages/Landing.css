@@ -1,4 +1,4 @@
-* ==========================================
+/* ==========================================
    🚀 FUTURISTIC LANDING 2050 - PARTE 1
    Diseño ultra moderno que causa IMPACTO
    ========================================== */
@@ -1317,6 +1317,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 2rem;
+  overflow-y: auto;
 }
 
 .payment-modal {
@@ -1326,12 +1328,32 @@ body {
   padding: 3rem;
   max-width: 900px;
   width: 90%;
-  max-height: 85vh;
+  max-height: 90vh;
   overflow-y: auto;
   z-index: 9999;
   box-shadow: 0 50px 150px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(20px);
   position: relative;
+  margin: auto;
+}
+
+/* Custom scrollbar para el modal */
+.payment-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.payment-modal::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.payment-modal::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--blue-500), var(--purple-500));
+  border-radius: 10px;
+}
+
+.payment-modal::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--purple-500), var(--pink-500));
 }
 
 .modal-header {
@@ -2020,4 +2042,190 @@ button:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--purple-500);
   outline-offset: 4px;
+}
+
+/* ==========================================
+   🍎 BOTÓN COPIAR ESTILO APPLE
+   ========================================== */
+
+.copy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 12px;
+  color: var(--purple-500);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.copy-button:hover {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(139, 92, 246, 0.2);
+}
+
+.copy-button:active {
+  transform: translateY(0);
+}
+
+.copy-button.copied {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: var(--green-500);
+}
+
+.copy-button.copied::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(16, 185, 129, 0.2);
+  animation: copyPulse 0.6s ease-out;
+}
+
+@keyframes copyPulse {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+.copy-icon {
+  display: inline-block;
+  transition: transform 0.3s;
+}
+
+.copy-button:hover .copy-icon {
+  transform: scale(1.1);
+}
+
+.copy-button.copied .copy-icon {
+  animation: checkBounce 0.5s ease-out;
+}
+
+@keyframes checkBounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+}
+
+/* Información copiable */
+.copyable-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(139, 92, 246, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  margin: 1rem 0;
+}
+
+.copyable-text {
+  flex: 1;
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 1.0625rem;
+}
+
+.copyable-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+/* Mejoras al payment steps */
+.payment-steps {
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-top: 2rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.payment-steps::-webkit-scrollbar {
+  width: 6px;
+}
+
+.payment-steps::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.payment-steps::-webkit-scrollbar-thumb {
+  background: var(--purple-500);
+  border-radius: 10px;
+}
+
+/* Mejora visual de los pasos */
+.steps-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  color: #4b5563;
+  font-size: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.steps-list li:last-child {
+  border-bottom: none;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  background: linear-gradient(135deg, var(--blue-500), var(--purple-500));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--white);
+  flex-shrink: 0;
+  box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+  margin-top: 0.25rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 1rem;
+  }
+
+  .payment-modal {
+    padding: 2rem 1.5rem;
+    max-height: 95vh;
+  }
+
+  .copyable-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .copy-button {
+    width: 100%;
+    justify-content: center;
+  }
 }
