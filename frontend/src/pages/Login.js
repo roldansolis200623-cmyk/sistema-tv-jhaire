@@ -1,24 +1,35 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Lock, Wifi, Radio, Smartphone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import '../Apple-White-Theme.css'; 
+import './Login.css';
 
-const Login = () => {
-    const [credentials, setCredentials] = useState({ usuario: '', password: '' });
+function Login() {
+    const navigate = useNavigate();
+    const { login } = useAuth();
+    const [credentials, setCredentials] = useState({
+        username: '',
+        password: ''
+    });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { login } = useAuth();
-    const navigate = useNavigate();
+    const [showPassword, setShowPassword] = useState(false);
+
+    const handleChange = (e) => {
+        setCredentials({
+            ...credentials,
+            [e.target.name]: e.target.value
+        });
+        setError('');
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
         setLoading(true);
+        setError('');
 
         try {
-            await login(credentials.usuario, credentials.password);
+            await login(credentials.username, credentials.password);
             navigate('/dashboard');
         } catch (err) {
             setError('Usuario o contraseña incorrectos');
@@ -28,247 +39,210 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex relative overflow-hidden">
-            {/* Lado izquierdo - Video de fondo */}
-            <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 relative overflow-hidden">
-                {/* Video de fondo */}
-                <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover opacity-30"
-                >
-                    <source src="/video-telecomunicaciones.mp4" type="video/mp4" />
-                    {/* Si no tienes video, comenta estas líneas y usa la imagen de respaldo */}
-                </video>
-                
-                {/* Imagen de respaldo si no hay video */}
-                <div 
-                    className="absolute inset-0 bg-cover bg-center opacity-20"
-                    style={{ 
-                        backgroundImage: "url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200')"
+        <div className="modern-login">
+            {/* FLOATING SHAPES */}
+            <div className="login-shapes">
+                <motion.div 
+                    className="shape shape-1"
+                    animate={{
+                        scale: [1, 1.2, 1],
+                        rotate: [0, 90, 0],
+                    }}
+                    transition={{
+                        duration: 20,
+                        repeat: Infinity,
+                        ease: "linear"
                     }}
                 />
-
-                {/* Overlay oscuro */}
-                <div className="absolute inset-0 bg-black/40" />
-                
-                {/* Partículas flotantes */}
-                <div className="absolute inset-0">
-                    {[...Array(30)].map((_, i) => (
-                        <motion.div
-                            key={i}
-                            className="absolute w-2 h-2 bg-white rounded-full"
-                            style={{
-                                left: `${Math.random() * 100}%`,
-                                top: `${Math.random() * 100}%`,
-                                opacity: Math.random() * 0.5
-                            }}
-                            animate={{
-                                y: [0, -50, 0],
-                                x: [0, Math.random() * 30 - 15, 0],
-                                scale: [1, 1.5, 1],
-                                opacity: [0.2, 0.6, 0.2]
-                            }}
-                            transition={{
-                                duration: 4 + Math.random() * 3,
-                                repeat: Infinity,
-                                delay: Math.random() * 2
-                            }}
-                        />
-                    ))}
-                </div>
-
-                {/* Contenido */}
-                <div className="relative z-10 flex flex-col justify-center items-center text-white p-12 w-full">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8 }}
-                        className="text-center"
-                    >
-                        {/* LOGO DE LA EMPRESA */}
-                        <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", duration: 1 }}
-                            className="mb-8"
-                        >
-                            <img 
-                                src="/logo.png" 
-                                alt="Logo Empresa" 
-                                className="w-48 h-48 mx-auto object-contain drop-shadow-2xl"
-                            />
-                        </motion.div>
-
-                        <motion.h1 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.5 }}
-                            className="text-5xl font-bold mb-4 drop-shadow-lg"
-                        >
-                            Sistema de Gestión
-                        </motion.h1>
-                        <motion.p 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.7 }}
-                            className="text-2xl mb-8 text-white/90"
-                        >
-                            TV / Internet
-                        </motion.p>
-                        
-                        <div className="flex gap-6 justify-center mb-8">
-                            {[
-                                { icon: Radio, label: 'Cable TV' },
-                                { icon: Wifi, label: 'Internet' },
-                                { icon: Smartphone, label: 'Móvil' }
-                            ].map((item, index) => (
-                                <motion.div
-                                    key={index}
-                                    initial={{ opacity: 0, scale: 0 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: 0.9 + index * 0.2 }}
-                                    whileHover={{ scale: 1.1 }}
-                                    className="flex flex-col items-center gap-2"
-                                >
-                                    <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/30 flex items-center justify-center hover:bg-white/20 transition-all">
-                                        <item.icon size={32} />
-                                    </div>
-                                    <p className="text-sm text-white/80 font-semibold">{item.label}</p>
-                                </motion.div>
-                            ))}
-                        </div>
-
-                        <motion.p
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 1.5 }}
-                            className="text-white/70 text-lg"
-                        >
-                            Gestión completa de clientes, pagos y servicios
-                        </motion.p>
-                    </motion.div>
-                </div>
-
-                {/* Decoración inferior */}
-                <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400" />
+                <motion.div 
+                    className="shape shape-2"
+                    animate={{
+                        scale: [1, 1.3, 1],
+                        rotate: [0, -90, 0],
+                    }}
+                    transition={{
+                        duration: 25,
+                        repeat: Infinity,
+                        ease: "linear"
+                    }}
+                />
             </div>
 
-            {/* Lado derecho - Formulario */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-gray-50 to-gray-100">
+            {/* LOGIN CONTAINER */}
+            <div className="login-container">
                 <motion.div
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    className="login-card"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="w-full max-w-md"
                 >
-                    <div className="bg-white rounded-3xl shadow-2xl p-10 border border-gray-100">
-                        {/* Logo pequeño en formulario */}
-                        <motion.div
-                            animate={{ rotate: [0, 5, -5, 0] }}
-                            transition={{ duration: 3, repeat: Infinity }}
-                            className="w-20 h-20 mx-auto mb-8"
+                    {/* HEADER */}
+                    <div className="login-header">
+                        <motion.div 
+                            className="login-logo"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 200 }}
                         >
-                            <img 
-                                src="/logo.png" 
-                                alt="Logo" 
-                                className="w-full h-full object-contain"
-                            />
+                            <div className="logo-circle">
+                                <span className="logo-icon">📡</span>
+                            </div>
                         </motion.div>
-
-                        <h2 className="text-3xl font-bold text-center mb-2 text-gray-800">
-                            Iniciar Sesión
-                        </h2>
-                        <p className="text-center text-gray-500 mb-8">
-                            Accede a tu panel de administración
-                        </p>
-
-                        {error && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm"
-                            >
-                                {error}
-                            </motion.div>
-                        )}
-
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Usuario
-                                </label>
-                                <div className="relative">
-                                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                                    <input
-                                        type="text"
-                                        value={credentials.usuario}
-                                        onChange={(e) => setCredentials({ ...credentials, usuario: e.target.value })}
-                                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all"
-                                        placeholder="Ingrese su usuario"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                    Contraseña
-                                </label>
-                                <div className="relative">
-                                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                                    <input
-                                        type="password"
-                                        value={credentials.password}
-                                        onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-all"
-                                        placeholder="Ingrese su contraseña"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <motion.button
-                                type="submit"
-                                disabled={loading}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {loading ? (
-                                    <span className="flex items-center justify-center gap-2">
-                                        <motion.div
-                                            animate={{ rotate: 360 }}
-                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                            className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                                        />
-                                        Iniciando...
-                                    </span>
-                                ) : (
-                                    'Iniciar Sesión'
-                                )}
-                            </motion.button>
-                        </form>
-
-                        <div className="mt-8 pt-6 border-t border-gray-200">
-                            <p className="text-center text-sm text-gray-500">
-                                Usuario por defecto: <span className="font-semibold text-gray-700">admin</span>
-                            </p>
-                            <p className="text-center text-sm text-gray-500">
-                                Contraseña: <span className="font-semibold text-gray-700">admin123</span>
-                            </p>
-                        </div>
+                        <h1 className="login-title">TV Jhaire</h1>
+                        <p className="login-subtitle">Sistema de Gestión</p>
                     </div>
 
-                    <p className="text-center text-gray-400 text-sm mt-6">
-                        © 2025 Sistema de Gestión TV/Internet
-                    </p>
+                    {/* ERROR MESSAGE */}
+                    {error && (
+                        <motion.div
+                            className="error-message"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {error}
+                        </motion.div>
+                    )}
+
+                    {/* FORM */}
+                    <form onSubmit={handleSubmit} className="login-form">
+                        <div className="form-group">
+                            <label htmlFor="username" className="form-label">Usuario</label>
+                            <div className="input-wrapper">
+                                <svg className="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                <input
+                                    type="text"
+                                    id="username"
+                                    name="username"
+                                    value={credentials.username}
+                                    onChange={handleChange}
+                                    placeholder="Ingresa tu usuario"
+                                    className="form-input"
+                                    required
+                                    autoComplete="username"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="password" className="form-label">Contraseña</label>
+                            <div className="input-wrapper">
+                                <svg className="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    id="password"
+                                    name="password"
+                                    value={credentials.password}
+                                    onChange={handleChange}
+                                    placeholder="Ingresa tu contraseña"
+                                    className="form-input"
+                                    required
+                                    autoComplete="current-password"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="password-toggle"
+                                >
+                                    {showPassword ? (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                        </svg>
+                                    ) : (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        <motion.button
+                            type="submit"
+                            className="login-button"
+                            disabled={loading}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            {loading ? (
+                                <div className="loading-spinner">
+                                    <div className="spinner"></div>
+                                </div>
+                            ) : (
+                                <>
+                                    <span>Iniciar Sesión</span>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                    </svg>
+                                </>
+                            )}
+                        </motion.button>
+                    </form>
+
+                    {/* BACK LINK */}
+                    <motion.button
+                        onClick={() => navigate('/')}
+                        className="back-link"
+                        whileHover={{ x: -5 }}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Volver al inicio
+                    </motion.button>
+                </motion.div>
+
+                {/* FEATURES */}
+                <motion.div
+                    className="login-features"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                >
+                    <div className="feature-item">
+                        <div className="feature-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                        <div className="feature-text">
+                            <h4>Seguro</h4>
+                            <p>Protección de datos</p>
+                        </div>
+                    </div>
+                    <div className="feature-item">
+                        <div className="feature-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <div className="feature-text">
+                            <h4>Rápido</h4>
+                            <p>Acceso instantáneo</p>
+                        </div>
+                    </div>
+                    <div className="feature-item">
+                        <div className="feature-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div className="feature-text">
+                            <h4>24/7</h4>
+                            <p>Siempre disponible</p>
+                        </div>
+                    </div>
                 </motion.div>
             </div>
         </div>
     );
-};
+}
 
 export default Login;
