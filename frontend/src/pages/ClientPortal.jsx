@@ -70,7 +70,7 @@ function ClientPortal() {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
-                        <span className="logo-icon">📡</span>
+                        <img src="/logo.png" alt="TV Jhaire" className="logo-image" />
                         <span className="logo-text">TV Jhaire</span>
                     </motion.div>
                     <motion.button

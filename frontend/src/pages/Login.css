@@ -138,6 +138,14 @@ body {
   align-items: center;
   justify-content: center;
   box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+  padding: 1rem;
+}
+
+.logo-circle .logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
 }
 
 .logo-icon {

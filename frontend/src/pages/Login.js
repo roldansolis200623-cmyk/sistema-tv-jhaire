@@ -85,7 +85,7 @@ function Login() {
                             transition={{ type: "spring", stiffness: 200 }}
                         >
                             <div className="logo-circle">
-                                <span className="logo-icon">📡</span>
+                                <img src="/logo.png" alt="TV Jhaire" className="logo-image" />
                             </div>
                         </motion.div>
                         <h1 className="login-title">TV Jhaire</h1>

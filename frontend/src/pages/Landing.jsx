@@ -72,7 +72,7 @@ function Landing() {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                     >
-                        <span className="logo-icon">📡</span>
+                        <img src="/logo.png" alt="TV Jhaire" className="logo-image" />
                         <span className="logo-text">TV Jhaire</span>
                     </motion.div>
                     
@@ -393,7 +393,7 @@ function Landing() {
                     <div className="footer-content">
                         <div className="footer-brand">
                             <div className="footer-logo">
-                                <span className="logo-icon">📡</span>
+                                <img src="/logo.png" alt="TV Jhaire" className="logo-image" />
                                 <span className="logo-text">TV Jhaire</span>
                             </div>
                             <p className="footer-description">
