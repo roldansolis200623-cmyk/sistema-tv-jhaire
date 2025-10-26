@@ -17,6 +17,7 @@ import HistorialPagos from './pages/HistorialPagos';
 import PerfilesInternet from './pages/PerfilesInternet';
 import Incidencias from './pages/Incidencias';
 import CalendarioCobros from './components/Calendario/CalendarioCobros';
+import NotificacionesInteligentes from './pages/NotificacionesInteligentes'; // ✅ NUEVO
 
 const ProtectedRoute = ({ children }) => {
     const { isAuthenticated } = useAuth();
@@ -92,6 +93,15 @@ function App() {
                             element={
                                 <ProtectedRoute>
                                     <CalendarioCobros />
+                                </ProtectedRoute>
+                            }
+                        />
+                        {/* ✅ NUEVA RUTA: Notificaciones Inteligentes */}
+                        <Route
+                            path="/notificaciones-inteligentes"
+                            element={
+                                <ProtectedRoute>
+                                    <NotificacionesInteligentes />
                                 </ProtectedRoute>
                             }
                         />
