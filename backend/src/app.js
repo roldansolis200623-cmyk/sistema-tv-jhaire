@@ -34,7 +34,7 @@ app.use(compression({
     level: 6 // Balance entre velocidad y compresión
 }));
 
-// ✅ MEJORADO: CORS configurado desde variable de entorno
+// ✅ MEJORADO: CORS configurado con soporte para Vercel
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
     ? process.env.ALLOWED_ORIGINS.split(',')
     : [
@@ -42,23 +42,36 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
         'http://localhost:3001', 
         'http://localhost:5173',
         'https://www.tvjhair.com',
-        'https://tvjhair.com',
-        'https://sistema-tv-jhaire.vercel.app',
-        'https://sistema-tv-jhaire-tlmy.vercel.app',
-        'https://sistema-tv-jhaire-tlmy-git-main-gabriels-projects-697bb8c5.vercel.app'
+        'https://tvjhair.com'
     ];
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Permitir requests sin origin (apps móviles, Postman, etc)
-        if (!origin) return callback(null, true);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🔧 Origen recibido:', origin);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            console.warn(`⚠️  Origin no permitido: ${origin}`);
-            callback(new Error('No permitido por CORS'));
+        // ✅ Permitir requests sin origin (apps móviles, Postman, curl, etc)
+        if (!origin) {
+            console.log('✅ Request sin origin - Permitido');
+            return callback(null, true);
         }
+        
+        // ✅ Verificar si está en la lista de origins permitidos
+        if (allowedOrigins.includes(origin)) {
+            console.log('✅ Origin en lista permitida:', origin);
+            return callback(null, true);
+        }
+        
+        // ✅ Permitir TODOS los subdominios de Vercel dinámicamente
+        if (origin.includes('.vercel.app')) {
+            console.log('✅ Origin de Vercel permitido:', origin);
+            return callback(null, true);
+        }
+        
+        // ❌ Bloquear cualquier otro origin
+        console.warn('⚠️ Origin NO permitido:', origin);
+        callback(new Error('No permitido por CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
