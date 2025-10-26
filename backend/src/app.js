@@ -124,6 +124,7 @@ const whatsappRoutes = require('./routes/whatsappRoutes');
 const perfilInternetRoutes = require('./routes/perfilInternetRoutes');
 const incidenciaRoutes = require('./routes/incidenciaRoutes');
 const notificacionRoutes = require('./routes/notificacionRoutes');
+const notificacionInteligenteRoutes = require('./routes/notificacionInteligenteRoutes'); // ✅ NUEVO
 
 // Usar rutas
 app.use('/api/public', publicRoutes);
@@ -134,6 +135,7 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/perfiles-internet', perfilInternetRoutes);
 app.use('/api/incidencias', incidenciaRoutes);
 app.use('/api/notificaciones', notificacionRoutes);
+app.use('/api/notificaciones-inteligentes', notificacionInteligenteRoutes); // ✅ NUEVO
 
 // Rutas de reportes - Orden importante
 app.use('/api/reportes', reportePdfRoutes);

@@ -29,6 +29,8 @@ const UsuarioModel = require('./src/models/usuarioModel');
 const NotificacionModel = require('./src/models/NotificacionModel');
 const LogConsultaModel = require('./src/models/logConsultaModel');
 const cronService = require('./src/services/cronService');
+const notificacionInteligenteService = require('./src/services/notificacionInteligenteService'); // ✅ NUEVO
+const cron = require('node-cron'); // ✅ NUEVO - Para tarea programada de notificaciones
 
 const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0';
@@ -53,16 +55,62 @@ const inicializarBD = async () => {
     }
 };
 
+// ✅ NUEVO: Inicializar sistema de notificaciones inteligentes
+const inicializarNotificacionesInteligentes = async () => {
+    try {
+        console.log('🔔 Generando notificaciones inteligentes iniciales...');
+        const resultado = await notificacionInteligenteService.generarNotificaciones();
+        console.log(`✅ ${resultado.cantidad_generadas} notificaciones generadas`);
+    } catch (error) {
+        console.error('⚠️ Error generando notificaciones iniciales:', error.message);
+        // No detener el servidor si falla esto
+    }
+};
+
 const iniciarServidor = async () => {
     try {
         await inicializarBD();
+        
+        // ✅ NUEVO: Generar notificaciones al iniciar
+        await inicializarNotificacionesInteligentes();
+        
+        // Iniciar tareas programadas existentes
         cronService.iniciar();
+        
+        // ✅ NUEVO: Tarea programada para notificaciones inteligentes (cada hora)
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('✅ Tareas programadas de notificaciones inteligentes:');
+        
+        cron.schedule('0 * * * *', async () => {
+            try {
+                console.log('🔔 Generando notificaciones inteligentes...');
+                const resultado = await notificacionInteligenteService.generarNotificaciones();
+                console.log(`✅ ${resultado.cantidad_generadas} notificaciones generadas`);
+            } catch (error) {
+                console.error('❌ Error en tarea programada de notificaciones:', error.message);
+            }
+        });
+        console.log(' - Cada hora (minuto 0): 🔔 Generar notificaciones inteligentes');
+        
+        // ✅ NUEVO: Limpieza semanal de notificaciones archivadas (domingos a las 3 AM)
+        cron.schedule('0 3 * * 0', async () => {
+            try {
+                console.log('🧹 Limpiando notificaciones archivadas antiguas...');
+                const resultado = await notificacionInteligenteService.limpiarNotificacionesAntiguas(30);
+                console.log(`✅ ${resultado.cantidad_eliminadas} notificaciones eliminadas`);
+            } catch (error) {
+                console.error('❌ Error limpiando notificaciones:', error.message);
+            }
+        });
+        console.log(' - Domingos (3:00 AM): 🧹 Limpiar notificaciones archivadas');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
         app.listen(PORT, HOST, () => {
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             console.log('🚀 Servidor corriendo en puerto', PORT);
             console.log('📊 Base de datos:', process.env.PGDATABASE || process.env.DB_NAME);
             console.log('🔐 JWT configurado correctamente');
+            console.log('🔔 Sistema de notificaciones inteligentes: ACTIVO');
             console.log('⏰ Iniciado:', new Date().toLocaleString());
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         });
