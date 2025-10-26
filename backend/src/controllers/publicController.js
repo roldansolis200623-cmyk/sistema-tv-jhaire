@@ -12,11 +12,30 @@ exports.consultarDeuda = async (req, res) => {
             });
         }
 
+        // ✅ CORREGIDO: Validar formato de DNI o teléfono ANTES de consultar
+        const dniLimpio = dni.toString().trim();
+        
+        // Validar que sea solo números
+        if (!/^\d+$/.test(dniLimpio)) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'DNI o teléfono inválido. Solo se permiten números.' 
+            });
+        }
+
+        // Validar longitud: DNI (8 dígitos) o teléfono (9 dígitos)
+        if (dniLimpio.length !== 8 && dniLimpio.length !== 9) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'DNI debe tener 8 dígitos o teléfono 9 dígitos.' 
+            });
+        }
+
         // Log de consulta (auditoría)
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.get('User-Agent') || 'Unknown';
 
-        // Buscar cliente por DNI o teléfono
+        // ✅ SEGURO: Query con parámetros y validación previa
         const query = `
             SELECT 
                 id,
@@ -31,20 +50,21 @@ exports.consultarDeuda = async (req, res) => {
             FROM clientes 
             WHERE (dni = $1 OR telefono = $1) 
             AND estado IN ('activo', 'suspendido')
+            LIMIT 1
         `;
         
-        const result = await pool.query(query, [dni.trim()]);
+        const result = await pool.query(query, [dniLimpio]);
         
         if (result.rows.length === 0) {
             // Log de consulta fallida
             await pool.query(
                 'INSERT INTO logs_consultas (dni, ip_address, user_agent, resultado) VALUES ($1, $2, $3, $4)',
-                [dni, ipAddress, userAgent, 'no_encontrado']
+                [dniLimpio, ipAddress, userAgent, 'no_encontrado']
             );
             
             return res.status(404).json({
                 success: false,
-                error: 'Cliente no encontrado'
+                error: 'Cliente no encontrado. Verifica el DNI o teléfono ingresado.'
             });
         }
 
@@ -66,7 +86,7 @@ exports.consultarDeuda = async (req, res) => {
         // Log de consulta exitosa
         await pool.query(
             'INSERT INTO logs_consultas (dni, ip_address, user_agent, resultado) VALUES ($1, $2, $3, $4)',
-            [dni, ipAddress, userAgent, 'encontrado']
+            [dniLimpio, ipAddress, userAgent, 'encontrado']
         );
 
         res.json({
@@ -87,7 +107,7 @@ exports.consultarDeuda = async (req, res) => {
         console.error('Error en consultarDeuda:', error);
         res.status(500).json({
             success: false,
-            error: 'Error al consultar deuda'
+            error: 'Error al consultar deuda. Intenta nuevamente.'
         });
     }
 };

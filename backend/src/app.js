@@ -1,38 +1,107 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
 
 const app = express();
 
-// Middlewares
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:3001', 
-    'http://localhost:5173',
-    'https://www.tvjhair.com',
-    'https://tvjhair.com',
-    'https://sistema-tv-jhaire.vercel.app',
-    'https://sistema-tv-jhaire-tlmy.vercel.app',
-    'https://sistema-tv-jhaire-tlmy-git-main-gabriels-projects-697bb8c5.vercel.app'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+// ✅ NUEVO: Helmet para headers de seguridad
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+        }
+    },
+    hsts: {
+        maxAge: 31536000, // 1 año
+        includeSubDomains: true,
+        preload: true
+    }
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// ✅ NUEVO: Compresión gzip para respuestas
+app.use(compression({
+    filter: (req, res) => {
+        if (req.headers['x-no-compression']) {
+            return false;
+        }
+        return compression.filter(req, res);
+    },
+    level: 6 // Balance entre velocidad y compresión
+}));
+
+// ✅ MEJORADO: CORS configurado desde variable de entorno
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : [
+        'http://localhost:3000',
+        'http://localhost:3001', 
+        'http://localhost:5173',
+        'https://www.tvjhair.com',
+        'https://tvjhair.com',
+        'https://sistema-tv-jhaire.vercel.app',
+        'https://sistema-tv-jhaire-tlmy.vercel.app',
+        'https://sistema-tv-jhaire-tlmy-git-main-gabriels-projects-697bb8c5.vercel.app'
+    ];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        // Permitir requests sin origin (apps móviles, Postman, etc)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.warn(`⚠️  Origin no permitido: ${origin}`);
+            callback(new Error('No permitido por CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400 // 24 horas
+}));
+
+app.use(express.json({ limit: '10mb' })); // ✅ Límite de tamaño
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ✅ NUEVO: Logging de requests (solo en desarrollo)
+if (process.env.NODE_ENV !== 'production') {
+    app.use((req, res, next) => {
+        console.log(`${req.method} ${req.path}`);
+        next();
+    });
+}
 
 // Ruta de prueba
 app.get('/', (req, res) => {
     res.json({ 
         message: '🚀 API Sistema de Clientes', 
-        version: '2.0.0',  // 🆕 Actualizado a v2.0
-        status: 'online' 
+        version: '2.0.0',
+        status: 'online',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// ✅ NUEVO: Health check endpoint
+app.get('/health', async (req, res) => {
+    const { healthCheck } = require('./config/database');
+    const dbHealth = await healthCheck();
+    
+    res.json({
+        status: dbHealth.healthy ? 'ok' : 'error',
+        database: dbHealth,
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
     });
 });
 
 // Importar rutas
-const publicRoutes = require('./routes/publicRoutes'); // 🆕 RUTAS PÚBLICAS
+const publicRoutes = require('./routes/publicRoutes');
 const authRoutes = require('./routes/authRoutes');
 const clienteRoutes = require('./routes/clienteRoutes');
 const reporteRoutes = require('./routes/reporteRoutes');
@@ -44,7 +113,7 @@ const incidenciaRoutes = require('./routes/incidenciaRoutes');
 const notificacionRoutes = require('./routes/notificacionRoutes');
 
 // Usar rutas
-app.use('/api/public', publicRoutes); // 🆕 RUTAS PÚBLICAS (sin autenticación)
+app.use('/api/public', publicRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/clientes', clienteRoutes);
 app.use('/api/pagos', pagoRoutes);
@@ -53,17 +122,46 @@ app.use('/api/perfiles-internet', perfilInternetRoutes);
 app.use('/api/incidencias', incidenciaRoutes);
 app.use('/api/notificaciones', notificacionRoutes);
 
-// ✅ RUTAS DE REPORTES - ORDEN IMPORTANTE
-app.use('/api/reportes', reportePdfRoutes);  // PRIMERO los PDFs (tiene /pdf/ en sus rutas)
-app.use('/api/reportes', reporteRoutes);     // DESPUÉS el Excel
+// Rutas de reportes - Orden importante
+app.use('/api/reportes', reportePdfRoutes);
+app.use('/api/reportes', reporteRoutes);
 
-// Manejo de errores
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ 
-        error: 'Error interno del servidor',
-        message: err.message 
+// ✅ NUEVO: Manejo de rutas 404
+app.use((req, res) => {
+    res.status(404).json({
+        error: 'Ruta no encontrada',
+        path: req.path,
+        method: req.method,
+        timestamp: new Date().toISOString()
     });
+});
+
+// ✅ MEJORADO: Manejo de errores
+app.use((err, req, res, next) => {
+    // Log del error completo en servidor
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ ERROR:', err.message);
+    console.error('📍 Ruta:', req.path);
+    console.error('🔧 Método:', req.method);
+    
+    if (process.env.NODE_ENV !== 'production') {
+        console.error('📚 Stack:', err.stack);
+    }
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    // Respuesta al cliente (sin exponer detalles en producción)
+    const errorResponse = {
+        error: err.message || 'Error interno del servidor',
+        timestamp: new Date().toISOString()
+    };
+    
+    // Solo incluir stack en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+        errorResponse.stack = err.stack;
+        errorResponse.path = req.path;
+    }
+    
+    res.status(err.status || 500).json(errorResponse);
 });
 
 module.exports = app;

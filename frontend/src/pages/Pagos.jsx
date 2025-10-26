@@ -38,45 +38,63 @@ function Pagos() {
     const [ultimoPago, setUltimoPago] = useState(null);
     const [clienteUltimoPago, setClienteUltimoPago] = useState(null);
 
+    // ✅ CORREGIDO: useEffect con cleanup para prevenir memory leaks
     useEffect(() => {
+        let mounted = true;
+        
+        const cargarDatos = async () => {
+            try {
+                setLoading(true);
+                const [pagosData, clientesData, estadisticasData] = await Promise.all([
+                    pagoService.getAll(),
+                    clienteService.getAll(),
+                    pagoService.getEstadisticas()
+                ]);
+                
+                if (!mounted) return;
+                
+                const clienteMap = {};
+                clientesData.forEach(c => {
+                    clienteMap[c.id] = c;
+                });
+                
+                const pagosConClientes = pagosData.map(pago => ({
+                    ...pago,
+                    cliente: pago.cliente || clienteMap[pago.cliente_id] || {
+                        nombre: 'Desconocido',
+                        apellido: '',
+                        dni: 'N/A'
+                    }
+                }));
+                
+                if (mounted) {
+                    setPagos(pagosConClientes);
+                    setClientes(clientesData);
+                    setEstadisticas(estadisticasData);
+                }
+            } catch (error) {
+                if (mounted) {
+                    console.error('Error cargando datos:', error);
+                }
+            } finally {
+                if (mounted) {
+                    setLoading(false);
+                }
+            }
+        };
+        
         cargarDatos();
+        
         if (location.state?.clienteId) {
             setClientePreseleccionado(location.state.clienteId);
             setShowForm(true);
         }
+        
+        // ✅ Cleanup function
+        return () => {
+            mounted = false;
+        };
     }, [location]);
-
-    const cargarDatos = async () => {
-        try {
-            const [pagosData, clientesData, estadisticasData] = await Promise.all([
-                pagoService.getAll(),
-                clienteService.getAll(),
-                pagoService.getEstadisticas()
-            ]);
-            
-            const clienteMap = {};
-            clientesData.forEach(c => {
-                clienteMap[c.id] = c;
-            });
-            
-            const pagosConClientes = pagosData.map(pago => ({
-                ...pago,
-                cliente: pago.cliente || clienteMap[pago.cliente_id] || {
-                    nombre: 'Desconocido',
-                    apellido: '',
-                    dni: 'N/A'
-                }
-            }));
-            
-            setPagos(pagosConClientes);
-            setClientes(clientesData);
-            setEstadisticas(estadisticasData);
-        } catch (error) {
-            console.error('Error cargando datos:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleNuevoPago = () => {
         setClientePreseleccionado(null);

@@ -1,13 +1,17 @@
 import axios from 'axios';
 
+// ✅ URL de producción (sin cambios)
 const API_URL = 'https://sistema-tv-jhaire-production-1248.up.railway.app/api';
+
+console.log('🔗 API URL configurada:', API_URL);
 
 // Crear instancia de axios
 const api = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json'
-    }
+    },
+    timeout: 30000 // ✅ Timeout de 30 segundos
 });
 
 // Interceptor para agregar el token en cada request
@@ -24,20 +28,48 @@ api.interceptors.request.use(
     }
 );
 
+// ✅ NUEVO: Interceptor para manejar errores de respuesta
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // Token expirado o inválido
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+        }
+        
+        if (error.response?.status === 429) {
+            // Rate limit excedido
+            console.warn('⚠️ Demasiadas solicitudes. Espera un momento.');
+        }
+        
+        return Promise.reject(error);
+    }
+);
+
 // Servicios de autenticación
 export const authService = {
     login: async (username, password) => {
-        const response = await api.post('/auth/login', { username, password });
-        if (response.data.token) {
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
+        try {
+            const response = await api.post('/auth/login', { username, password });
+            if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+            }
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error;
         }
-        return response.data;
     },
 
     register: async (userData) => {
-        const response = await api.post('/auth/register', userData);
-        return response.data;
+        try {
+            const response = await api.post('/auth/register', userData);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error;
+        }
     },
 
     logout: () => {
@@ -46,8 +78,26 @@ export const authService = {
     },
 
     getCurrentUser: () => {
-        const userStr = localStorage.getItem('user');
-        return userStr ? JSON.parse(userStr) : null;
+        try {
+            const userStr = localStorage.getItem('user');
+            return userStr ? JSON.parse(userStr) : null;
+        } catch (error) {
+            console.error('Error parseando usuario:', error);
+            return null;
+        }
+    },
+
+    // ✅ NUEVO: Cambiar contraseña
+    changePassword: async (currentPassword, newPassword) => {
+        try {
+            const response = await api.post('/auth/change-password', {
+                currentPassword,
+                newPassword
+            });
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || error;
+        }
     }
 };
 
@@ -77,7 +127,7 @@ export const clienteService = {
         const response = await api.delete(`/clientes/${id}`);
         return response.data;
     }
-}; // <-- ESTA LLAVE FALTABA
+};
 
 // Servicios de pagos
 export const pagoService = {

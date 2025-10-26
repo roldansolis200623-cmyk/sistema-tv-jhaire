@@ -18,20 +18,35 @@ const Dashboard = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
 
+    // ✅ CORREGIDO: useEffect con cleanup para prevenir memory leaks
     useEffect(() => {
+        let mounted = true;
+        
+        const loadClientes = async () => {
+            try {
+                setLoading(true);
+                const data = await clienteService.getAll();
+                if (mounted) {
+                    setClientes(data);
+                }
+            } catch (error) {
+                if (mounted) {
+                    console.error('Error cargando clientes:', error);
+                }
+            } finally {
+                if (mounted) {
+                    setLoading(false);
+                }
+            }
+        };
+        
         loadClientes();
+        
+        // ✅ Cleanup function
+        return () => {
+            mounted = false;
+        };
     }, []);
-
-    const loadClientes = async () => {
-        try {
-            const data = await clienteService.getAll();
-            setClientes(data);
-        } catch (error) {
-            console.error('Error cargando clientes:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleLogout = () => {
         logout();

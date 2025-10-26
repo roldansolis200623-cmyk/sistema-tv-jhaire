@@ -26,20 +26,36 @@ const PerfilesInternet = () => {
         descripcion: ''
     });
 
+    // ✅ CORREGIDO: useEffect con cleanup para prevenir memory leaks
     useEffect(() => {
+        let mounted = true;
+        
+        const cargarPerfiles = async () => {
+            try {
+                setLoading(true);
+                const data = await perfilInternetService.getAll();
+                
+                if (mounted) {
+                    setPerfiles(data);
+                }
+            } catch (error) {
+                if (mounted) {
+                    console.error('Error cargando perfiles:', error);
+                }
+            } finally {
+                if (mounted) {
+                    setLoading(false);
+                }
+            }
+        };
+        
         cargarPerfiles();
+        
+        // ✅ Cleanup function
+        return () => {
+            mounted = false;
+        };
     }, []);
-
-    const cargarPerfiles = async () => {
-        try {
-            const data = await perfilInternetService.getAll();
-            setPerfiles(data);
-        } catch (error) {
-            console.error('Error cargando perfiles:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
