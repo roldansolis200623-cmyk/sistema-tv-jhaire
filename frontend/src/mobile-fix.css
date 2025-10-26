@@ -1,0 +1,83 @@
+/* ==========================================
+   🍎 GLOBAL MOBILE FIX - Anti Blur
+   ========================================== */
+
+/* Aplicar a TODOS los elementos interactivos */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Permitir selección de texto en inputs */
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Optimización de touch */
+button,
+a,
+[role="button"],
+[onclick] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+/* Eliminar delay de 300ms en móvil */
+a,
+button,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+/* Mejorar el blur en móvil */
+.apple-sidebar,
+.apple-header,
+.apple-card,
+.apple-stat-card,
+.apple-table-container,
+.apple-search-input,
+.apple-mobile-card {
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* Prevenir zoom en inputs en iOS */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Scroll suave en móvil */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Optimizar animaciones en móvil */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
