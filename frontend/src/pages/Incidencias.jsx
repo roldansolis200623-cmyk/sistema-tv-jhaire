@@ -23,10 +23,6 @@ const Incidencias = () => {
     const [busqueda, setBusqueda] = useState('');
     const [selectedIncidencia, setSelectedIncidencia] = useState(null);
 
-    useEffect(() => {
-        cargarIncidencias();
-    }, []);
-
     const cargarIncidencias = async () => {
         try {
             setLoading(true);
@@ -37,35 +33,12 @@ const Incidencias = () => {
         } finally {
             setLoading(false);
         }
-    };// ✅ CORREGIDO: useEffect con cleanup para prevenir memory leaks
+    };
+
     useEffect(() => {
         let mounted = true;
-        
-        const cargarIncidencias = async () => {
-            try {
-                setLoading(true);
-                const data = await incidenciaService.getAll();
-                
-                if (mounted) {
-                    setIncidencias(data);
-                }
-            } catch (error) {
-                if (mounted) {
-                    console.error('Error:', error);
-                }
-            } finally {
-                if (mounted) {
-                    setLoading(false);
-                }
-            }
-        };
-        
-        cargarIncidencias();
-        
-        // ✅ Cleanup function
-        return () => {
-            mounted = false;
-        };
+        if (mounted) cargarIncidencias();
+        return () => { mounted = false; };
     }, []);
 
     const handleLogout = () => {

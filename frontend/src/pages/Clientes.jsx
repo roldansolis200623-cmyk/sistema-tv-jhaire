@@ -40,31 +40,27 @@ const Clientes = () => {
         soloDeudores: false
     });
 
-    // ✅ CORREGIDO: useEffect con cleanup para prevenir memory leaks
+    // ✅ CORREGIDO: Definir función ANTES del useEffect
+    const loadClientes = async () => {
+        try {
+            setLoading(true);
+            const data = await clienteService.getAll();
+            setClientes(data);
+        } catch (error) {
+            console.error('Error cargando clientes:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // useEffect ahora puede llamar a loadClientes porque ya está definida
     useEffect(() => {
         let mounted = true;
         
-        const loadClientes = async () => {
-            try {
-                setLoading(true);
-                const data = await clienteService.getAll();
-                if (mounted) {
-                    setClientes(data);
-                }
-            } catch (error) {
-                if (mounted) {
-                    console.error('Error cargando clientes:', error);
-                }
-            } finally {
-                if (mounted) {
-                    setLoading(false);
-                }
-            }
-        };
+        if (mounted) {
+            loadClientes();
+        }
         
-        loadClientes();
-        
-        // ✅ Cleanup function para prevenir memory leaks
         return () => {
             mounted = false;
         };

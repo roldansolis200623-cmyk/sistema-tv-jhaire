@@ -22,39 +22,26 @@ const HistorialPagos = () => {
     const [showReciboModal, setShowReciboModal] = useState(false);
     const [pagoSeleccionado, setPagoSeleccionado] = useState(null);
 
-    // ✅ CORREGIDO: useEffect con cleanup para prevenir memory leaks
+    const cargarDatos = async () => {
+        try {
+            setLoading(true);
+            const [clienteData, pagosData] = await Promise.all([
+                clienteService.getById(clienteId),
+                pagoService.getPorCliente(clienteId)
+            ]);
+            setCliente(clienteData);
+            setPagos(pagosData);
+        } catch (error) {
+            console.error('Error cargando datos:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         let mounted = true;
-        
-        const cargarDatos = async () => {
-            try {
-                setLoading(true);
-                const [clienteData, pagosData] = await Promise.all([
-                    clienteService.getById(clienteId),
-                    pagoService.getPorCliente(clienteId)
-                ]);
-                
-                if (mounted) {
-                    setCliente(clienteData);
-                    setPagos(pagosData);
-                }
-            } catch (error) {
-                if (mounted) {
-                    console.error('Error cargando datos:', error);
-                }
-            } finally {
-                if (mounted) {
-                    setLoading(false);
-                }
-            }
-        };
-        
-        cargarDatos();
-        
-        // ✅ Cleanup function
-        return () => {
-            mounted = false;
-        };
+        if (mounted) cargarDatos();
+        return () => { mounted = false; };
     }, [clienteId]);
 
     // 🆕 Función para abrir modal de recibo
