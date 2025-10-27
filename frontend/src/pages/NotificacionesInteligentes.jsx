@@ -150,6 +150,18 @@ const NotificacionesInteligentes = () => {
         navigate('/');
     };
 
+    // 🔧 HELPER: Formatear monto de forma segura
+    const formatearMonto = (valor) => {
+        const numero = Number(valor);
+        return isNaN(numero) ? '0.00' : numero.toFixed(2);
+    };
+
+    // 🔧 HELPER: Formatear número entero de forma segura
+    const formatearNumero = (valor, defecto = 0) => {
+        const numero = Number(valor);
+        return isNaN(numero) ? defecto : numero;
+    };
+
     if (loading && !resumen) {
         return (
             <div className="notificaciones-loading">
@@ -188,7 +200,7 @@ const NotificacionesInteligentes = () => {
                     >
                         <div className="card-icono">📊</div>
                         <div className="card-info">
-                            <h3>{resumen.total || 0}</h3>
+                            <h3>{formatearNumero(resumen.total, 0)}</h3>
                             <p>Total</p>
                         </div>
                     </div>
@@ -199,7 +211,7 @@ const NotificacionesInteligentes = () => {
                     >
                         <div className="card-icono">🔴</div>
                         <div className="card-info">
-                            <h3>{resumen.criticas || 0}</h3>
+                            <h3>{formatearNumero(resumen.criticas, 0)}</h3>
                             <p>Críticas</p>
                         </div>
                     </div>
@@ -210,7 +222,7 @@ const NotificacionesInteligentes = () => {
                     >
                         <div className="card-icono">⚠️</div>
                         <div className="card-info">
-                            <h3>{resumen.atencion || 0}</h3>
+                            <h3>{formatearNumero(resumen.atencion, 0)}</h3>
                             <p>Atención</p>
                         </div>
                     </div>
@@ -221,7 +233,7 @@ const NotificacionesInteligentes = () => {
                     >
                         <div className="card-icono">📅</div>
                         <div className="card-info">
-                            <h3>{resumen.recordatorios || 0}</h3>
+                            <h3>{formatearNumero(resumen.recordatorios, 0)}</h3>
                             <p>Recordatorios</p>
                         </div>
                     </div>
@@ -229,7 +241,7 @@ const NotificacionesInteligentes = () => {
                     <div className="resumen-card no-leidas">
                         <div className="card-icono">📬</div>
                         <div className="card-info">
-                            <h3>{resumen.no_leidas || 0}</h3>
+                            <h3>{formatearNumero(resumen.no_leidas, 0)}</h3>
                             <p>Sin Leer</p>
                         </div>
                     </div>
@@ -277,9 +289,15 @@ const NotificacionesInteligentes = () => {
                                 <p className="notif-mensaje">{notif.mensaje}</p>
 
                                 <div className="notif-detalles">
-                                    <span className="detalle-item">💰 Deuda: S/ {notif.deuda_actual?.toFixed(2) || '0.00'}</span>
-                                    <span className="detalle-item">📅 {notif.dias_sin_pagar} días sin pagar</span>
-                                    <span className="detalle-item">⏱️ Patrón: cada {notif.patron_detectado} días</span>
+                                    <span className="detalle-item">
+                                        💰 Deuda: S/ {formatearMonto(notif.deuda_actual)}
+                                    </span>
+                                    <span className="detalle-item">
+                                        📅 {formatearNumero(notif.dias_sin_pagar, 0)} días sin pagar
+                                    </span>
+                                    <span className="detalle-item">
+                                        ⏱️ Patrón: cada {formatearNumero(notif.patron_detectado, 30)} días
+                                    </span>
                                 </div>
                             </div>
 
