@@ -6,12 +6,71 @@ class NotificacionInteligenteService {
      */
     async generarNotificaciones() {
         try {
-            const result = await pool.query('SELECT generar_notificaciones_inteligentes() as cantidad');
-            return {
-                success: true,
-                cantidad_generadas: result.rows[0].cantidad,
-                timestamp: new Date()
-            };
+            // Intentar usar la función de PostgreSQL si existe
+            try {
+                const result = await pool.query('SELECT generar_notificaciones_inteligentes() as cantidad');
+                return {
+                    success: true,
+                    cantidad_generadas: result.rows[0].cantidad,
+                    timestamp: new Date()
+                };
+            } catch (pgError) {
+                // Si la función no existe, generar notificaciones manualmente
+                console.log('Función PG no encontrada, generando notificaciones manualmente...');
+
+                // Limpiar notificaciones antiguas
+                await pool.query('DELETE FROM notificaciones_inteligentes WHERE fecha_creacion < NOW() - INTERVAL \'30 days\'');
+
+                // Insertar nuevas notificaciones para clientes con deuda
+                const insertQuery = `
+                    INSERT INTO notificaciones_inteligentes
+                    (cliente_id, tipo, prioridad, titulo, mensaje, accion_sugerida, deuda_actual, dias_sin_pagar, patron_detectado)
+                    SELECT
+                        c.id,
+                        CASE
+                            WHEN c.deuda_actual > 200 THEN 'CRITICO'
+                            WHEN c.deuda_actual > 100 THEN 'ATENCION'
+                            ELSE 'RECORDATORIO'
+                        END as tipo,
+                        CASE
+                            WHEN c.deuda_actual > 200 THEN 'alta'
+                            WHEN c.deuda_actual > 100 THEN 'media'
+                            ELSE 'baja'
+                        END as prioridad,
+                        CASE
+                            WHEN c.deuda_actual > 200 THEN 'Deuda Crítica - Acción Urgente'
+                            WHEN c.deuda_actual > 100 THEN 'Atención Requerida'
+                            ELSE 'Recordatorio de Pago'
+                        END as titulo,
+                        'Cliente con deuda pendiente de S/ ' || ROUND(c.deuda_actual::numeric, 2) as mensaje,
+                        CASE
+                            WHEN c.deuda_actual > 200 THEN 'visitar'
+                            ELSE 'whatsapp'
+                        END as accion_sugerida,
+                        c.deuda_actual,
+                        COALESCE(EXTRACT(DAY FROM (NOW() - (SELECT MAX(fecha_pago) FROM pagos WHERE cliente_id = c.id)))::integer, 30) as dias_sin_pagar,
+                        30 as patron_detectado
+                    FROM clientes c
+                    WHERE c.deuda_actual > 0
+                    ON CONFLICT (cliente_id) DO UPDATE SET
+                        tipo = EXCLUDED.tipo,
+                        prioridad = EXCLUDED.prioridad,
+                        titulo = EXCLUDED.titulo,
+                        mensaje = EXCLUDED.mensaje,
+                        deuda_actual = EXCLUDED.deuda_actual,
+                        dias_sin_pagar = EXCLUDED.dias_sin_pagar,
+                        fecha_actualizacion = NOW()
+                `;
+
+                const result = await pool.query(insertQuery);
+
+                return {
+                    success: true,
+                    cantidad_generadas: result.rowCount || 0,
+                    timestamp: new Date(),
+                    metodo: 'manual'
+                };
+            }
         } catch (error) {
             console.error('Error generando notificaciones:', error);
             throw error;

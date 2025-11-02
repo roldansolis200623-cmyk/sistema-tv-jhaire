@@ -366,15 +366,13 @@ const NotificacionesInteligentes = () => {
                 >
                     {seleccionados.length === notificaciones.length && notificaciones.length > 0 ? '⬜ Deseleccionar todos' : '☑️ Seleccionar todos'}
                 </button>
-                {seleccionados.length > 0 && (
-                    <button
-                        onClick={enviarWhatsAppMasivo}
-                        className="btn-accion btn-whatsapp-masivo"
-                        disabled={enviandoWhatsApp}
-                    >
-                        {enviandoWhatsApp ? '⏳ Enviando...' : `📱 Enviar WhatsApp (${seleccionados.length})`}
-                    </button>
-                )}
+                <button
+                    onClick={enviarWhatsAppMasivo}
+                    className="btn-accion btn-whatsapp-masivo"
+                    disabled={enviandoWhatsApp || seleccionados.length === 0}
+                >
+                    {enviandoWhatsApp ? '⏳ Enviando...' : `📱 Enviar WhatsApp (${seleccionados.length})`}
+                </button>
             </div>
 
             {/* Lista de notificaciones */}
