@@ -37,6 +37,7 @@ const NotificacionesInteligentes = () => {
 
     useEffect(() => {
         cargarDatos();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filtros]);
 
     // Aplicar filtro por vista
@@ -111,11 +112,20 @@ const NotificacionesInteligentes = () => {
 
     // Ir a cliente
     const irACliente = (clienteId) => {
-        navigate(`/clientes`); // O la ruta que uses para ver clientes
+        // Por ahora solo navega a la lista de clientes
+        // TODO: Implementar navegación a cliente específico cuando la ruta esté disponible
+        // navigate(`/clientes/${clienteId}`);
+        navigate(`/clientes`);
     };
 
     // Enviar WhatsApp
     const enviarWhatsApp = (notificacion) => {
+        // Validar que el teléfono exista
+        if (!notificacion.telefono) {
+            alert('Este cliente no tiene número de teléfono registrado');
+            return;
+        }
+
         const mensaje = encodeURIComponent(
             `Hola ${notificacion.nombre}, te contactamos de TV Jhaire. ${notificacion.mensaje}`
         );
@@ -253,7 +263,7 @@ const NotificacionesInteligentes = () => {
                 <button onClick={marcarTodasLeidas} className="btn-accion">
                     ✓ Marcar todas como leídas
                 </button>
-                <button onClick={() => setFiltros({ ...filtros, leida: !filtros.leida })} className="btn-accion">
+                <button onClick={() => setFiltros({ ...filtros, leida: filtros.leida === false ? null : false })} className="btn-accion">
                     {filtros.leida === false ? '📭 Mostrar todas' : '📬 Solo no leídas'}
                 </button>
             </div>
