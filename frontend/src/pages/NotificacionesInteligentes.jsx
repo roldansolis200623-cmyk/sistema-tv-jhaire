@@ -17,6 +17,8 @@ const NotificacionesInteligentes = () => {
         leida: null
     });
     const [vistaActual, setVistaActual] = useState('todas'); // 'todas', 'criticas', 'atencion', 'recordatorios'
+    const [seleccionados, setSeleccionados] = useState([]); // IDs de notificaciones seleccionadas
+    const [enviandoWhatsApp, setEnviandoWhatsApp] = useState(false);
 
     // Cargar datos
     const cargarDatos = async () => {
@@ -103,10 +105,13 @@ const NotificacionesInteligentes = () => {
             setLoading(true);
             await notificacionService.generar();
             await cargarDatos();
-            alert('Notificaciones actualizadas');
+            alert('Notificaciones actualizadas correctamente');
         } catch (error) {
-            console.error('Error:', error);
-            alert('Error al actualizar notificaciones');
+            console.error('Error refrescando notificaciones:', error);
+            const errorMsg = error.response?.data?.message || 'Error al actualizar. Verifica tu conexión.';
+            alert(errorMsg);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -132,6 +137,94 @@ const NotificacionesInteligentes = () => {
         const url = `https://wa.me/51${notificacion.telefono}?text=${mensaje}`;
         window.open(url, '_blank');
         marcarLeida(notificacion.id);
+    };
+
+    // Toggle selección individual
+    const toggleSeleccion = (notifId) => {
+        setSeleccionados(prev => {
+            if (prev.includes(notifId)) {
+                return prev.filter(id => id !== notifId);
+            } else {
+                return [...prev, notifId];
+            }
+        });
+    };
+
+    // Seleccionar/Deseleccionar todos
+    const toggleSeleccionTodos = () => {
+        if (seleccionados.length === notificaciones.length) {
+            setSeleccionados([]);
+        } else {
+            setSeleccionados(notificaciones.map(n => n.id));
+        }
+    };
+
+    // Enviar WhatsApp masivo
+    const enviarWhatsAppMasivo = async () => {
+        const notificacionesAEnviar = notificaciones.filter(n => seleccionados.includes(n.id));
+
+        if (notificacionesAEnviar.length === 0) {
+            alert('Selecciona al menos un cliente para enviar WhatsApp');
+            return;
+        }
+
+        const sinTelefono = notificacionesAEnviar.filter(n => !n.telefono);
+        if (sinTelefono.length > 0) {
+            const confirmar = window.confirm(
+                `${sinTelefono.length} cliente(s) no tienen teléfono. ¿Continuar con los demás?`
+            );
+            if (!confirmar) return;
+        }
+
+        const clientesValidos = notificacionesAEnviar.filter(n => n.telefono);
+
+        if (clientesValidos.length === 0) {
+            alert('Ningún cliente seleccionado tiene teléfono');
+            return;
+        }
+
+        const confirmar = window.confirm(
+            `¿Enviar WhatsApp a ${clientesValidos.length} cliente(s)?\n\nSe abrirán las conversaciones una por una.`
+        );
+
+        if (!confirmar) return;
+
+        setEnviandoWhatsApp(true);
+
+        // Enviar uno por uno con delay
+        for (let i = 0; i < clientesValidos.length; i++) {
+            const notif = clientesValidos[i];
+
+            const mensaje = encodeURIComponent(
+                `Hola ${notif.nombre}, somos de TV Jhaire.\n\n` +
+                `Te recordamos que tienes una deuda pendiente de S/ ${formatearMonto(notif.deuda_actual)}.\n` +
+                `Días sin pagar: ${formatearNumero(notif.dias_sin_pagar, 0)} días.\n\n` +
+                `Por favor, regulariza tu pago para evitar el corte del servicio.\n\n` +
+                `¡Gracias! 🙏`
+            );
+
+            const url = `https://wa.me/51${notif.telefono}?text=${mensaje}`;
+
+            // Abrir WhatsApp
+            window.open(url, '_blank');
+
+            // Marcar como leída
+            try {
+                await marcarLeida(notif.id);
+            } catch (error) {
+                console.error('Error marcando como leída:', error);
+            }
+
+            // Delay de 2 segundos entre cada mensaje (excepto el último)
+            if (i < clientesValidos.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+
+        setEnviandoWhatsApp(false);
+        setSeleccionados([]);
+        alert(`WhatsApp enviado a ${clientesValidos.length} cliente(s)`);
+        cargarDatos();
     };
 
     // Obtener icono según tipo
@@ -266,6 +359,22 @@ const NotificacionesInteligentes = () => {
                 <button onClick={() => setFiltros({ ...filtros, leida: filtros.leida === false ? null : false })} className="btn-accion">
                     {filtros.leida === false ? '📭 Mostrar todas' : '📬 Solo no leídas'}
                 </button>
+                <button
+                    onClick={toggleSeleccionTodos}
+                    className="btn-accion"
+                    disabled={notificaciones.length === 0}
+                >
+                    {seleccionados.length === notificaciones.length && notificaciones.length > 0 ? '⬜ Deseleccionar todos' : '☑️ Seleccionar todos'}
+                </button>
+                {seleccionados.length > 0 && (
+                    <button
+                        onClick={enviarWhatsAppMasivo}
+                        className="btn-accion btn-whatsapp-masivo"
+                        disabled={enviandoWhatsApp}
+                    >
+                        {enviandoWhatsApp ? '⏳ Enviando...' : `📱 Enviar WhatsApp (${seleccionados.length})`}
+                    </button>
+                )}
             </div>
 
             {/* Lista de notificaciones */}
@@ -279,12 +388,18 @@ const NotificacionesInteligentes = () => {
                     </div>
                 ) : (
                     notificaciones.map(notif => (
-                        <div 
-                            key={notif.id} 
-                            className={`notif-card ${obtenerColorPrioridad(notif.prioridad)} ${notif.leida ? 'leida' : 'no-leida'}`}
+                        <div
+                            key={notif.id}
+                            className={`notif-card ${obtenerColorPrioridad(notif.prioridad)} ${notif.leida ? 'leida' : 'no-leida'} ${seleccionados.includes(notif.id) ? 'seleccionada' : ''}`}
                         >
                             <div className="notif-header-card">
                                 <div className="notif-tipo">
+                                    <input
+                                        type="checkbox"
+                                        checked={seleccionados.includes(notif.id)}
+                                        onChange={() => toggleSeleccion(notif.id)}
+                                        className="notif-checkbox"
+                                    />
                                     <span className="tipo-icono">{obtenerIcono(notif.tipo)}</span>
                                     <span className="tipo-texto">{notif.tipo}</span>
                                 </div>

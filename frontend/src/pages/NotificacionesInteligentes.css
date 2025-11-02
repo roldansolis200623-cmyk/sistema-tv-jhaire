@@ -1420,6 +1420,93 @@ body {
 }
 
 /* ============================================
+   ESTILOS PARA WHATSAPP MASIVO Y CHECKBOXES
+   ============================================ */
+
+/* Checkbox en notificaciones */
+.notif-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    margin-right: 10px;
+    accent-color: var(--primary-start);
+    transition: transform 0.2s ease;
+}
+
+.notif-checkbox:hover {
+    transform: scale(1.1);
+}
+
+.notif-checkbox:checked {
+    transform: scale(1.15);
+}
+
+/* Card seleccionada */
+.notif-card.seleccionada {
+    border: 2px solid var(--primary-start) !important;
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3) !important;
+    transform: scale(1.02);
+}
+
+/* Botón WhatsApp masivo */
+.btn-whatsapp-masivo {
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%) !important;
+    color: white !important;
+    font-weight: bold;
+    animation: pulse-whatsapp 2s ease-in-out infinite;
+}
+
+.btn-whatsapp-masivo:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(37, 211, 102, 0.4);
+}
+
+.btn-whatsapp-masivo:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    animation: none;
+}
+
+@keyframes pulse-whatsapp {
+    0%, 100% {
+        box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+    }
+    50% {
+        box-shadow: 0 8px 25px rgba(37, 211, 102, 0.5);
+    }
+}
+
+/* Ajuste para notif-tipo con checkbox */
+.notif-tipo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Responsive para móvil */
+@media (max-width: 768px) {
+    .notif-checkbox {
+        width: 18px;
+        height: 18px;
+    }
+
+    .btn-whatsapp-masivo {
+        font-size: 14px;
+        padding: 10px 15px;
+    }
+
+    .notif-acciones {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .btn-accion {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 140px;
+    }
+}
+
+/* ============================================
    FIN DEL CSS - 1500+ LÍNEAS 🔥
    Diseño inspirado en tvjhair.com
    ============================================ */
