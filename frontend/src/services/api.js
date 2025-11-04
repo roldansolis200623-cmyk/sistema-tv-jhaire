@@ -1,20 +1,29 @@
+// ============================================
+// frontend/src/services/api.js
+// CONFIGURACIÓN COMPLETA DE AXIOS + SERVICIOS
+// ============================================
+
 import axios from 'axios';
 
-// ✅ URL de producción (sin cambios)
+// ✅ URL de producción (Railway)
 const API_URL = 'https://sistema-tv-jhaire-production-1248.up.railway.app/api';
 
 console.log('🔗 API URL configurada:', API_URL);
 
-// Crear instancia de axios
+// ============================================
+// CREAR INSTANCIA DE AXIOS
+// ============================================
 const api = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json'
     },
-    timeout: 30000 // ✅ Timeout de 30 segundos
+    timeout: 30000 // 30 segundos
 });
 
-// Interceptor para agregar el token en cada request
+// ============================================
+// INTERCEPTOR - AGREGAR TOKEN AUTOMÁTICO
+// ============================================
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -28,7 +37,9 @@ api.interceptors.request.use(
     }
 );
 
-// ✅ NUEVO: Interceptor para manejar errores de respuesta
+// ============================================
+// INTERCEPTOR - MANEJAR ERRORES DE RESPUESTA
+// ============================================
 api.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -48,7 +59,9 @@ api.interceptors.response.use(
     }
 );
 
-// Servicios de autenticación
+// ============================================
+// SERVICIOS DE AUTENTICACIÓN
+// ============================================
 export const authService = {
     login: async (username, password) => {
         try {
@@ -87,7 +100,6 @@ export const authService = {
         }
     },
 
-    // ✅ NUEVO: Cambiar contraseña
     changePassword: async (currentPassword, newPassword) => {
         try {
             const response = await api.post('/auth/change-password', {
@@ -101,7 +113,9 @@ export const authService = {
     }
 };
 
-// Servicios de clientes
+// ============================================
+// SERVICIOS DE CLIENTES
+// ============================================
 export const clienteService = {
     getAll: async () => {
         const response = await api.get('/clientes');
@@ -129,7 +143,9 @@ export const clienteService = {
     }
 };
 
-// Servicios de pagos
+// ============================================
+// SERVICIOS DE PAGOS
+// ============================================
 export const pagoService = {
     getAll: async () => {
         const response = await api.get('/pagos');
@@ -164,4 +180,196 @@ export const pagoService = {
     }
 };
 
+// ============================================
+// ✅ NUEVO: SERVICIOS DE DASHBOARD
+// ============================================
+export const dashboardService = {
+    getKPIs: async () => {
+        try {
+            const response = await api.get('/dashboard/kpis');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo KPIs:', error);
+            throw error;
+        }
+    },
+
+    getIngresosMensuales: async () => {
+        try {
+            const response = await api.get('/dashboard/ingresos-mensuales');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo ingresos mensuales:', error);
+            throw error;
+        }
+    },
+
+    getMejoresPagadores: async () => {
+        try {
+            const response = await api.get('/dashboard/mejores-pagadores');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo mejores pagadores:', error);
+            throw error;
+        }
+    },
+
+    getPeoresPagadores: async () => {
+        try {
+            const response = await api.get('/dashboard/peores-pagadores');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo peores pagadores:', error);
+            throw error;
+        }
+    },
+
+    getDistribucionEstado: async () => {
+        try {
+            const response = await api.get('/dashboard/distribucion-estado');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo distribución por estado:', error);
+            throw error;
+        }
+    },
+
+    getDistribucionGeografica: async () => {
+        try {
+            const response = await api.get('/dashboard/distribucion-geografica');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo distribución geográfica:', error);
+            throw error;
+        }
+    },
+
+    getTasaMorosidad: async () => {
+        try {
+            const response = await api.get('/dashboard/tasa-morosidad');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo tasa morosidad:', error);
+            throw error;
+        }
+    },
+
+    getNuevosClientes: async () => {
+        try {
+            const response = await api.get('/dashboard/nuevos-clientes');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo nuevos clientes:', error);
+            throw error;
+        }
+    },
+
+    getProyeccionIngresos: async () => {
+        try {
+            const response = await api.get('/dashboard/proyeccion-ingresos');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo proyección:', error);
+            throw error;
+        }
+    },
+
+    getClientesRiesgo: async () => {
+        try {
+            const response = await api.get('/dashboard/clientes-riesgo');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo clientes en riesgo:', error);
+            throw error;
+        }
+    },
+
+    getResumenCompleto: async () => {
+        try {
+            const response = await api.get('/dashboard/resumen');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo resumen completo:', error);
+            throw error;
+        }
+    }
+};
+
+// ============================================
+// ✅ NUEVO: SERVICIOS DE CRON
+// ============================================
+export const cronService = {
+    ejecutarTarea: async (tarea) => {
+        try {
+            const response = await api.post(`/cron/ejecutar/${tarea}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error ejecutando tarea ${tarea}:`, error);
+            throw error;
+        }
+    },
+
+    getLogs: async (tarea = null, limit = 50) => {
+        try {
+            const params = {};
+            if (tarea) params.tarea = tarea;
+            if (limit) params.limit = limit;
+            
+            const response = await api.get('/cron/logs', { params });
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo logs:', error);
+            throw error;
+        }
+    },
+
+    getEstadisticas: async () => {
+        try {
+            const response = await api.get('/cron/estadisticas');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo estadísticas:', error);
+            throw error;
+        }
+    },
+
+    limpiarLogs: async (dias = 90) => {
+        try {
+            const response = await api.delete('/cron/logs/limpiar', {
+                params: { dias }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error limpiando logs:', error);
+            throw error;
+        }
+    },
+
+    getConfiguracion: async () => {
+        try {
+            const response = await api.get('/cron/configuracion');
+            return response.data;
+        } catch (error) {
+            console.error('Error obteniendo configuración:', error);
+            throw error;
+        }
+    },
+
+    actualizarConfiguracion: async (clave, valor) => {
+        try {
+            const response = await api.put('/cron/configuracion', {
+                clave,
+                valor
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error actualizando configuración:', error);
+            throw error;
+        }
+    }
+};
+
+// ============================================
+// EXPORTAR API COMO DEFAULT
+// ============================================
 export default api;

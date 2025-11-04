@@ -1,3 +1,8 @@
+// ============================================
+// backend/src/app.js
+// CONFIGURACIÓN EXPRESS CON TODAS LAS RUTAS
+// ============================================
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -5,7 +10,9 @@ const compression = require('compression');
 
 const app = express();
 
-// ✅ NUEVO: Helmet para headers de seguridad
+// ============================================
+// SEGURIDAD - HELMET
+// ============================================
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -17,13 +24,15 @@ app.use(helmet({
         }
     },
     hsts: {
-        maxAge: 31536000, // 1 año
+        maxAge: 31536000,
         includeSubDomains: true,
         preload: true
     }
 }));
 
-// ✅ NUEVO: Compresión gzip para respuestas
+// ============================================
+// COMPRESIÓN GZIP
+// ============================================
 app.use(compression({
     filter: (req, res) => {
         if (req.headers['x-no-compression']) {
@@ -31,10 +40,12 @@ app.use(compression({
         }
         return compression.filter(req, res);
     },
-    level: 6 // Balance entre velocidad y compresión
+    level: 6
 }));
 
-// ✅ MEJORADO: CORS configurado con soporte para Vercel
+// ============================================
+// CORS CONFIGURADO
+// ============================================
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
     ? process.env.ALLOWED_ORIGINS.split(',')
     : [
@@ -47,42 +58,39 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 app.use(cors({
     origin: (origin, callback) => {
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('🔧 Origen recibido:', origin);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        
-        // ✅ Permitir requests sin origin (apps móviles, Postman, curl, etc)
+        // Permitir requests sin origin (apps móviles, Postman, etc)
         if (!origin) {
-            console.log('✅ Request sin origin - Permitido');
             return callback(null, true);
         }
         
-        // ✅ Verificar si está en la lista de origins permitidos
+        // Verificar si está en la lista permitida
         if (allowedOrigins.includes(origin)) {
-            console.log('✅ Origin en lista permitida:', origin);
             return callback(null, true);
         }
         
-        // ✅ Permitir TODOS los subdominios de Vercel dinámicamente
+        // Permitir subdominios de Vercel
         if (origin.includes('.vercel.app')) {
-            console.log('✅ Origin de Vercel permitido:', origin);
             return callback(null, true);
         }
         
-        // ❌ Bloquear cualquier otro origin
-        console.warn('⚠️ Origin NO permitido:', origin);
+        // Bloquear otros origins
         callback(new Error('No permitido por CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    maxAge: 86400 // 24 horas
+    maxAge: 86400
 }));
 
-app.use(express.json({ limit: '10mb' })); // ✅ Límite de tamaño
+// ============================================
+// BODY PARSERS
+// ============================================
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ✅ NUEVO: Logging de requests (solo en desarrollo)
+// ============================================
+// LOGGING EN DESARROLLO
+// ============================================
 if (process.env.NODE_ENV !== 'production') {
     app.use((req, res, next) => {
         console.log(`${req.method} ${req.path}`);
@@ -90,17 +98,28 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
-// Ruta de prueba
+// ============================================
+// RUTAS DE PRUEBA
+// ============================================
 app.get('/', (req, res) => {
     res.json({ 
-        message: '🚀 API Sistema de Clientes', 
+        message: '🚀 API Sistema TV Jhaire', 
         version: '2.0.0',
         status: 'online',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        features: [
+            'Dashboard Ejecutivo',
+            'CRON Jobs Automatizados',
+            'Portal Público Cliente',
+            'Notificaciones Inteligentes',
+            'Sistema Completo de Gestión'
+        ]
     });
 });
 
-// ✅ NUEVO: Health check endpoint
+// ============================================
+// HEALTH CHECK
+// ============================================
 app.get('/health', async (req, res) => {
     const { healthCheck } = require('./config/database');
     const dbHealth = await healthCheck();
@@ -109,11 +128,14 @@ app.get('/health', async (req, res) => {
         status: dbHealth.healthy ? 'ok' : 'error',
         database: dbHealth,
         uptime: process.uptime(),
+        memory: process.memoryUsage(),
         timestamp: new Date().toISOString()
     });
 });
 
-// Importar rutas
+// ============================================
+// IMPORTAR RUTAS EXISTENTES
+// ============================================
 const publicRoutes = require('./routes/publicRoutes');
 const authRoutes = require('./routes/authRoutes');
 const clienteRoutes = require('./routes/clienteRoutes');
@@ -124,9 +146,17 @@ const whatsappRoutes = require('./routes/whatsappRoutes');
 const perfilInternetRoutes = require('./routes/perfilInternetRoutes');
 const incidenciaRoutes = require('./routes/incidenciaRoutes');
 const notificacionRoutes = require('./routes/notificacionRoutes');
-const notificacionInteligenteRoutes = require('./routes/notificacionInteligenteRoutes'); // ✅ NUEVO
+const notificacionInteligenteRoutes = require('./routes/notificacionInteligenteRoutes');
 
-// Usar rutas
+// ============================================
+// ✅ NUEVO: IMPORTAR RUTAS DASHBOARD Y CRON
+// ============================================
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const cronRoutes = require('./routes/cronRoutes');
+
+// ============================================
+// USAR RUTAS EXISTENTES
+// ============================================
 app.use('/api/public', publicRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/clientes', clienteRoutes);
@@ -135,25 +165,43 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/perfiles-internet', perfilInternetRoutes);
 app.use('/api/incidencias', incidenciaRoutes);
 app.use('/api/notificaciones', notificacionRoutes);
-app.use('/api/notificaciones-inteligentes', notificacionInteligenteRoutes); // ✅ NUEVO
+app.use('/api/notificaciones-inteligentes', notificacionInteligenteRoutes);
 
-// Rutas de reportes - Orden importante
+// Rutas de reportes (orden importante)
 app.use('/api/reportes', reportePdfRoutes);
 app.use('/api/reportes', reporteRoutes);
 
-// ✅ NUEVO: Manejo de rutas 404
+// ============================================
+// ✅ NUEVO: USAR RUTAS DASHBOARD Y CRON
+// ============================================
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/cron', cronRoutes);
+
+// ============================================
+// MANEJO DE RUTAS 404
+// ============================================
 app.use((req, res) => {
     res.status(404).json({
         error: 'Ruta no encontrada',
         path: req.path,
         method: req.method,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        availableRoutes: [
+            '/api/auth',
+            '/api/clientes',
+            '/api/pagos',
+            '/api/dashboard',
+            '/api/cron',
+            '/health'
+        ]
     });
 });
 
-// ✅ MEJORADO: Manejo de errores
+// ============================================
+// MANEJO DE ERRORES GLOBAL
+// ============================================
 app.use((err, req, res, next) => {
-    // Log del error completo en servidor
+    // Log completo en servidor
     console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.error('❌ ERROR:', err.message);
     console.error('📍 Ruta:', req.path);
@@ -164,7 +212,7 @@ app.use((err, req, res, next) => {
     }
     console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    // Respuesta al cliente (sin exponer detalles en producción)
+    // Respuesta al cliente
     const errorResponse = {
         error: err.message || 'Error interno del servidor',
         timestamp: new Date().toISOString()
