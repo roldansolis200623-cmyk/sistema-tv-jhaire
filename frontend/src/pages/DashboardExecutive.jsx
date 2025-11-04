@@ -1,11 +1,6 @@
-// ============================================
-// frontend/src/pages/DashboardExecutive.jsx
-// DASHBOARD EJECUTIVO - ESTILO APPLE FUTURISTA
-// ============================================
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -22,16 +17,33 @@ import {
 } from 'chart.js';
 import {
     ArrowLeft,
+    Download,
+    FileText,
+    Mail,
+    Filter,
+    Calendar,
     TrendingUp,
     TrendingDown,
-    DollarSign,
+    AlertCircle,
+    Brain,
+    Zap,
+    Target,
+    Award,
     Users,
-    AlertTriangle,
+    DollarSign,
+    RefreshCw,
+    Eye,
+    EyeOff,
+    Maximize2,
     CheckCircle,
     Clock,
-    Activity
+    Activity,
+    MapPin
 } from 'lucide-react';
 import api from '../services/api';
+import { generateInsights, predictTrends } from '../utils/InsightsEngine';
+import { exportToPDF, exportToExcel, sendEmail } from '../utils/ExportService';
+import DashboardFilters from '../components/DashboardFilters';
 import './DashboardExecutive.css';
 
 ChartJS.register(
@@ -49,7 +61,11 @@ ChartJS.register(
 
 const DashboardExecutive = () => {
     const navigate = useNavigate();
+    const dashboardRef = useRef(null);
+    
+    // Estados principales
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [kpis, setKpis] = useState({});
     const [ingresosMensuales, setIngresosMensuales] = useState([]);
     const [mejoresPagadores, setMejoresPagadores] = useState([]);
@@ -59,16 +75,45 @@ const DashboardExecutive = () => {
     const [proyeccion, setProyeccion] = useState({});
     const [clientesRiesgo, setClientesRiesgo] = useState([]);
     const [distribucionGeo, setDistribucionGeo] = useState([]);
+    
+    // Estados IA & Insights
+    const [insights, setInsights] = useState([]);
+    const [alerts, setAlerts] = useState([]);
+    const [predictions, setPredictions] = useState({});
+    const [recommendations, setRecommendations] = useState([]);
+    
+    // Estados UI
+    const [showFilters, setShowFilters] = useState(false);
+    const [showInsights, setShowInsights] = useState(true);
+    
+    // Estados filtros
+    const [dateRange, setDateRange] = useState({
+        start: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+        end: new Date()
+    });
+    const [filters, setFilters] = useState({
+        zona: 'todas',
+        estado: 'todos',
+        scoreMin: 0,
+        scoreMax: 100
+    });
 
     useEffect(() => {
         cargarDatos();
-        const interval = setInterval(cargarDatos, 300000);
+        const interval = setInterval(() => {
+            cargarDatos(true);
+        }, 5 * 60 * 1000);
+        
         return () => clearInterval(interval);
-    }, []);
+    }, [dateRange, filters]);
 
-    const cargarDatos = async () => {
+    const cargarDatos = async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) {
+                setLoading(true);
+            } else {
+                setRefreshing(true);
+            }
             
             const [
                 kpisRes,
@@ -92,20 +137,90 @@ const DashboardExecutive = () => {
                 api.get('/dashboard/distribucion-geografica')
             ]);
 
-            setKpis(kpisRes.data);
-            setIngresosMensuales(ingresosRes.data);
+            const kpisData = kpisRes.data;
+            const ingresosData = ingresosRes.data;
+            const tasaMorData = tasaMorRes.data;
+            const proyData = proyRes.data;
+            const riesgoData = riesgoRes.data;
+
+            setKpis(kpisData);
+            setIngresosMensuales(ingresosData);
             setMejoresPagadores(mejoresRes.data);
             setPeoresPagadores(peoresRes.data);
             setDistribucionEstado(distEstadoRes.data);
-            setTasaMorosidad(tasaMorRes.data);
-            setProyeccion(proyRes.data);
-            setClientesRiesgo(riesgoRes.data);
+            setTasaMorosidad(tasaMorData);
+            setProyeccion(proyData);
+            setClientesRiesgo(riesgoData);
             setDistribucionGeo(geoRes.data);
+
+            // GENERAR INSIGHTS CON IA
+            const generatedInsights = generateInsights({
+                kpis: kpisData,
+                ingresos: ingresosData,
+                morosidad: tasaMorData,
+                proyeccion: proyData,
+                riesgo: riesgoData
+            });
+            setInsights(generatedInsights.insights);
+            setAlerts(generatedInsights.alerts);
+            setRecommendations(generatedInsights.recommendations);
+
+            // PREDICCIONES
+            const predictions = predictTrends(ingresosData, tasaMorData);
+            setPredictions(predictions);
             
             setLoading(false);
+            setRefreshing(false);
         } catch (error) {
             console.error('Error cargando dashboard:', error);
             setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const handleExportPDF = async () => {
+        try {
+            await exportToPDF(dashboardRef.current, {
+                kpis,
+                insights,
+                alerts,
+                recommendations
+            });
+        } catch (error) {
+            console.error('Error exportando PDF:', error);
+            alert('Error al exportar PDF');
+        }
+    };
+
+    const handleExportExcel = async () => {
+        try {
+            await exportToExcel({
+                kpis,
+                ingresos: ingresosMensuales,
+                mejoresPagadores,
+                peoresPagadores,
+                clientesRiesgo
+            });
+        } catch (error) {
+            console.error('Error exportando Excel:', error);
+            alert('Error al exportar Excel');
+        }
+    };
+
+    const handleSendEmail = async () => {
+        const email = prompt('Ingresa el email destino:');
+        if (!email) return;
+        
+        try {
+            await sendEmail(email, {
+                kpis,
+                insights,
+                alerts
+            });
+            alert('Email enviado correctamente');
+        } catch (error) {
+            console.error('Error enviando email:', error);
+            alert('Error al enviar email');
         }
     };
 
@@ -120,6 +235,10 @@ const DashboardExecutive = () => {
         return new Intl.NumberFormat('es-PE').format(value || 0);
     };
 
+    const formatPercent = (value) => {
+        return `${(value || 0).toFixed(1)}%`;
+    };
+
     const getScoreClass = (score) => {
         if (score >= 80) return 'excelente';
         if (score >= 60) return 'bueno';
@@ -128,19 +247,23 @@ const DashboardExecutive = () => {
         return 'critico';
     };
 
-    // Configuración de gráficos con estilo Apple
-    const chartOptionsApple = {
+    const getTrendIcon = (value) => {
+        return value >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />;
+    };
+
+    const getTrendClass = (value) => {
+        return value >= 0 ? 'trend-positive' : 'trend-negative';
+    };
+
+    // Configuración de gráficos
+    const chartOptions = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: {
-                display: false
-            },
+            legend: { display: false },
             tooltip: {
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
                 padding: 12,
-                titleColor: '#fff',
-                bodyColor: '#fff',
                 cornerRadius: 8,
                 displayColors: false
             }
@@ -148,21 +271,12 @@ const DashboardExecutive = () => {
         scales: {
             y: {
                 beginAtZero: true,
-                grid: {
-                    color: 'rgba(0, 0, 0, 0.05)',
-                    drawBorder: false
-                },
-                ticks: {
-                    color: '#86868b'
-                }
+                grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                ticks: { color: '#86868b' }
             },
             x: {
-                grid: {
-                    display: false
-                },
-                ticks: {
-                    color: '#86868b'
-                }
+                grid: { display: false },
+                ticks: { color: '#86868b' }
             }
         }
     };
@@ -233,339 +347,599 @@ const DashboardExecutive = () => {
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     className="loading-spinner"
                 />
-                <p>Cargando datos...</p>
+                <p>Cargando inteligencia ejecutiva...</p>
             </div>
         );
     }
 
     return (
-        <div className="executive-dashboard">
-            {/* Header Premium */}
+        <div className="executive-dashboard" ref={dashboardRef}>
+            {/* HEADER */}
             <motion.header 
                 className="executive-header"
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
             >
                 <div className="header-content">
-                    <motion.button
-                        onClick={() => navigate('/dashboard')}
-                        className="btn-back"
-                        whileHover={{ x: -5 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <ArrowLeft size={20} />
-                        <span>Panel de Control</span>
-                    </motion.button>
-
-                    <div className="header-title">
-                        <h1>Dashboard Ejecutivo</h1>
-                        <p>Análisis en tiempo real • {new Date().toLocaleDateString('es-PE', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                        })}</p>
+                    <div className="header-left">
+                        <motion.button
+                            onClick={() => navigate('/dashboard')}
+                            className="btn-back"
+                            whileHover={{ x: -5 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            <ArrowLeft size={20} />
+                            <span>Panel de Control</span>
+                        </motion.button>
                     </div>
 
-                    <motion.button
-                        onClick={cargarDatos}
-                        className="btn-refresh"
-                        whileHover={{ rotate: 180 }}
-                        whileTap={{ scale: 0.9 }}
-                    >
-                        <Activity size={20} />
-                    </motion.button>
+                    <div className="header-center">
+                        <h1>Dashboard Ejecutivo</h1>
+                        <div className="header-meta">
+                            <span className="live-indicator">
+                                <span className="pulse"></span>
+                                EN VIVO
+                            </span>
+                            <span className="date-time">
+                                {new Date().toLocaleDateString('es-PE', { 
+                                    weekday: 'long', 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                })}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="header-right">
+                        <motion.button
+                            className="btn-icon"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setShowFilters(!showFilters)}
+                            title="Filtros"
+                        >
+                            <Filter size={20} />
+                        </motion.button>
+                        
+                        <motion.button
+                            className="btn-icon"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleExportPDF}
+                            title="Exportar PDF"
+                        >
+                            <Download size={20} />
+                        </motion.button>
+
+                        <motion.button
+                            className="btn-icon"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleExportExcel}
+                            title="Exportar Excel"
+                        >
+                            <FileText size={20} />
+                        </motion.button>
+
+                        <motion.button
+                            className="btn-icon"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleSendEmail}
+                            title="Enviar por Email"
+                        >
+                            <Mail size={20} />
+                        </motion.button>
+
+                        <motion.button
+                            className="btn-primary"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => cargarDatos()}
+                            disabled={refreshing}
+                        >
+                            <RefreshCw size={18} className={refreshing ? 'spinning' : ''} />
+                            {refreshing ? 'Actualizando...' : 'Actualizar'}
+                        </motion.button>
+                    </div>
                 </div>
             </motion.header>
 
-            {/* KPIs Premium */}
-            <div className="kpis-premium">
-                <motion.div 
-                    className="kpi-card kpi-primary"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.1 }}
-                    whileHover={{ y: -5 }}
-                >
-                    <div className="kpi-icon">
-                        <Users size={24} />
-                    </div>
-                    <div className="kpi-data">
-                        <span className="kpi-label">Clientes Activos</span>
-                        <span className="kpi-value">{formatNumber(kpis.clientes_activos)}</span>
-                        <span className="kpi-trend positive">
-                            <TrendingUp size={16} />
-                            +12% vs mes anterior
-                        </span>
-                    </div>
-                </motion.div>
+            {/* FILTROS */}
+            <AnimatePresence>
+                {showFilters && (
+                    <DashboardFilters
+                        dateRange={dateRange}
+                        setDateRange={setDateRange}
+                        filters={filters}
+                        setFilters={setFilters}
+                        onClose={() => setShowFilters(false)}
+                    />
+                )}
+            </AnimatePresence>
 
-                <motion.div 
-                    className="kpi-card kpi-success"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    whileHover={{ y: -5 }}
-                >
-                    <div className="kpi-icon">
-                        <DollarSign size={24} />
-                    </div>
-                    <div className="kpi-data">
-                        <span className="kpi-label">Ingresos del Mes</span>
-                        <span className="kpi-value">{formatMoney(kpis.ingresos_mes)}</span>
-                        <span className="kpi-trend positive">
-                            <TrendingUp size={16} />
-                            +8.5% vs mes anterior
-                        </span>
-                    </div>
-                </motion.div>
+            <div className="dashboard-content">
+                {/* INSIGHTS IA */}
+                <AnimatePresence>
+                    {showInsights && insights.length > 0 && (
+                        <motion.div
+                            className="insights-section"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                        >
+                            <div className="insights-header">
+                                <div className="insights-title">
+                                    <Brain size={24} />
+                                    <h2>Asistente Inteligente</h2>
+                                    <span className="badge-ai">IA</span>
+                                </div>
+                                <motion.button
+                                    className="btn-toggle"
+                                    onClick={() => setShowInsights(!showInsights)}
+                                    whileHover={{ scale: 1.05 }}
+                                >
+                                    {showInsights ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </motion.button>
+                            </div>
 
-                <motion.div 
-                    className="kpi-card kpi-warning"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    whileHover={{ y: -5 }}
-                >
-                    <div className="kpi-icon">
-                        <AlertTriangle size={24} />
-                    </div>
-                    <div className="kpi-data">
-                        <span className="kpi-label">Con Deuda</span>
-                        <span className="kpi-value">{formatNumber(kpis.clientes_con_deuda)}</span>
-                        <span className="kpi-trend negative">
-                            <TrendingDown size={16} />
-                            Requiere atención
-                        </span>
-                    </div>
-                </motion.div>
+                            <div className="insights-grid">
+                                {insights.map((insight, i) => (
+                                    <motion.div
+                                        key={i}
+                                        className={`insight-card insight-${insight.type}`}
+                                        initial={{ x: -20, opacity: 0 }}
+                                        animate={{ x: 0, opacity: 1 }}
+                                        transition={{ delay: i * 0.1 }}
+                                        whileHover={{ scale: 1.02 }}
+                                    >
+                                        <div className="insight-icon">
+                                            {insight.type === 'warning' && <AlertCircle size={20} />}
+                                            {insight.type === 'success' && <Target size={20} />}
+                                            {insight.type === 'info' && <Zap size={20} />}
+                                        </div>
+                                        <div className="insight-content">
+                                            <h4>{insight.title}</h4>
+                                            <p>{insight.message}</p>
+                                            {insight.action && (
+                                                <button className="insight-action">
+                                                    {insight.action}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
 
+                            {alerts.length > 0 && (
+                                <div className="alerts-critical">
+                                    <h3>🚨 Alertas Críticas</h3>
+                                    <div className="alerts-list">
+                                        {alerts.map((alert, i) => (
+                                            <motion.div
+                                                key={i}
+                                                className="alert-item"
+                                                initial={{ x: -20, opacity: 0 }}
+                                                animate={{ x: 0, opacity: 1 }}
+                                                transition={{ delay: i * 0.1 }}
+                                            >
+                                                <AlertCircle size={18} />
+                                                <span>{alert.message}</span>
+                                                <button className="alert-action">{alert.action}</button>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {recommendations.length > 0 && (
+                                <div className="recommendations">
+                                    <h3>💡 Recomendaciones</h3>
+                                    <div className="recommendations-list">
+                                        {recommendations.map((rec, i) => (
+                                            <motion.div
+                                                key={i}
+                                                className="recommendation-item"
+                                                initial={{ y: 20, opacity: 0 }}
+                                                animate={{ y: 0, opacity: 1 }}
+                                                transition={{ delay: i * 0.1 }}
+                                                whileHover={{ x: 5 }}
+                                            >
+                                                <div className="recommendation-priority">
+                                                    {rec.priority}
+                                                </div>
+                                                <div className="recommendation-content">
+                                                    <h4>{rec.title}</h4>
+                                                    <p>{rec.description}</p>
+                                                </div>
+                                                <button className="recommendation-action">
+                                                    Aplicar
+                                                </button>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* KPIS */}
+                <div className="kpis-ultra">
+                    <motion.div 
+                        className="kpi-ultra kpi-primary"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        whileHover={{ y: -5, scale: 1.02 }}
+                    >
+                        <div className="kpi-header">
+                            <div className="kpi-icon">
+                                <Users size={28} />
+                            </div>
+                            <div className="kpi-trend">
+                                <span className="trend-positive">
+                                    <TrendingUp size={16} />
+                                    12%
+                                </span>
+                            </div>
+                        </div>
+                        <div className="kpi-body">
+                            <h3>Clientes Activos</h3>
+                            <div className="kpi-value">{formatNumber(kpis.clientes_activos)}</div>
+                            <p className="kpi-subtitle">+{formatNumber(Math.round((kpis.clientes_activos || 0) * 0.12))} vs mes anterior</p>
+                        </div>
+                    </motion.div>
+
+                    <motion.div 
+                        className="kpi-ultra kpi-success"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                        whileHover={{ y: -5, scale: 1.02 }}
+                    >
+                        <div className="kpi-header">
+                            <div className="kpi-icon">
+                                <DollarSign size={28} />
+                            </div>
+                            <div className="kpi-trend">
+                                <span className="trend-positive">
+                                    <TrendingUp size={16} />
+                                    8.5%
+                                </span>
+                            </div>
+                        </div>
+                        <div className="kpi-body">
+                            <h3>Ingresos del Mes</h3>
+                            <div className="kpi-value">{formatMoney(kpis.ingresos_mes)}</div>
+                            <p className="kpi-subtitle">Objetivo: {formatMoney((kpis.ingresos_mes || 0) * 1.15)}</p>
+                        </div>
+                        <div className="kpi-progress">
+                            <div 
+                                className="kpi-progress-bar"
+                                style={{ width: '73%' }}
+                            />
+                        </div>
+                    </motion.div>
+
+                    <motion.div 
+                        className="kpi-ultra kpi-warning"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        whileHover={{ y: -5, scale: 1.02 }}
+                    >
+                        <div className="kpi-header">
+                            <div className="kpi-icon">
+                                <AlertCircle size={28} />
+                            </div>
+                            <div className="kpi-badge badge-warning">
+                                Atención
+                            </div>
+                        </div>
+                        <div className="kpi-body">
+                            <h3>Clientes con Deuda</h3>
+                            <div className="kpi-value">{formatNumber(kpis.clientes_con_deuda)}</div>
+                            <p className="kpi-subtitle">{formatPercent(((kpis.clientes_con_deuda || 0) / (kpis.clientes_activos || 1)) * 100)} del total</p>
+                        </div>
+                    </motion.div>
+
+                    <motion.div 
+                        className="kpi-ultra kpi-danger"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                        whileHover={{ y: -5, scale: 1.02 }}
+                    >
+                        <div className="kpi-header">
+                            <div className="kpi-icon">
+                                <Target size={28} />
+                            </div>
+                            <div className="kpi-badge badge-danger">
+                                Crítico
+                            </div>
+                        </div>
+                        <div className="kpi-body">
+                            <h3>Deuda Total</h3>
+                            <div className="kpi-value">{formatMoney(kpis.deuda_total)}</div>
+                            <p className="kpi-subtitle">Recuperar: {formatMoney((kpis.deuda_total || 0) * 0.7)}</p>
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* PROYECCIÓN */}
                 <motion.div 
-                    className="kpi-card kpi-danger"
+                    className="proyeccion-ultra"
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.4 }}
-                    whileHover={{ y: -5 }}
                 >
-                    <div className="kpi-icon">
-                        <Clock size={24} />
+                    <div className="proyeccion-header">
+                        <h2>Proyección de Ingresos con IA</h2>
                     </div>
-                    <div className="kpi-data">
-                        <span className="kpi-label">Deuda Total</span>
-                        <span className="kpi-value">{formatMoney(kpis.deuda_total)}</span>
-                        <span className="kpi-trend negative">
-                            <TrendingDown size={16} />
-                            Gestionar cobranza
-                        </span>
-                    </div>
-                </motion.div>
-            </div>
 
-            {/* Proyección Premium */}
-            <motion.div 
-                className="proyeccion-premium"
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.5 }}
-            >
-                <div className="proyeccion-header">
-                    <h2>Proyección de Ingresos</h2>
-                    <span className="proyeccion-percentage">
-                        {((proyeccion.ingresado / proyeccion.proyeccion_total * 100) || 0).toFixed(1)}%
-                    </span>
-                </div>
-                <div className="proyeccion-bar">
+                    <div className="proyeccion-visual">
+                        <div className="proyeccion-circle">
+                            <svg viewBox="0 0 200 200">
+                                <circle
+                                    cx="100"
+                                    cy="100"
+                                    r="90"
+                                    fill="none"
+                                    stroke="rgba(0,0,0,0.1)"
+                                    strokeWidth="20"
+                                />
+                                <motion.circle
+                                    cx="100"
+                                    cy="100"
+                                    r="90"
+                                    fill="none"
+                                    stroke="url(#gradient)"
+                                    strokeWidth="20"
+                                    strokeDasharray={565}
+                                    strokeDashoffset={565 - (565 * ((proyeccion.ingresado || 0) / (proyeccion.proyeccion_total || 1)))}
+                                    strokeLinecap="round"
+                                    initial={{ strokeDashoffset: 565 }}
+                                    animate={{ strokeDashoffset: 565 - (565 * ((proyeccion.ingresado || 0) / (proyeccion.proyeccion_total || 1))) }}
+                                    transition={{ duration: 2, ease: "easeOut" }}
+                                />
+                                <defs>
+                                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#007AFF" />
+                                        <stop offset="100%" stopColor="#5856D6" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div className="proyeccion-center">
+                                <div className="proyeccion-percentage">
+                                    {formatPercent(((proyeccion.ingresado || 0) / (proyeccion.proyeccion_total || 1)) * 100)}
+                                </div>
+                                <div className="proyeccion-label">Completado</div>
+                            </div>
+                        </div>
+
+                        <div className="proyeccion-stats-grid">
+                            <div className="proyeccion-stat">
+                                <div className="stat-icon success">✓</div>
+                                <div className="stat-content">
+                                    <span className="stat-label">Ya Ingresado</span>
+                                    <span className="stat-value">{formatMoney(proyeccion.ingresado)}</span>
+                                </div>
+                            </div>
+
+                            <div className="proyeccion-stat">
+                                <div className="stat-icon info">⏳</div>
+                                <div className="stat-content">
+                                    <span className="stat-label">Por Ingresar</span>
+                                    <span className="stat-value">{formatMoney(proyeccion.por_ingresar)}</span>
+                                </div>
+                            </div>
+
+                            <div className="proyeccion-stat">
+                                <div className="stat-icon warning">📊</div>
+                                <div className="stat-content">
+                                    <span className="stat-label">Recuperación Est.</span>
+                                    <span className="stat-value">{formatMoney(proyeccion.recuperacion_estimada)}</span>
+                                </div>
+                            </div>
+
+                            <div className="proyeccion-stat featured">
+                                <div className="stat-icon primary">🎯</div>
+                                <div className="stat-content">
+                                    <span className="stat-label">Total Proyectado</span>
+                                    <span className="stat-value">{formatMoney(proyeccion.proyeccion_total)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {predictions.nextMonth && (
+                        <div className="proyeccion-prediction">
+                            <div className="prediction-icon">
+                                <Brain size={20} />
+                            </div>
+                            <div className="prediction-content">
+                                <h4>Predicción IA para próximo mes</h4>
+                                <p>
+                                    Basado en tendencias, se espera {formatMoney(predictions.nextMonth.expected)} 
+                                    con {formatPercent(predictions.nextMonth.confidence)} de confianza
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </motion.div>
+
+                {/* GRÁFICOS */}
+                <div className="charts-premium">
                     <motion.div 
-                        className="proyeccion-fill"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(proyeccion.ingresado / proyeccion.proyeccion_total * 100) || 0}%` }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                    />
+                        className="chart-premium"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.6 }}
+                    >
+                        <h3>Ingresos Mensuales</h3>
+                        <div className="chart-container">
+                            <Bar data={ingresosChartData} options={chartOptions} />
+                        </div>
+                    </motion.div>
+
+                    <motion.div 
+                        className="chart-premium"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.7 }}
+                    >
+                        <h3>Estado de Clientes</h3>
+                        <div className="chart-container">
+                            <Pie data={distribucionEstadoData} options={chartOptions} />
+                        </div>
+                    </motion.div>
+
+                    <motion.div 
+                        className="chart-premium chart-wide"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.8 }}
+                    >
+                        <h3>Evolución de Morosidad</h3>
+                        <div className="chart-container">
+                            <Line data={morosidadChartData} options={chartOptions} />
+                        </div>
+                    </motion.div>
+
+                    <motion.div 
+                        className="chart-premium"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.9 }}
+                    >
+                        <h3>Distribución Geográfica</h3>
+                        <div className="chart-container">
+                            <Doughnut data={distribucionGeoData} options={chartOptions} />
+                        </div>
+                    </motion.div>
                 </div>
-                <div className="proyeccion-stats">
-                    <div className="proyeccion-stat">
-                        <span className="label">Ingresado</span>
-                        <span className="value success">{formatMoney(proyeccion.ingresado)}</span>
-                    </div>
-                    <div className="proyeccion-stat">
-                        <span className="label">Por Ingresar</span>
-                        <span className="value info">{formatMoney(proyeccion.por_ingresar)}</span>
-                    </div>
-                    <div className="proyeccion-stat">
-                        <span className="label">Total Proyectado</span>
-                        <span className="value primary">{formatMoney(proyeccion.proyeccion_total)}</span>
-                    </div>
-                </div>
-            </motion.div>
 
-            {/* Gráficos Premium */}
-            <div className="charts-premium">
-                <motion.div 
-                    className="chart-premium"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.6 }}
-                >
-                    <h3>Ingresos Mensuales</h3>
-                    <div className="chart-container">
-                        <Bar data={ingresosChartData} options={chartOptionsApple} />
-                    </div>
-                </motion.div>
-
-                <motion.div 
-                    className="chart-premium"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.7 }}
-                >
-                    <h3>Estado de Clientes</h3>
-                    <div className="chart-container">
-                        <Pie data={distribucionEstadoData} options={chartOptionsApple} />
-                    </div>
-                </motion.div>
-
-                <motion.div 
-                    className="chart-premium chart-wide"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.8 }}
-                >
-                    <h3>Evolución de Morosidad</h3>
-                    <div className="chart-container">
-                        <Line data={morosidadChartData} options={chartOptionsApple} />
-                    </div>
-                </motion.div>
-
-                <motion.div 
-                    className="chart-premium"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.9 }}
-                >
-                    <h3>Distribución Geográfica</h3>
-                    <div className="chart-container">
-                        <Doughnut data={distribucionGeoData} options={chartOptionsApple} />
-                    </div>
-                </motion.div>
-            </div>
-
-            {/* Top Pagadores */}
-            <div className="top-premium">
-                <motion.div 
-                    className="top-card top-success"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 1.0 }}
-                >
-                    <div className="top-header">
-                        <CheckCircle size={24} />
-                        <h3>Top 10 Mejores Pagadores</h3>
-                    </div>
-                    <div className="top-list">
-                        {mejoresPagadores.map((cliente, index) => (
-                            <motion.div 
-                                key={cliente.id} 
-                                className="top-item"
-                                whileHover={{ x: 5 }}
-                            >
-                                <div className="rank">{index + 1}</div>
-                                <div className="info">
-                                    <span className="name">{cliente.cliente}</span>
-                                    <span className="meta">{cliente.total_pagos} pagos</span>
-                                </div>
-                                <div className="amount">{formatMoney(cliente.monto_total)}</div>
-                                <div className={`score score-${getScoreClass(cliente.score_pago)}`}>
-                                    {cliente.score_pago}
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </motion.div>
-
-                <motion.div 
-                    className="top-card top-danger"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 1.1 }}
-                >
-                    <div className="top-header">
-                        <AlertTriangle size={24} />
-                        <h3>Top 10 Clientes en Mora</h3>
-                    </div>
-                    <div className="top-list">
-                        {peoresPagadores.map((cliente, index) => (
-                            <motion.div 
-                                key={cliente.id} 
-                                className="top-item"
-                                whileHover={{ x: 5 }}
-                            >
-                                <div className="rank danger">{index + 1}</div>
-                                <div className="info">
-                                    <span className="name">{cliente.cliente}</span>
-                                    <span className="meta">{cliente.meses_deuda} meses</span>
-                                </div>
-                                <div className="amount danger">{formatMoney(cliente.deuda_total)}</div>
-                                <div className="zone">{cliente.zona_geografica || 'N/A'}</div>
-                            </motion.div>
-                        ))}
-                    </div>
-                </motion.div>
-            </div>
-
-            {/* Clientes en Riesgo */}
-            <motion.div 
-                className="riesgo-premium"
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 1.2 }}
-            >
-                <div className="riesgo-header">
-                    <AlertTriangle size={24} />
-                    <h3>Clientes en Riesgo ({clientesRiesgo.length})</h3>
-                </div>
-                <div className="riesgo-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Cliente</th>
-                                <th>Teléfono</th>
-                                <th>Deuda</th>
-                                <th>Score</th>
-                                <th>Riesgo</th>
-                                <th>Último Pago</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {clientesRiesgo.slice(0, 10).map((cliente) => (
-                                <motion.tr 
-                                    key={cliente.id}
-                                    whileHover={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}
+                {/* TOP PAGADORES */}
+                <div className="top-premium">
+                    <motion.div 
+                        className="top-card top-success"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 1.0 }}
+                    >
+                        <div className="top-header">
+                            <CheckCircle size={24} />
+                            <h3>Top 10 Mejores Pagadores</h3>
+                        </div>
+                        <div className="top-list">
+                            {mejoresPagadores.map((cliente, index) => (
+                                <motion.div 
+                                    key={cliente.id} 
+                                    className="top-item"
+                                    whileHover={{ x: 5 }}
                                 >
-                                    <td className="cliente-name">{cliente.cliente}</td>
-                                    <td>{cliente.telefono || 'N/A'}</td>
-                                    <td className="deuda">{formatMoney(cliente.deuda_total)}</td>
-                                    <td>
-                                        <span className={`score score-${getScoreClass(cliente.score_pago)}`}>
-                                            {cliente.score_pago}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span className={`riesgo riesgo-${cliente.nivel_riesgo.toLowerCase()}`}>
-                                            {cliente.nivel_riesgo}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {cliente.fecha_ultimo_pago 
-                                            ? new Date(cliente.fecha_ultimo_pago).toLocaleDateString('es-PE')
-                                            : 'Nunca'
-                                        }
-                                    </td>
-                                </motion.tr>
+                                    <div className="rank">{index + 1}</div>
+                                    <div className="info">
+                                        <span className="name">{cliente.cliente}</span>
+                                        <span className="meta">{cliente.total_pagos} pagos</span>
+                                    </div>
+                                    <div className="amount">{formatMoney(cliente.monto_total)}</div>
+                                    <div className={`score score-${getScoreClass(cliente.score_pago)}`}>
+                                        {cliente.score_pago}
+                                    </div>
+                                </motion.div>
                             ))}
-                        </tbody>
-                    </table>
+                        </div>
+                    </motion.div>
+
+                    <motion.div 
+                        className="top-card top-danger"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 1.1 }}
+                    >
+                        <div className="top-header">
+                            <AlertCircle size={24} />
+                            <h3>Top 10 Clientes en Mora</h3>
+                        </div>
+                        <div className="top-list">
+                            {peoresPagadores.map((cliente, index) => (
+                                <motion.div 
+                                    key={cliente.id} 
+                                    className="top-item"
+                                    whileHover={{ x: 5 }}
+                                >
+                                    <div className="rank danger">{index + 1}</div>
+                                    <div className="info">
+                                        <span className="name">{cliente.cliente}</span>
+                                        <span className="meta">{cliente.meses_deuda} meses</span>
+                                    </div>
+                                    <div className="amount danger">{formatMoney(cliente.deuda_total)}</div>
+                                    <div className="zone">{cliente.zona_geografica || 'N/A'}</div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </motion.div>
                 </div>
-            </motion.div>
+
+                {/* CLIENTES EN RIESGO */}
+                <motion.div 
+                    className="riesgo-premium"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 1.2 }}
+                >
+                    <div className="riesgo-card">
+                        <div className="riesgo-header">
+                            <AlertCircle size={24} />
+                            <h3>Clientes en Riesgo ({clientesRiesgo.length})</h3>
+                        </div>
+                        <div className="riesgo-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Teléfono</th>
+                                        <th>Deuda</th>
+                                        <th>Score</th>
+                                        <th>Riesgo</th>
+                                        <th>Último Pago</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {clientesRiesgo.slice(0, 10).map((cliente) => (
+                                        <motion.tr 
+                                            key={cliente.id}
+                                            whileHover={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}
+                                        >
+                                            <td className="cliente-name">{cliente.cliente}</td>
+                                            <td>{cliente.telefono || 'N/A'}</td>
+                                            <td className="deuda">{formatMoney(cliente.deuda_total)}</td>
+                                            <td>
+                                                <span className={`score score-${getScoreClass(cliente.score_pago)}`}>
+                                                    {cliente.score_pago}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`riesgo riesgo-${(cliente.nivel_riesgo || '').toLowerCase()}`}>
+                                                    {cliente.nivel_riesgo}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {cliente.fecha_ultimo_pago 
+                                                    ? new Date(cliente.fecha_ultimo_pago).toLocaleDateString('es-PE')
+                                                    : 'Nunca'
+                                                }
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
         </div>
     );
 };
