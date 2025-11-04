@@ -5,18 +5,18 @@ import {
     Users, UserCheck, UserX, DollarSign,
     FileText, CreditCard, BarChart3, Settings,
     Home, LogOut, TrendingUp, AlertCircle,
-    Clock, Award, ArrowRight, Calendar, Menu, X, Bell // ✅ Agregado Bell
+    Clock, Award, ArrowRight, Calendar, Menu, X, Bell
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clienteService } from '../services/api';
 import NotificationBell from '../components/NotificationBell';
-import notificacionService from '../services/notificacionInteligenteService'; // ✅ NUEVO
+import notificacionService from '../services/notificacionInteligenteService';
 
 const Dashboard = () => {
     const [clientes, setClientes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [notificacionesCount, setNotificacionesCount] = useState(0); // ✅ NUEVO
+    const [notificacionesCount, setNotificacionesCount] = useState(0);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
 
@@ -32,7 +32,6 @@ const Dashboard = () => {
         }
     };
 
-    // ✅ NUEVO: Cargar contador de notificaciones
     const cargarContadorNotificaciones = async () => {
         try {
             const resumen = await notificacionService.obtenerResumen();
@@ -47,10 +46,9 @@ const Dashboard = () => {
         let mounted = true;
         if (mounted) {
             loadClientes();
-            cargarContadorNotificaciones(); // ✅ Cargar notificaciones al inicio
+            cargarContadorNotificaciones();
         }
         
-        // ✅ Actualizar contador cada 5 minutos
         const interval = setInterval(() => {
             if (mounted) {
                 cargarContadorNotificaciones();
@@ -90,12 +88,12 @@ const Dashboard = () => {
         { 
             icon: Bell, 
             label: 'Notificaciones', 
-            badge: notificacionesCount, // ✅ NUEVO: Badge con contador
+            badge: notificacionesCount,
             onClick: () => { navigate('/notificaciones-inteligentes'); setSidebarOpen(false); } 
-        }, // ✅ NUEVO ITEM
+        },
         { icon: FileText, label: 'Reportes', onClick: () => { navigate('/reportes'); setSidebarOpen(false); } },
         { icon: Settings, label: 'Perfiles Internet', onClick: () => { navigate('/perfiles-internet'); setSidebarOpen(false); } },
-        { icon: BarChart3, label: 'Estadísticas', onClick: () => { navigate('/estadisticas'); setSidebarOpen(false); } },
+        { icon: BarChart3, label: 'Dashboard Ejecutivo', onClick: () => { navigate('/dashboard-executive'); setSidebarOpen(false); } },
     ];
 
     return (
@@ -158,7 +156,6 @@ const Dashboard = () => {
                         >
                             <item.icon size={20} />
                             <span className="font-medium">{item.label}</span>
-                            {/* ✅ NUEVO: Badge de notificaciones */}
                             {item.badge && item.badge > 0 && (
                                 <motion.span
                                     initial={{ scale: 0 }}
@@ -220,7 +217,6 @@ const Dashboard = () => {
 
                             <div className="flex items-center gap-3">
                                 <NotificationBell />
-                                {/* ✅ NUEVO: Botón rápido a notificaciones */}
                                 <motion.button
                                     onClick={() => navigate('/notificaciones-inteligentes')}
                                     whileHover={{ scale: 1.05 }}
@@ -454,7 +450,7 @@ const Dashboard = () => {
                                     { label: 'Ver Clientes', fullLabel: 'Ver Todos los Clientes', icon: Users, gradient: 'from-blue-600 to-indigo-600', onClick: () => navigate('/clientes') },
                                     { label: 'Pagos', fullLabel: 'Gestionar Pagos', icon: CreditCard, gradient: 'from-green-600 to-emerald-600', onClick: () => navigate('/pagos') },
                                     { label: 'Reportes', fullLabel: 'Generar Reportes', icon: FileText, gradient: 'from-red-600 to-pink-600', onClick: () => navigate('/reportes') },
-                                    { label: 'Estadísticas', fullLabel: 'Ver Estadísticas', icon: BarChart3, gradient: 'from-purple-600 to-pink-600', onClick: () => navigate('/estadisticas') }
+                                    { label: 'Dashboard Pro', fullLabel: 'Dashboard Ejecutivo', icon: BarChart3, gradient: 'from-purple-600 to-indigo-600', onClick: () => navigate('/dashboard-executive') }
                                 ].map((item, i) => (
                                     <motion.button
                                         key={i}
