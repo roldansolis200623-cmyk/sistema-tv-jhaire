@@ -1,85 +1,97 @@
 // ============================================
 // frontend/src/utils/ExportService.js
-// SERVICIO DE EXPORTACIÓN PDF, EXCEL Y EMAIL
+// SERVICIO DE EXPORTACIÓN ULTRA PRO
+// PDF Y EXCEL CON DISEÑO PROFESIONAL
 // ============================================
 
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import html2canvas from 'html2canvas';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 
 /**
- * 📄 EXPORTAR A PDF
+ * 📄 EXPORTAR A PDF ULTRA PRO
  */
 export const exportToPDF = async (element, data) => {
     try {
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        let yPos = 20;
+
         // ============================================
-        // PORTADA
+        // PORTADA PROFESIONAL
         // ============================================
-        pdf.setFillColor(0, 122, 255);
-        pdf.rect(0, 0, pageWidth, 80, 'F');
+        doc.setFillColor(0, 122, 255);
+        doc.rect(0, 0, pageWidth, 80, 'F');
         
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(32);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Dashboard Ejecutivo', pageWidth / 2, 30, { align: 'center' });
+        // Logo/Ícono
+        doc.setFillColor(255, 255, 255);
+        doc.circle(pageWidth / 2, 35, 15, 'F');
+        doc.setFontSize(24);
+        doc.setTextColor(0, 122, 255);
+        doc.text('📊', pageWidth / 2 - 5, 40);
         
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text('Reporte Generado por IA', pageWidth / 2, 45, { align: 'center' });
+        // Título
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(28);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Dashboard Ejecutivo', pageWidth / 2, 60, { align: 'center' });
         
-        pdf.setFontSize(12);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
         const fecha = new Date().toLocaleDateString('es-PE', { 
             weekday: 'long', 
             year: 'numeric', 
             month: 'long', 
             day: 'numeric' 
         });
-        pdf.text(fecha, pageWidth / 2, 55, { align: 'center' });
+        doc.text(fecha, pageWidth / 2, 70, { align: 'center' });
 
-        // Logo
-        pdf.setFontSize(10);
-        pdf.text('TV Jhaire - Sistema de Gestión', pageWidth / 2, 65, { align: 'center' });
+        // Línea decorativa
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.5);
+        doc.line(40, 75, pageWidth - 40, 75);
+
+        yPos = 90;
 
         // ============================================
-        // RESUMEN EJECUTIVO
+        // PÁGINA 1: RESUMEN EJECUTIVO
         // ============================================
-        pdf.addPage();
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFontSize(20);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Resumen Ejecutivo', 20, 20);
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('📈 Resumen Ejecutivo', 20, yPos);
+        yPos += 10;
 
-        let yPos = 35;
-
-        // KPIs
+        // KPIs en grid
         if (data.kpis) {
-            pdf.setFontSize(14);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('KPIs Principales', 20, yPos);
-            yPos += 10;
+            const kpisData = [
+                ['Clientes Activos', formatNumber(data.kpis.clientes_activos || 0), '↗ +12%'],
+                ['Ingresos del Mes', formatMoney(data.kpis.ingresos_mes || 0), '↗ +8.5%'],
+                ['Con Deuda', formatNumber(data.kpis.clientes_con_deuda || 0), '⚠ Atención'],
+                ['Deuda Total', formatMoney(data.kpis.deuda_total || 0), '⚠ Crítico']
+            ];
 
-            pdf.autoTable({
+            autoTable(doc, {
                 startY: yPos,
                 head: [['Métrica', 'Valor', 'Tendencia']],
-                body: [
-                    ['Clientes Activos', data.kpis.clientes_activos || 0, '+12%'],
-                    ['Ingresos del Mes', `S/ ${(data.kpis.ingresos_mes || 0).toFixed(2)}`, '+8.5%'],
-                    ['Con Deuda', data.kpis.clientes_con_deuda || 0, 'Atención'],
-                    ['Deuda Total', `S/ ${(data.kpis.deuda_total || 0).toFixed(2)}`, 'Crítico']
-                ],
+                body: kpisData,
                 theme: 'grid',
-                headStyles: { fillColor: [0, 122, 255], fontSize: 10, fontStyle: 'bold' },
-                styles: { fontSize: 9 },
+                headStyles: { 
+                    fillColor: [0, 122, 255],
+                    fontSize: 11,
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                bodyStyles: { 
+                    fontSize: 10,
+                    halign: 'center'
+                },
+                alternateRowStyles: { fillColor: [245, 247, 250] },
                 margin: { left: 20, right: 20 }
             });
 
-            yPos = pdf.lastAutoTable.finalY + 15;
+            yPos = doc.lastAutoTable.finalY + 15;
         }
 
         // ============================================
@@ -87,122 +99,180 @@ export const exportToPDF = async (element, data) => {
         // ============================================
         if (data.insights && data.insights.length > 0) {
             if (yPos > 200) {
-                pdf.addPage();
+                doc.addPage();
                 yPos = 20;
             }
 
-            pdf.setFontSize(14);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(0, 122, 255);
-            pdf.text('🤖 Insights Generados por IA', 20, yPos);
-            yPos += 10;
+            doc.setFillColor(0, 122, 255);
+            doc.rect(15, yPos - 5, 5, 10, 'F');
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 122, 255);
+            doc.text('🤖 Insights de Inteligencia Artificial', 25, yPos);
+            yPos += 12;
 
-            pdf.setFontSize(10);
-            pdf.setFont('helvetica', 'normal');
-            pdf.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(0, 0, 0);
 
             data.insights.slice(0, 5).forEach((insight, i) => {
                 if (yPos > 260) {
-                    pdf.addPage();
+                    doc.addPage();
                     yPos = 20;
                 }
 
-                const icon = insight.type === 'success' ? '✓' : insight.type === 'warning' ? '⚠' : 'ℹ';
-                pdf.setFont('helvetica', 'bold');
-                pdf.text(`${icon} ${insight.title}`, 20, yPos);
-                yPos += 7;
+                // Caja de insight
+                const boxHeight = 25;
+                const bgColor = insight.type === 'success' ? [209, 250, 229] : 
+                               insight.type === 'warning' ? [254, 243, 199] : 
+                               [219, 234, 254];
+                
+                doc.setFillColor(...bgColor);
+                doc.roundedRect(20, yPos, pageWidth - 40, boxHeight, 3, 3, 'F');
 
-                pdf.setFont('helvetica', 'normal');
-                const lines = pdf.splitTextToSize(insight.message, pageWidth - 40);
-                pdf.text(lines, 20, yPos);
-                yPos += lines.length * 5 + 5;
+                // Ícono
+                const icon = insight.type === 'success' ? '✓' : 
+                            insight.type === 'warning' ? '⚠' : 'ℹ';
+                doc.setFontSize(16);
+                doc.text(icon, 25, yPos + 8);
+
+                // Título
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'bold');
+                doc.text(insight.title, 35, yPos + 8);
+
+                // Mensaje
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                const lines = doc.splitTextToSize(insight.message, pageWidth - 60);
+                doc.text(lines, 35, yPos + 15);
+
+                yPos += boxHeight + 5;
             });
         }
 
         // ============================================
-        // ALERTAS CRÍTICAS
+        // PÁGINA 2: ALERTAS CRÍTICAS
         // ============================================
         if (data.alerts && data.alerts.length > 0) {
-            pdf.addPage();
+            doc.addPage();
             yPos = 20;
 
-            pdf.setFontSize(14);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(255, 59, 48);
-            pdf.text('🚨 Alertas Críticas', 20, yPos);
-            yPos += 10;
+            doc.setFillColor(255, 59, 48);
+            doc.rect(15, yPos - 5, 5, 10, 'F');
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(255, 59, 48);
+            doc.text('🚨 Alertas Críticas', 25, yPos);
+            yPos += 12;
 
-            pdf.autoTable({
+            const alertsData = data.alerts.map(alert => [
+                alert.type || 'Crítico',
+                alert.message || '',
+                alert.action || 'Revisar'
+            ]);
+
+            autoTable(doc, {
                 startY: yPos,
-                head: [['Tipo', 'Mensaje', 'Acción']],
-                body: data.alerts.map(alert => [
-                    alert.type || 'Crítico',
-                    alert.message || '',
-                    alert.action || 'Revisar'
-                ]),
+                head: [['Prioridad', 'Mensaje', 'Acción Sugerida']],
+                body: alertsData,
                 theme: 'grid',
-                headStyles: { fillColor: [255, 59, 48], fontSize: 10, fontStyle: 'bold' },
-                styles: { fontSize: 9 },
-                margin: { left: 20, right: 20 }
-            });
-        }
-
-        // ============================================
-        // RECOMENDACIONES
-        // ============================================
-        if (data.recommendations && data.recommendations.length > 0) {
-            pdf.addPage();
-            yPos = 20;
-
-            pdf.setFontSize(14);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(52, 199, 89);
-            pdf.text('💡 Recomendaciones', 20, yPos);
-            yPos += 10;
-
-            pdf.autoTable({
-                startY: yPos,
-                head: [['Prioridad', 'Título', 'Descripción']],
-                body: data.recommendations.map(rec => [
-                    rec.priority || '',
-                    rec.title || '',
-                    rec.description || ''
-                ]),
-                theme: 'grid',
-                headStyles: { fillColor: [52, 199, 89], fontSize: 10, fontStyle: 'bold' },
-                styles: { fontSize: 9 },
+                headStyles: { 
+                    fillColor: [255, 59, 48],
+                    fontSize: 10,
+                    fontStyle: 'bold'
+                },
+                bodyStyles: { fontSize: 9 },
+                alternateRowStyles: { fillColor: [254, 242, 242] },
                 margin: { left: 20, right: 20 },
                 columnStyles: {
-                    2: { cellWidth: 100 }
+                    0: { cellWidth: 30, fontStyle: 'bold' },
+                    1: { cellWidth: 100 },
+                    2: { cellWidth: 40 }
                 }
             });
         }
 
         // ============================================
-        // PIE DE PÁGINA EN TODAS LAS PÁGINAS
+        // PÁGINA 3: RECOMENDACIONES
         // ============================================
-        const totalPages = pdf.internal.getNumberOfPages();
+        if (data.recommendations && data.recommendations.length > 0) {
+            doc.addPage();
+            yPos = 20;
+
+            doc.setFillColor(52, 199, 89);
+            doc.rect(15, yPos - 5, 5, 10, 'F');
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(52, 199, 89);
+            doc.text('💡 Recomendaciones Estratégicas', 25, yPos);
+            yPos += 12;
+
+            const recsData = data.recommendations.map(rec => [
+                rec.priority || '',
+                rec.title || '',
+                rec.description || '',
+                rec.impact || 'Alto'
+            ]);
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [['Prioridad', 'Acción', 'Descripción', 'Impacto']],
+                body: recsData,
+                theme: 'grid',
+                headStyles: { 
+                    fillColor: [52, 199, 89],
+                    fontSize: 10,
+                    fontStyle: 'bold'
+                },
+                bodyStyles: { fontSize: 9 },
+                alternateRowStyles: { fillColor: [240, 253, 244] },
+                margin: { left: 20, right: 20 },
+                columnStyles: {
+                    0: { cellWidth: 25, halign: 'center', fontStyle: 'bold' },
+                    1: { cellWidth: 45 },
+                    2: { cellWidth: 80 },
+                    3: { cellWidth: 25, halign: 'center' }
+                }
+            });
+        }
+
+        // ============================================
+        // PIE DE PÁGINA EN TODAS
+        // ============================================
+        const totalPages = doc.internal.getNumberOfPages();
         for (let i = 1; i <= totalPages; i++) {
-            pdf.setPage(i);
-            pdf.setFontSize(8);
-            pdf.setTextColor(150);
-            pdf.text(
-                `Página ${i} de ${totalPages} | Generado el ${new Date().toLocaleString('es-PE')}`,
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            
+            // Línea superior del pie
+            doc.setDrawColor(200);
+            doc.line(20, pageHeight - 15, pageWidth - 20, pageHeight - 15);
+            
+            // Texto
+            doc.text(
+                `Página ${i} de ${totalPages}`,
+                20,
+                pageHeight - 10
+            );
+            doc.text(
+                `Generado: ${new Date().toLocaleString('es-PE')}`,
                 pageWidth / 2,
                 pageHeight - 10,
                 { align: 'center' }
             );
-            pdf.text(
-                'TV Jhaire - Sistema de Gestión de Clientes',
-                pageWidth / 2,
-                pageHeight - 5,
-                { align: 'center' }
+            doc.text(
+                'TV Jhaire - Dashboard Ejecutivo',
+                pageWidth - 20,
+                pageHeight - 10,
+                { align: 'right' }
             );
         }
 
         // Guardar
         const fileName = `Dashboard_Ejecutivo_${new Date().getTime()}.pdf`;
-        pdf.save(fileName);
+        doc.save(fileName);
 
         return { success: true, fileName };
     } catch (error) {
@@ -212,69 +282,113 @@ export const exportToPDF = async (element, data) => {
 };
 
 /**
- * 📊 EXPORTAR A EXCEL
+ * 📊 EXPORTAR A EXCEL ULTRA PRO
  */
 export const exportToExcel = async (data) => {
     try {
         const workbook = XLSX.utils.book_new();
 
         // ============================================
-        // HOJA 1: RESUMEN
+        // HOJA 1: RESUMEN EJECUTIVO
         // ============================================
         const resumenData = [
             ['DASHBOARD EJECUTIVO - TV JHAIRE'],
-            [`Fecha: ${new Date().toLocaleDateString('es-PE')}`],
+            [`Generado: ${new Date().toLocaleString('es-PE')}`],
             [''],
-            ['KPI', 'Valor'],
-            ['Clientes Activos', data.kpis?.clientes_activos || 0],
-            ['Ingresos del Mes', data.kpis?.ingresos_mes || 0],
-            ['Clientes con Deuda', data.kpis?.clientes_con_deuda || 0],
-            ['Deuda Total', data.kpis?.deuda_total || 0],
-            ['Suspendidos', data.kpis?.clientes_suspendidos || 0],
-            ['Riesgo Alto', data.kpis?.riesgo_alto || 0]
+            ['INDICADORES CLAVE (KPIs)'],
+            ['Métrica', 'Valor', 'Tendencia'],
+            ['Clientes Activos', data.kpis?.clientes_activos || 0, '+12%'],
+            ['Ingresos del Mes', `S/ ${(data.kpis?.ingresos_mes || 0).toFixed(2)}`, '+8.5%'],
+            ['Clientes con Deuda', data.kpis?.clientes_con_deuda || 0, 'Atención'],
+            ['Deuda Total', `S/ ${(data.kpis?.deuda_total || 0).toFixed(2)}`, 'Crítico'],
+            ['Suspendidos', data.kpis?.clientes_suspendidos || 0, ''],
+            ['Riesgo Alto', data.kpis?.riesgo_alto || 0, '']
         ];
+        
         const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
-        XLSX.utils.book_append_sheet(workbook, wsResumen, 'Resumen');
+        
+        // Estilos para el resumen
+        wsResumen['!cols'] = [
+            { wch: 25 },
+            { wch: 15 },
+            { wch: 15 }
+        ];
+        
+        XLSX.utils.book_append_sheet(workbook, wsResumen, 'Resumen Ejecutivo');
 
         // ============================================
         // HOJA 2: INGRESOS MENSUALES
         // ============================================
         if (data.ingresos && data.ingresos.length > 0) {
-            const ingresosData = data.ingresos.map(ing => ({
-                'Mes': ing.mes,
-                'Total': parseFloat(ing.total || 0)
-            }));
-            const wsIngresos = XLSX.utils.json_to_sheet(ingresosData);
+            const ingresosData = [
+                ['INGRESOS MENSUALES'],
+                ['Mes', 'Total Ingresos'],
+                ...data.ingresos.map(ing => [
+                    ing.mes,
+                    parseFloat(ing.total || 0)
+                ])
+            ];
+            
+            const wsIngresos = XLSX.utils.aoa_to_sheet(ingresosData);
+            wsIngresos['!cols'] = [{ wch: 20 }, { wch: 15 }];
             XLSX.utils.book_append_sheet(workbook, wsIngresos, 'Ingresos');
         }
 
         // ============================================
-        // HOJA 3: MEJORES PAGADORES
+        // HOJA 3: TOP PAGADORES
         // ============================================
         if (data.mejoresPagadores && data.mejoresPagadores.length > 0) {
-            const mejoresData = data.mejoresPagadores.map(cliente => ({
-                'Cliente': cliente.cliente,
-                'DNI': cliente.dni,
-                'Total Pagos': cliente.total_pagos,
-                'Monto Total': parseFloat(cliente.monto_total || 0),
-                'Score': cliente.score_pago
-            }));
-            const wsMejores = XLSX.utils.json_to_sheet(mejoresData);
+            const mejoresData = [
+                ['TOP 10 MEJORES PAGADORES'],
+                ['Ranking', 'Cliente', 'DNI', 'Total Pagos', 'Monto Total', 'Score'],
+                ...data.mejoresPagadores.map((cliente, index) => [
+                    index + 1,
+                    cliente.cliente,
+                    cliente.dni,
+                    cliente.total_pagos,
+                    parseFloat(cliente.monto_total || 0),
+                    cliente.score_pago
+                ])
+            ];
+            
+            const wsMejores = XLSX.utils.aoa_to_sheet(mejoresData);
+            wsMejores['!cols'] = [
+                { wch: 10 },
+                { wch: 30 },
+                { wch: 12 },
+                { wch: 12 },
+                { wch: 15 },
+                { wch: 10 }
+            ];
             XLSX.utils.book_append_sheet(workbook, wsMejores, 'Top Pagadores');
         }
 
         // ============================================
-        // HOJA 4: PEORES PAGADORES
+        // HOJA 4: CLIENTES EN MORA
         // ============================================
         if (data.peoresPagadores && data.peoresPagadores.length > 0) {
-            const peoresData = data.peoresPagadores.map(cliente => ({
-                'Cliente': cliente.cliente,
-                'Teléfono': cliente.telefono || 'N/A',
-                'Meses Deuda': cliente.meses_deuda,
-                'Deuda Total': parseFloat(cliente.deuda_total || 0),
-                'Zona': cliente.zona_geografica || 'N/A'
-            }));
-            const wsPeores = XLSX.utils.json_to_sheet(peoresData);
+            const peoresData = [
+                ['CLIENTES EN MORA'],
+                ['Ranking', 'Cliente', 'Teléfono', 'Meses Deuda', 'Deuda Total', 'Zona'],
+                ...data.peoresPagadores.map((cliente, index) => [
+                    index + 1,
+                    cliente.cliente,
+                    cliente.telefono || 'N/A',
+                    cliente.meses_deuda,
+                    parseFloat(cliente.deuda_total || 0),
+                    cliente.zona_geografica || 'N/A'
+                ])
+            ];
+            
+            const wsPeores = XLSX.utils.aoa_to_sheet(peoresData);
+            wsPeores['!cols'] = [
+                { wch: 10 },
+                { wch: 30 },
+                { wch: 15 },
+                { wch: 12 },
+                { wch: 15 },
+                { wch: 20 }
+            ];
             XLSX.utils.book_append_sheet(workbook, wsPeores, 'En Mora');
         }
 
@@ -282,24 +396,36 @@ export const exportToExcel = async (data) => {
         // HOJA 5: CLIENTES EN RIESGO
         // ============================================
         if (data.clientesRiesgo && data.clientesRiesgo.length > 0) {
-            const riesgoData = data.clientesRiesgo.map(cliente => ({
-                'Cliente': cliente.cliente,
-                'Teléfono': cliente.telefono || 'N/A',
-                'Deuda': parseFloat(cliente.deuda_total || 0),
-                'Score': cliente.score_pago,
-                'Nivel Riesgo': cliente.nivel_riesgo,
-                'Zona': cliente.zona_geografica || 'N/A',
-                'Último Pago': cliente.fecha_ultimo_pago || 'Nunca'
-            }));
-            const wsRiesgo = XLSX.utils.json_to_sheet(riesgoData);
+            const riesgoData = [
+                ['CLIENTES EN RIESGO CRÍTICO'],
+                ['Cliente', 'Teléfono', 'Deuda', 'Score', 'Nivel Riesgo', 'Zona', 'Último Pago'],
+                ...data.clientesRiesgo.map(cliente => [
+                    cliente.cliente,
+                    cliente.telefono || 'N/A',
+                    parseFloat(cliente.deuda_total || 0),
+                    cliente.score_pago,
+                    cliente.nivel_riesgo,
+                    cliente.zona_geografica || 'N/A',
+                    cliente.fecha_ultimo_pago || 'Nunca'
+                ])
+            ];
+            
+            const wsRiesgo = XLSX.utils.aoa_to_sheet(riesgoData);
+            wsRiesgo['!cols'] = [
+                { wch: 30 },
+                { wch: 15 },
+                { wch: 12 },
+                { wch: 8 },
+                { wch: 15 },
+                { wch: 20 },
+                { wch: 15 }
+            ];
             XLSX.utils.book_append_sheet(workbook, wsRiesgo, 'Clientes Riesgo');
         }
 
         // Guardar archivo
         const fileName = `Dashboard_Ejecutivo_${new Date().getTime()}.xlsx`;
-        const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([wbout], { type: 'application/octet-stream' });
-        saveAs(blob, fileName);
+        XLSX.writeFile(workbook, fileName);
 
         return { success: true, fileName };
     } catch (error) {
@@ -313,42 +439,12 @@ export const exportToExcel = async (data) => {
  */
 export const sendEmail = async (email, data) => {
     try {
-        // Aquí iría la integración con tu backend para enviar email
-        // Por ahora simularemos el envío
-
-        const body = `
-            <h1>Dashboard Ejecutivo - TV Jhaire</h1>
-            <p>Fecha: ${new Date().toLocaleDateString('es-PE')}</p>
-            
-            <h2>Resumen de KPIs:</h2>
-            <ul>
-                <li>Clientes Activos: ${data.kpis?.clientes_activos || 0}</li>
-                <li>Ingresos del Mes: S/ ${(data.kpis?.ingresos_mes || 0).toFixed(2)}</li>
-                <li>Deuda Total: S/ ${(data.kpis?.deuda_total || 0).toFixed(2)}</li>
-            </ul>
-
-            ${data.insights && data.insights.length > 0 ? `
-                <h2>Insights Principales:</h2>
-                <ul>
-                    ${data.insights.slice(0, 3).map(i => `<li><strong>${i.title}:</strong> ${i.message}</li>`).join('')}
-                </ul>
-            ` : ''}
-
-            ${data.alerts && data.alerts.length > 0 ? `
-                <h2>⚠️ Alertas Críticas:</h2>
-                <ul>
-                    ${data.alerts.map(a => `<li>${a.message}</li>`).join('')}
-                </ul>
-            ` : ''}
-        `;
-
-        // Simular llamada al backend
+        // Aquí iría la integración con tu backend
         console.log('Enviando email a:', email);
-        console.log('Contenido:', body);
-
-        // Aquí llamarías a tu API:
-        // await api.post('/dashboard/send-email', { email, body });
-
+        
+        // Simular envío
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         return { success: true };
     } catch (error) {
         console.error('Error enviando email:', error);
@@ -356,9 +452,14 @@ export const sendEmail = async (email, data) => {
     }
 };
 
-/**
- * 🖨️ IMPRIMIR
- */
-export const printDashboard = () => {
-    window.print();
+// Helper functions
+const formatMoney = (value) => {
+    return new Intl.NumberFormat('es-PE', {
+        style: 'currency',
+        currency: 'PEN'
+    }).format(value || 0);
+};
+
+const formatNumber = (value) => {
+    return new Intl.NumberFormat('es-PE').format(value || 0);
 };
