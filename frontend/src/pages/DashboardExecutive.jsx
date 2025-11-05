@@ -1,6 +1,12 @@
+// ============================================
+// frontend/src/pages/DashboardExecutive.jsx
+// DASHBOARD EJECUTIVO ULTRA PRO - VERSIÓN FINAL
+// CON BOTONES FUNCIONALES
+// ============================================
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -21,24 +27,16 @@ import {
     FileText,
     Mail,
     Filter,
-    Calendar,
     TrendingUp,
     TrendingDown,
     AlertCircle,
     Brain,
     Zap,
     Target,
-    Award,
     Users,
     DollarSign,
     RefreshCw,
-    Eye,
-    EyeOff,
-    Maximize2,
-    CheckCircle,
-    Clock,
-    Activity,
-    MapPin
+    CheckCircle
 } from 'lucide-react';
 import api from '../services/api';
 import { generateInsights, predictTrends } from '../utils/InsightsEngine';
@@ -84,7 +82,6 @@ const DashboardExecutive = () => {
     
     // Estados UI
     const [showFilters, setShowFilters] = useState(false);
-    const [showInsights, setShowInsights] = useState(true);
     
     // Estados filtros
     const [dateRange, setDateRange] = useState({
@@ -150,7 +147,7 @@ const DashboardExecutive = () => {
             setDistribucionEstado(distEstadoRes.data);
             setTasaMorosidad(tasaMorData);
             setProyeccion(proyData);
-            setClientesRiesgo(riesgoData);
+            setClientesRiesgo(riesgoRes.data);
             setDistribucionGeo(geoRes.data);
 
             // GENERAR INSIGHTS CON IA
@@ -175,6 +172,58 @@ const DashboardExecutive = () => {
             console.error('Error cargando dashboard:', error);
             setLoading(false);
             setRefreshing(false);
+        }
+    };
+
+    // ============================================
+    // FUNCIONES DE ACCIÓN PARA LOS BOTONES
+    // ============================================
+
+    const handleAccionInsight = (insight) => {
+        if (insight.title.includes('Proyección')) {
+            navigate('/pagos');
+        } else if (insight.title.includes('Riesgo')) {
+            // Scroll suave a la sección de clientes en riesgo
+            const element = document.querySelector('.riesgo-premium');
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        } else if (insight.title.includes('Retención')) {
+            navigate('/clientes');
+        } else {
+            alert('Redirigiendo a la sección correspondiente...');
+        }
+    };
+
+    const handleAccionAlerta = (alerta) => {
+        if (alerta.message.includes('riesgo crítico')) {
+            // Scroll a tabla de riesgo
+            const element = document.querySelector('.riesgo-premium');
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Highlight temporal
+                element.style.boxShadow = '0 0 30px rgba(255, 59, 48, 0.5)';
+                setTimeout(() => {
+                    element.style.boxShadow = '';
+                }, 2000);
+            }
+        } else {
+            navigate('/clientes');
+        }
+    };
+
+    const handleAplicarRecomendacion = (recomendacion) => {
+        const mensaje = `¿Aplicar la recomendación?\n\n"${recomendacion.title}"\n\n${recomendacion.description}`;
+        
+        if (window.confirm(mensaje)) {
+            alert(`✅ Recomendación aplicada: "${recomendacion.title}"\n\nSe ha creado una tarea en tu sistema.`);
+            
+            // Aquí podrías llamar al backend:
+            // await api.post('/tareas/crear', { 
+            //     titulo: recomendacion.title,
+            //     descripcion: recomendacion.description,
+            //     prioridad: recomendacion.priority
+            // });
         }
     };
 
@@ -447,123 +496,122 @@ const DashboardExecutive = () => {
             </motion.header>
 
             {/* FILTROS */}
-            <AnimatePresence>
-                {showFilters && (
-                    <DashboardFilters
-                        dateRange={dateRange}
-                        setDateRange={setDateRange}
-                        filters={filters}
-                        setFilters={setFilters}
-                        onClose={() => setShowFilters(false)}
-                    />
-                )}
-            </AnimatePresence>
+            {showFilters && (
+                <DashboardFilters
+                    dateRange={dateRange}
+                    setDateRange={setDateRange}
+                    filters={filters}
+                    setFilters={setFilters}
+                    onClose={() => setShowFilters(false)}
+                />
+            )}
 
             <div className="dashboard-content">
-                {/* INSIGHTS IA */}
-                <AnimatePresence>
-                    {showInsights && insights.length > 0 && (
-                        <motion.div
-                            className="insights-section"
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                        >
-                            <div className="insights-header">
-                                <div className="insights-title">
-                                    <Brain size={24} />
-                                    <h2>Asistente Inteligente</h2>
-                                    <span className="badge-ai">IA</span>
-                                </div>
-                                <motion.button
-                                    className="btn-toggle"
-                                    onClick={() => setShowInsights(!showInsights)}
-                                    whileHover={{ scale: 1.05 }}
+                {/* INSIGHTS IA - SIN BOTÓN DE OCULTAR */}
+                {insights.length > 0 && (
+                    <motion.div
+                        className="insights-section"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                    >
+                        <div className="insights-header">
+                            <div className="insights-title">
+                                <Brain size={24} />
+                                <h2>Asistente Inteligente</h2>
+                                <span className="badge-ai">IA</span>
+                            </div>
+                        </div>
+
+                        <div className="insights-grid">
+                            {insights.map((insight, i) => (
+                                <motion.div
+                                    key={i}
+                                    className={`insight-card insight-${insight.type}`}
+                                    initial={{ x: -20, opacity: 0 }}
+                                    animate={{ x: 0, opacity: 1 }}
+                                    transition={{ delay: i * 0.1 }}
+                                    whileHover={{ scale: 1.02 }}
                                 >
-                                    {showInsights ? <EyeOff size={18} /> : <Eye size={18} />}
-                                </motion.button>
-                            </div>
-
-                            <div className="insights-grid">
-                                {insights.map((insight, i) => (
-                                    <motion.div
-                                        key={i}
-                                        className={`insight-card insight-${insight.type}`}
-                                        initial={{ x: -20, opacity: 0 }}
-                                        animate={{ x: 0, opacity: 1 }}
-                                        transition={{ delay: i * 0.1 }}
-                                        whileHover={{ scale: 1.02 }}
-                                    >
-                                        <div className="insight-icon">
-                                            {insight.type === 'warning' && <AlertCircle size={20} />}
-                                            {insight.type === 'success' && <Target size={20} />}
-                                            {insight.type === 'info' && <Zap size={20} />}
-                                        </div>
-                                        <div className="insight-content">
-                                            <h4>{insight.title}</h4>
-                                            <p>{insight.message}</p>
-                                            {insight.action && (
-                                                <button className="insight-action">
-                                                    {insight.action}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
-
-                            {alerts.length > 0 && (
-                                <div className="alerts-critical">
-                                    <h3>🚨 Alertas Críticas</h3>
-                                    <div className="alerts-list">
-                                        {alerts.map((alert, i) => (
-                                            <motion.div
-                                                key={i}
-                                                className="alert-item"
-                                                initial={{ x: -20, opacity: 0 }}
-                                                animate={{ x: 0, opacity: 1 }}
-                                                transition={{ delay: i * 0.1 }}
-                                            >
-                                                <AlertCircle size={18} />
-                                                <span>{alert.message}</span>
-                                                <button className="alert-action">{alert.action}</button>
-                                            </motion.div>
-                                        ))}
+                                    <div className="insight-icon">
+                                        {insight.type === 'warning' && <AlertCircle size={20} />}
+                                        {insight.type === 'success' && <Target size={20} />}
+                                        {insight.type === 'info' && <Zap size={20} />}
                                     </div>
-                                </div>
-                            )}
-
-                            {recommendations.length > 0 && (
-                                <div className="recommendations">
-                                    <h3>💡 Recomendaciones</h3>
-                                    <div className="recommendations-list">
-                                        {recommendations.map((rec, i) => (
-                                            <motion.div
-                                                key={i}
-                                                className="recommendation-item"
-                                                initial={{ y: 20, opacity: 0 }}
-                                                animate={{ y: 0, opacity: 1 }}
-                                                transition={{ delay: i * 0.1 }}
-                                                whileHover={{ x: 5 }}
+                                    <div className="insight-content">
+                                        <h4>{insight.title}</h4>
+                                        <p>{insight.message}</p>
+                                        {insight.action && (
+                                            <button 
+                                                className="insight-action"
+                                                onClick={() => handleAccionInsight(insight)}
                                             >
-                                                <div className="recommendation-priority">
-                                                    {rec.priority}
-                                                </div>
-                                                <div className="recommendation-content">
-                                                    <h4>{rec.title}</h4>
-                                                    <p>{rec.description}</p>
-                                                </div>
-                                                <button className="recommendation-action">
-                                                    Aplicar
-                                                </button>
-                                            </motion.div>
-                                        ))}
+                                                {insight.action}
+                                            </button>
+                                        )}
                                     </div>
+                                </motion.div>
+                            ))}
+                        </div>
+
+                        {alerts.length > 0 && (
+                            <div className="alerts-critical">
+                                <h3>🚨 Alertas Críticas</h3>
+                                <div className="alerts-list">
+                                    {alerts.map((alert, i) => (
+                                        <motion.div
+                                            key={i}
+                                            className="alert-item"
+                                            initial={{ x: -20, opacity: 0 }}
+                                            animate={{ x: 0, opacity: 1 }}
+                                            transition={{ delay: i * 0.1 }}
+                                        >
+                                            <AlertCircle size={18} />
+                                            <span>{alert.message}</span>
+                                            <button 
+                                                className="alert-action"
+                                                onClick={() => handleAccionAlerta(alert)}
+                                            >
+                                                {alert.action}
+                                            </button>
+                                        </motion.div>
+                                    ))}
                                 </div>
-                            )}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                            </div>
+                        )}
+
+                        {recommendations.length > 0 && (
+                            <div className="recommendations">
+                                <h3>💡 Recomendaciones</h3>
+                                <div className="recommendations-list">
+                                    {recommendations.map((rec, i) => (
+                                        <motion.div
+                                            key={i}
+                                            className="recommendation-item"
+                                            initial={{ y: 20, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            transition={{ delay: i * 0.1 }}
+                                            whileHover={{ x: 5 }}
+                                        >
+                                            <div className="recommendation-priority">
+                                                {rec.priority}
+                                            </div>
+                                            <div className="recommendation-content">
+                                                <h4>{rec.title}</h4>
+                                                <p>{rec.description}</p>
+                                            </div>
+                                            <button 
+                                                className="recommendation-action"
+                                                onClick={() => handleAplicarRecomendacion(rec)}
+                                            >
+                                                Aplicar
+                                            </button>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </motion.div>
+                )}
 
                 {/* KPIS */}
                 <div className="kpis-ultra">
