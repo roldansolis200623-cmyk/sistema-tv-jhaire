@@ -17,7 +17,7 @@ import {
     X
 } from 'lucide-react';
 import api from '../services/api';
-import './Notificaciones.css';
+import './NotificacionesInteligentes.css';  // 
 
 const Notificaciones = () => {
     const [notificaciones, setNotificaciones] = useState([]);
