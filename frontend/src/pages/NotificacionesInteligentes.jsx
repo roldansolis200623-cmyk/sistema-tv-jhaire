@@ -1,274 +1,181 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import notificacionService from '../services/notificacionInteligenteService';
-import './NotificacionesInteligentes.css';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    Bell,
+    CheckCircle2,
+    AlertCircle,
+    Info,
+    Trash2,
+    Check,
+    Filter,
+    RefreshCw,
+    Brain,
+    DollarSign,
+    Users,
+    Clock,
+    Eye,
+    X
+} from 'lucide-react';
+import api from '../services/api';
+import './Notificaciones.css';
 
-const NotificacionesInteligentes = () => {
-    const navigate = useNavigate();
-    const { logout } = useAuth();
-    
+const Notificaciones = () => {
     const [notificaciones, setNotificaciones] = useState([]);
-    const [resumen, setResumen] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [filtros, setFiltros] = useState({
-        tipo: null,
-        prioridad: null,
-        leida: null
-    });
-    const [vistaActual, setVistaActual] = useState('todas'); // 'todas', 'criticas', 'atencion', 'recordatorios'
-    const [seleccionados, setSeleccionados] = useState([]); // IDs de notificaciones seleccionadas
-    const [enviandoWhatsApp, setEnviandoWhatsApp] = useState(false);
-
-    // Cargar datos
-    const cargarDatos = async () => {
-        try {
-            setLoading(true);
-            const [notifs, resum] = await Promise.all([
-                notificacionService.obtenerTodas(filtros),
-                notificacionService.obtenerResumen()
-            ]);
-            setNotificaciones(notifs);
-            setResumen(resum);
-        } catch (error) {
-            console.error('Error cargando datos:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const [filtro, setFiltro] = useState('todas');
+    const [stats, setStats] = useState({});
 
     useEffect(() => {
-        cargarDatos();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filtros]);
+        cargarNotificaciones();
+    }, [filtro]);
 
-    // Aplicar filtro por vista
-    const aplicarVistaFiltro = (vista) => {
-        setVistaActual(vista);
-        switch (vista) {
-            case 'criticas':
-                setFiltros({ tipo: 'CRITICO', prioridad: null, leida: false });
-                break;
-            case 'atencion':
-                setFiltros({ tipo: 'ATENCION', prioridad: null, leida: false });
-                break;
-            case 'recordatorios':
-                setFiltros({ tipo: 'RECORDATORIO', prioridad: null, leida: null });
-                break;
-            default:
-                setFiltros({ tipo: null, prioridad: null, leida: false });
-        }
-    };
-
-    // Marcar como leída
-    const marcarLeida = async (id) => {
-        try {
-            await notificacionService.marcarLeida(id);
-            cargarDatos();
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    };
-
-    // Marcar todas como leídas
-    const marcarTodasLeidas = async () => {
-        try {
-            const ids = notificaciones
-                .filter(n => !n.leida)
-                .map(n => n.id);
-            
-            if (ids.length === 0) {
-                alert('No hay notificaciones sin leer');
-                return;
-            }
-
-            await notificacionService.marcarVariasLeidas(ids);
-            cargarDatos();
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    };
-
-    // Archivar notificación
-    const archivarNotificacion = async (id) => {
-        try {
-            await notificacionService.archivar(id);
-            cargarDatos();
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    };
-
-    // Refrescar notificaciones
-    const refrescar = async () => {
+    const cargarNotificaciones = async () => {
         try {
             setLoading(true);
-            await notificacionService.generar();
-            await cargarDatos();
-            alert('Notificaciones actualizadas correctamente');
+            
+            // Por ahora usamos datos de ejemplo
+            // Cuando tengas el backend real, usa: await api.get('/notificaciones')
+            const notifEjemplo = [
+                {
+                    id: 1,
+                    tipo: 'ia',
+                    titulo: 'Nueva recomendación de IA',
+                    mensaje: 'Se detectaron 6 clientes en riesgo alto que requieren seguimiento inmediato',
+                    fecha: new Date().toISOString(),
+                    leida: false,
+                    prioridad: 'alta',
+                    icono: 'brain'
+                },
+                {
+                    id: 2,
+                    tipo: 'pago',
+                    titulo: 'Pago recibido',
+                    mensaje: 'Juan Pérez realizó un pago de S/ 150.00',
+                    fecha: new Date(Date.now() - 3600000).toISOString(),
+                    leida: false,
+                    prioridad: 'normal',
+                    icono: 'dollar'
+                },
+                {
+                    id: 3,
+                    tipo: 'alerta',
+                    titulo: 'Cliente en mora crítica',
+                    mensaje: 'María García tiene 3 meses de deuda acumulada - S/ 450.00',
+                    fecha: new Date(Date.now() - 7200000).toISOString(),
+                    leida: false,
+                    prioridad: 'critica',
+                    icono: 'alert'
+                },
+                {
+                    id: 4,
+                    tipo: 'sistema',
+                    titulo: 'Tarea completada',
+                    mensaje: 'Has completado la tarea: "Contactar clientes en mora"',
+                    fecha: new Date(Date.now() - 86400000).toISOString(),
+                    leida: true,
+                    prioridad: 'normal',
+                    icono: 'check'
+                },
+                {
+                    id: 5,
+                    tipo: 'recordatorio',
+                    titulo: 'Recordatorio de vencimiento',
+                    mensaje: '15 clientes tienen pagos que vencen mañana',
+                    fecha: new Date(Date.now() - 172800000).toISOString(),
+                    leida: true,
+                    prioridad: 'normal',
+                    icono: 'clock'
+                }
+            ];
+
+            setNotificaciones(notifEjemplo);
+            
+            // Calcular stats
+            setStats({
+                total: notifEjemplo.length,
+                noLeidas: notifEjemplo.filter(n => !n.leida).length,
+                criticas: notifEjemplo.filter(n => n.prioridad === 'critica').length,
+                hoy: notifEjemplo.filter(n => {
+                    const fecha = new Date(n.fecha);
+                    const hoy = new Date();
+                    return fecha.toDateString() === hoy.toDateString();
+                }).length
+            });
+            
+            setLoading(false);
         } catch (error) {
-            console.error('Error refrescando notificaciones:', error);
-            const errorMsg = error.response?.data?.message || 'Error al actualizar. Verifica tu conexión.';
-            alert(errorMsg);
-        } finally {
+            console.error('Error cargando notificaciones:', error);
             setLoading(false);
         }
     };
 
-    // Ir a cliente
-    const irACliente = (clienteId) => {
-        // Por ahora solo navega a la lista de clientes
-        // TODO: Implementar navegación a cliente específico cuando la ruta esté disponible
-        // navigate(`/clientes/${clienteId}`);
-        navigate(`/clientes`);
-    };
-
-    // Enviar WhatsApp
-    const enviarWhatsApp = (notificacion) => {
-        // Validar que el teléfono exista
-        if (!notificacion.telefono) {
-            alert('Este cliente no tiene número de teléfono registrado');
-            return;
-        }
-
-        const mensaje = encodeURIComponent(
-            `Hola ${notificacion.nombre}, te contactamos de TV Jhaire. ${notificacion.mensaje}`
-        );
-        const url = `https://wa.me/51${notificacion.telefono}?text=${mensaje}`;
-        window.open(url, '_blank');
-        marcarLeida(notificacion.id);
-    };
-
-    // Toggle selección individual
-    const toggleSeleccion = (notifId) => {
-        setSeleccionados(prev => {
-            if (prev.includes(notifId)) {
-                return prev.filter(id => id !== notifId);
-            } else {
-                return [...prev, notifId];
-            }
-        });
-    };
-
-    // Seleccionar/Deseleccionar todos
-    const toggleSeleccionTodos = () => {
-        if (seleccionados.length === notificaciones.length) {
-            setSeleccionados([]);
-        } else {
-            setSeleccionados(notificaciones.map(n => n.id));
+    const marcarComoLeida = async (id) => {
+        try {
+            setNotificaciones(notificaciones.map(n =>
+                n.id === id ? { ...n, leida: true } : n
+            ));
+            // await api.put(`/notificaciones/${id}/leer`);
+        } catch (error) {
+            console.error('Error marcando como leída:', error);
         }
     };
 
-    // Enviar WhatsApp masivo
-    const enviarWhatsAppMasivo = async () => {
-        const notificacionesAEnviar = notificaciones.filter(n => seleccionados.includes(n.id));
-
-        if (notificacionesAEnviar.length === 0) {
-            alert('Selecciona al menos un cliente para enviar WhatsApp');
-            return;
-        }
-
-        const sinTelefono = notificacionesAEnviar.filter(n => !n.telefono);
-        if (sinTelefono.length > 0) {
-            const confirmar = window.confirm(
-                `${sinTelefono.length} cliente(s) no tienen teléfono. ¿Continuar con los demás?`
-            );
-            if (!confirmar) return;
-        }
-
-        const clientesValidos = notificacionesAEnviar.filter(n => n.telefono);
-
-        if (clientesValidos.length === 0) {
-            alert('Ningún cliente seleccionado tiene teléfono');
-            return;
-        }
-
-        const confirmar = window.confirm(
-            `¿Enviar WhatsApp a ${clientesValidos.length} cliente(s)?\n\nSe abrirán las conversaciones una por una.`
-        );
-
-        if (!confirmar) return;
-
-        setEnviandoWhatsApp(true);
-
-        // Enviar uno por uno con delay
-        for (let i = 0; i < clientesValidos.length; i++) {
-            const notif = clientesValidos[i];
-
-            const mensaje = encodeURIComponent(
-                `Hola ${notif.nombre}, somos de TV Jhaire.\n\n` +
-                `Te recordamos que tienes una deuda pendiente de S/ ${formatearMonto(notif.deuda_actual)}.\n` +
-                `Días sin pagar: ${formatearNumero(notif.dias_sin_pagar, 0)} días.\n\n` +
-                `Por favor, regulariza tu pago para evitar el corte del servicio.\n\n` +
-                `¡Gracias! 🙏`
-            );
-
-            const url = `https://wa.me/51${notif.telefono}?text=${mensaje}`;
-
-            // Abrir WhatsApp
-            window.open(url, '_blank');
-
-            // Marcar como leída
-            try {
-                await marcarLeida(notif.id);
-            } catch (error) {
-                console.error('Error marcando como leída:', error);
-            }
-
-            // Delay de 2 segundos entre cada mensaje (excepto el último)
-            if (i < clientesValidos.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-        }
-
-        setEnviandoWhatsApp(false);
-        setSeleccionados([]);
-        alert(`WhatsApp enviado a ${clientesValidos.length} cliente(s)`);
-        cargarDatos();
-    };
-
-    // Obtener icono según tipo
-    const obtenerIcono = (tipo) => {
-        switch (tipo) {
-            case 'CRITICO': return '🔴';
-            case 'ATENCION': return '⚠️';
-            case 'RECORDATORIO': return '📅';
-            case 'AL_DIA': return '✅';
-            default: return '📋';
+    const marcarTodasLeidas = async () => {
+        try {
+            setNotificaciones(notificaciones.map(n => ({ ...n, leida: true })));
+            // await api.post('/notificaciones/leer-todas');
+        } catch (error) {
+            console.error('Error marcando todas como leídas:', error);
         }
     };
 
-    // Obtener color según prioridad
-    const obtenerColorPrioridad = (prioridad) => {
-        switch (prioridad) {
-            case 'alta': return 'notif-alta';
-            case 'media': return 'notif-media';
-            case 'baja': return 'notif-baja';
-            default: return 'notif-info';
+    const eliminarNotificacion = async (id) => {
+        try {
+            setNotificaciones(notificaciones.filter(n => n.id !== id));
+            // await api.delete(`/notificaciones/${id}`);
+        } catch (error) {
+            console.error('Error eliminando notificación:', error);
         }
     };
 
-    const handleLogout = () => {
-        logout();
-        navigate('/');
+    const getIcono = (icono) => {
+        const iconos = {
+            brain: <Brain size={20} />,
+            dollar: <DollarSign size={20} />,
+            alert: <AlertCircle size={20} />,
+            check: <CheckCircle2 size={20} />,
+            clock: <Clock size={20} />,
+            users: <Users size={20} />
+        };
+        return iconos[icono] || <Info size={20} />;
     };
 
-    // 🔧 HELPER: Formatear monto de forma segura
-    const formatearMonto = (valor) => {
-        const numero = Number(valor);
-        return isNaN(numero) ? '0.00' : numero.toFixed(2);
+    const getTiempoRelativo = (fecha) => {
+        const ahora = new Date();
+        const fechaNotif = new Date(fecha);
+        const diff = Math.floor((ahora - fechaNotif) / 1000);
+
+        if (diff < 60) return 'Hace un momento';
+        if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
+        if (diff < 86400) return `Hace ${Math.floor(diff / 3600)} h`;
+        if (diff < 604800) return `Hace ${Math.floor(diff / 86400)} días`;
+        return fechaNotif.toLocaleDateString('es-PE');
     };
 
-    // 🔧 HELPER: Formatear número entero de forma segura
-    const formatearNumero = (valor, defecto = 0) => {
-        const numero = Number(valor);
-        return isNaN(numero) ? defecto : numero;
-    };
+    const notifFiltradas = filtro === 'todas' 
+        ? notificaciones 
+        : filtro === 'no-leidas'
+        ? notificaciones.filter(n => !n.leida)
+        : notificaciones.filter(n => n.tipo === filtro);
 
-    if (loading && !resumen) {
+    if (loading) {
         return (
-            <div className="notificaciones-loading">
-                <div className="spinner"></div>
+            <div className="notif-loading">
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="loading-spinner"
+                />
                 <p>Cargando notificaciones...</p>
             </div>
         );
@@ -276,193 +183,221 @@ const NotificacionesInteligentes = () => {
 
     return (
         <div className="notificaciones-container">
-            {/* Header */}
-            <header className="notificaciones-header">
-                <div className="header-left">
-                    <button onClick={() => navigate('/dashboard')} className="btn-volver">
-                        ← Volver al Dashboard
-                    </button>
-                    <h1>🔔 Notificaciones Inteligentes</h1>
-                </div>
-                <div className="header-right">
-                    <button onClick={refrescar} className="btn-refresh" disabled={loading}>
-                        🔄 Actualizar
-                    </button>
-                    <button onClick={handleLogout} className="btn-logout">
-                        Cerrar Sesión
-                    </button>
-                </div>
-            </header>
-
-            {/* Resumen de notificaciones */}
-            {resumen && (
-                <div className="notif-resumen">
-                    <div 
-                        className={`resumen-card ${vistaActual === 'todas' ? 'active' : ''}`}
-                        onClick={() => aplicarVistaFiltro('todas')}
-                    >
-                        <div className="card-icono">📊</div>
-                        <div className="card-info">
-                            <h3>{formatearNumero(resumen.total, 0)}</h3>
-                            <p>Total</p>
+            {/* HEADER */}
+            <motion.header 
+                className="notif-header"
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+            >
+                <div className="header-content">
+                    <div className="header-left">
+                        <div className="header-icon">
+                            <Bell size={32} />
+                            {stats.noLeidas > 0 && (
+                                <span className="badge-count">{stats.noLeidas}</span>
+                            )}
+                        </div>
+                        <div>
+                            <h1>Notificaciones</h1>
+                            <p className="subtitle">
+                                {stats.noLeidas > 0 
+                                    ? `${stats.noLeidas} sin leer de ${stats.total} total`
+                                    : 'Estás al día'
+                                }
+                            </p>
                         </div>
                     </div>
 
-                    <div 
-                        className={`resumen-card criticas ${vistaActual === 'criticas' ? 'active' : ''}`}
-                        onClick={() => aplicarVistaFiltro('criticas')}
-                    >
-                        <div className="card-icono">🔴</div>
-                        <div className="card-info">
-                            <h3>{formatearNumero(resumen.criticas, 0)}</h3>
-                            <p>Críticas</p>
-                        </div>
-                    </div>
-
-                    <div 
-                        className={`resumen-card atencion ${vistaActual === 'atencion' ? 'active' : ''}`}
-                        onClick={() => aplicarVistaFiltro('atencion')}
-                    >
-                        <div className="card-icono">⚠️</div>
-                        <div className="card-info">
-                            <h3>{formatearNumero(resumen.atencion, 0)}</h3>
-                            <p>Atención</p>
-                        </div>
-                    </div>
-
-                    <div 
-                        className={`resumen-card recordatorios ${vistaActual === 'recordatorios' ? 'active' : ''}`}
-                        onClick={() => aplicarVistaFiltro('recordatorios')}
-                    >
-                        <div className="card-icono">📅</div>
-                        <div className="card-info">
-                            <h3>{formatearNumero(resumen.recordatorios, 0)}</h3>
-                            <p>Recordatorios</p>
-                        </div>
-                    </div>
-
-                    <div className="resumen-card no-leidas">
-                        <div className="card-icono">📬</div>
-                        <div className="card-info">
-                            <h3>{formatearNumero(resumen.no_leidas, 0)}</h3>
-                            <p>Sin Leer</p>
-                        </div>
+                    <div className="header-actions">
+                        {stats.noLeidas > 0 && (
+                            <motion.button
+                                className="btn-marcar-todas"
+                                onClick={marcarTodasLeidas}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                <CheckCircle2 size={18} />
+                                Marcar todas como leídas
+                            </motion.button>
+                        )}
+                        
+                        <motion.button
+                            className="btn-refresh"
+                            onClick={cargarNotificaciones}
+                            whileHover={{ scale: 1.05, rotate: 180 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            <RefreshCw size={20} />
+                        </motion.button>
                     </div>
                 </div>
-            )}
+            </motion.header>
 
-            {/* Acciones rápidas */}
-            <div className="notif-acciones">
-                <button onClick={marcarTodasLeidas} className="btn-accion">
-                    ✓ Marcar todas como leídas
-                </button>
-                <button onClick={() => setFiltros({ ...filtros, leida: filtros.leida === false ? null : false })} className="btn-accion">
-                    {filtros.leida === false ? '📭 Mostrar todas' : '📬 Solo no leídas'}
-                </button>
-                <button
-                    onClick={toggleSeleccionTodos}
-                    className="btn-accion"
-                    disabled={notificaciones.length === 0}
+            {/* STATS */}
+            <div className="notif-stats">
+                <motion.div 
+                    className="stat-card"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.1 }}
                 >
-                    {seleccionados.length === notificaciones.length && notificaciones.length > 0 ? '⬜ Deseleccionar todos' : '☑️ Seleccionar todos'}
-                </button>
-                <button
-                    onClick={enviarWhatsAppMasivo}
-                    className="btn-accion btn-whatsapp-masivo"
-                    disabled={enviandoWhatsApp || seleccionados.length === 0}
+                    <div className="stat-icon total">
+                        <Bell size={24} />
+                    </div>
+                    <div className="stat-content">
+                        <span className="stat-value">{stats.total}</span>
+                        <span className="stat-label">Total</span>
+                    </div>
+                </motion.div>
+
+                <motion.div 
+                    className="stat-card"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
                 >
-                    {enviandoWhatsApp ? '⏳ Enviando...' : `📱 Enviar WhatsApp (${seleccionados.length})`}
-                </button>
+                    <div className="stat-icon no-leidas">
+                        <Eye size={24} />
+                    </div>
+                    <div className="stat-content">
+                        <span className="stat-value">{stats.noLeidas}</span>
+                        <span className="stat-label">Sin Leer</span>
+                    </div>
+                </motion.div>
+
+                <motion.div 
+                    className="stat-card"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                >
+                    <div className="stat-icon criticas">
+                        <AlertCircle size={24} />
+                    </div>
+                    <div className="stat-content">
+                        <span className="stat-value">{stats.criticas}</span>
+                        <span className="stat-label">Críticas</span>
+                    </div>
+                </motion.div>
+
+                <motion.div 
+                    className="stat-card"
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                >
+                    <div className="stat-icon hoy">
+                        <Clock size={24} />
+                    </div>
+                    <div className="stat-content">
+                        <span className="stat-value">{stats.hoy}</span>
+                        <span className="stat-label">Hoy</span>
+                    </div>
+                </motion.div>
             </div>
 
-            {/* Lista de notificaciones */}
-            <div className="notif-lista">
-                {loading ? (
-                    <div className="spinner-small">Cargando...</div>
-                ) : notificaciones.length === 0 ? (
-                    <div className="notif-vacia">
-                        <p>🎉 ¡No hay notificaciones!</p>
-                        <p>Todos los clientes están al día</p>
-                    </div>
-                ) : (
-                    notificaciones.map(notif => (
-                        <div
-                            key={notif.id}
-                            className={`notif-card ${obtenerColorPrioridad(notif.prioridad)} ${notif.leida ? 'leida' : 'no-leida'} ${seleccionados.includes(notif.id) ? 'seleccionada' : ''}`}
+            {/* FILTROS */}
+            <div className="notif-filtros">
+                <div className="filtros-tabs">
+                    {[
+                        { id: 'todas', label: 'Todas' },
+                        { id: 'no-leidas', label: 'Sin Leer' },
+                        { id: 'ia', label: 'IA' },
+                        { id: 'pago', label: 'Pagos' },
+                        { id: 'alerta', label: 'Alertas' }
+                    ].map(f => (
+                        <button
+                            key={f.id}
+                            className={`filtro-tab ${filtro === f.id ? 'active' : ''}`}
+                            onClick={() => setFiltro(f.id)}
                         >
-                            <div className="notif-header-card">
-                                <div className="notif-tipo">
-                                    <input
-                                        type="checkbox"
-                                        checked={seleccionados.includes(notif.id)}
-                                        onChange={() => toggleSeleccion(notif.id)}
-                                        className="notif-checkbox"
-                                    />
-                                    <span className="tipo-icono">{obtenerIcono(notif.tipo)}</span>
-                                    <span className="tipo-texto">{notif.tipo}</span>
+                            {f.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* LISTA DE NOTIFICACIONES */}
+            <div className="notif-lista">
+                <AnimatePresence>
+                    {notifFiltradas.length === 0 ? (
+                        <motion.div 
+                            className="notif-vacio"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                        >
+                            <CheckCircle2 size={64} />
+                            <h3>No hay notificaciones</h3>
+                            <p>Estás al día con todas tus notificaciones</p>
+                        </motion.div>
+                    ) : (
+                        notifFiltradas.map((notif, index) => (
+                            <motion.div
+                                key={notif.id}
+                                className={`notif-card ${!notif.leida ? 'no-leida' : ''} prioridad-${notif.prioridad}`}
+                                initial={{ x: -20, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                exit={{ x: 20, opacity: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                whileHover={{ x: 8, scale: 1.01 }}
+                                layout
+                            >
+                                <div className={`notif-icono ${notif.tipo}`}>
+                                    {getIcono(notif.icono)}
                                 </div>
-                                {!notif.leida && <span className="badge-nuevo">NUEVO</span>}
-                            </div>
 
-                            <div className="notif-body">
-                                <h3 onClick={() => irACliente(notif.cliente_id)} className="cliente-nombre">
-                                    {notif.nombre} {notif.apellido}
-                                </h3>
-                                <p className="notif-titulo">{notif.titulo}</p>
-                                <p className="notif-mensaje">{notif.mensaje}</p>
-
-                                <div className="notif-detalles">
-                                    <span className="detalle-item">
-                                        💰 Deuda: S/ {formatearMonto(notif.deuda_actual)}
-                                    </span>
-                                    <span className="detalle-item">
-                                        📅 {formatearNumero(notif.dias_sin_pagar, 0)} días sin pagar
-                                    </span>
-                                    <span className="detalle-item">
-                                        ⏱️ Patrón: cada {formatearNumero(notif.patron_detectado, 30)} días
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="notif-footer">
-                                <div className="notif-acciones-card">
-                                    {notif.accion_sugerida === 'visitar' && (
-                                        <button className="btn-accion-card visitar" onClick={() => irACliente(notif.cliente_id)}>
-                                            🚶 Visitar
-                                        </button>
+                                <div className="notif-contenido">
+                                    <div className="notif-header-inline">
+                                        <h3>{notif.titulo}</h3>
+                                        <span className="notif-tiempo">
+                                            {getTiempoRelativo(notif.fecha)}
+                                        </span>
+                                    </div>
+                                    <p>{notif.mensaje}</p>
+                                    
+                                    {notif.prioridad === 'critica' && (
+                                        <span className="badge-prioridad critica">
+                                            <AlertCircle size={14} />
+                                            Urgente
+                                        </span>
                                     )}
-                                    {(notif.accion_sugerida === 'llamar' || notif.accion_sugerida === 'whatsapp') && (
-                                        <button className="btn-accion-card whatsapp" onClick={() => enviarWhatsApp(notif)}>
-                                            💬 WhatsApp
-                                        </button>
+                                    {notif.prioridad === 'alta' && (
+                                        <span className="badge-prioridad alta">
+                                            <Info size={14} />
+                                            Importante
+                                        </span>
                                     )}
-                                    <button className="btn-accion-card cliente" onClick={() => irACliente(notif.cliente_id)}>
-                                        👤 Ver Cliente
-                                    </button>
                                 </div>
 
-                                <div className="notif-meta">
+                                <div className="notif-acciones">
                                     {!notif.leida && (
-                                        <button className="btn-mini" onClick={() => marcarLeida(notif.id)}>
-                                            ✓ Marcar leída
-                                        </button>
+                                        <motion.button
+                                            className="btn-accion leer"
+                                            onClick={() => marcarComoLeida(notif.id)}
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.9 }}
+                                            title="Marcar como leída"
+                                        >
+                                            <Check size={16} />
+                                        </motion.button>
                                     )}
-                                    <button className="btn-mini archivar" onClick={() => archivarNotificacion(notif.id)}>
-                                        🗑️ Archivar
-                                    </button>
-                                    <span className="fecha">
-                                        {new Date(notif.fecha_creacion).toLocaleDateString('es-PE', {
-                                            day: '2-digit',
-                                            month: 'short',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
-                                    </span>
+                                    
+                                    <motion.button
+                                        className="btn-accion eliminar"
+                                        onClick={() => eliminarNotificacion(notif.id)}
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        title="Eliminar"
+                                    >
+                                        <Trash2 size={16} />
+                                    </motion.button>
                                 </div>
-                            </div>
-                        </div>
-                    ))
-                )}
+
+                                {!notif.leida && <div className="notif-punto"></div>}
+                            </motion.div>
+                        ))
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

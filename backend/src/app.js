@@ -112,7 +112,8 @@ app.get('/', (req, res) => {
             'CRON Jobs Automatizados',
             'Portal Público Cliente',
             'Notificaciones Inteligentes',
-            'Sistema Completo de Gestión'
+            'Sistema Completo de Gestión',
+            'Sistema de Tareas con IA' // ✅ NUEVO
         ]
     });
 });
@@ -147,12 +148,13 @@ const perfilInternetRoutes = require('./routes/perfilInternetRoutes');
 const incidenciaRoutes = require('./routes/incidenciaRoutes');
 const notificacionRoutes = require('./routes/notificacionRoutes');
 const notificacionInteligenteRoutes = require('./routes/notificacionInteligenteRoutes');
-
-// ============================================
-// ✅ NUEVO: IMPORTAR RUTAS DASHBOARD Y CRON
-// ============================================
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const cronRoutes = require('./routes/cronRoutes');
+
+// ============================================
+// ✅ NUEVO: IMPORTAR RUTAS DE TAREAS
+// ============================================
+const tareasRoutes = require('./routes/tareas');
 
 // ============================================
 // USAR RUTAS EXISTENTES
@@ -171,11 +173,14 @@ app.use('/api/notificaciones-inteligentes', notificacionInteligenteRoutes);
 app.use('/api/reportes', reportePdfRoutes);
 app.use('/api/reportes', reporteRoutes);
 
-// ============================================
-// ✅ NUEVO: USAR RUTAS DASHBOARD Y CRON
-// ============================================
+// Rutas de Dashboard y CRON
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/cron', cronRoutes);
+
+// ============================================
+// ✅ NUEVO: USAR RUTAS DE TAREAS
+// ============================================
+app.use('/api/tareas', tareasRoutes);
 
 // ============================================
 // MANEJO DE RUTAS 404
@@ -192,6 +197,7 @@ app.use((req, res) => {
             '/api/pagos',
             '/api/dashboard',
             '/api/cron',
+            '/api/tareas', // ✅ NUEVO
             '/health'
         ]
     });

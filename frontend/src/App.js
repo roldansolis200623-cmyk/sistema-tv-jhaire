@@ -33,9 +33,10 @@ import CalendarioCobros from './components/Calendario/CalendarioCobros';
 import NotificacionesInteligentes from './pages/NotificacionesInteligentes';
 
 // ============================================
-// ✅ NUEVO: IMPORTAR DASHBOARD EJECUTIVO
+// ✅ NUEVO: IMPORTAR DASHBOARD EJECUTIVO Y TAREAS
 // ============================================
 import DashboardExecutive from './pages/DashboardExecutive';
+import Tareas from './pages/Tareas';
 
 // ============================================
 // COMPONENTE DE RUTA PROTEGIDA
@@ -193,6 +194,18 @@ function App() {
                             element={
                                 <ProtectedRoute>
                                     <PerfilesInternet />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* ============================================ */}
+                        {/* ✅ NUEVO: SISTEMA DE TAREAS */}
+                        {/* ============================================ */}
+                        <Route
+                            path="/tareas"
+                            element={
+                                <ProtectedRoute>
+                                    <Tareas />
                                 </ProtectedRoute>
                             }
                         />
