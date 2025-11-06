@@ -17,9 +17,9 @@ import {
     X
 } from 'lucide-react';
 import api from '../services/api';
-import './NotificacionesInteligentes.css';  // 
+import './NotificacionesInteligentes.css'; // ✅ CORREGIDO
 
-const Notificaciones = () => {
+const NotificacionesInteligentes = () => {
     const [notificaciones, setNotificaciones] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filtro, setFiltro] = useState('todas');
