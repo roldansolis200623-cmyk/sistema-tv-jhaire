@@ -1,6 +1,7 @@
 // ============================================
 // frontend/src/App.js
-// APP COMPLETO CON TODAS LAS RUTAS
+// APP COMPLETO CON TODAS LAS RUTAS + ADMIN PANEL
+// VERSIÓN 3.0 - NOVIEMBRE 2025
 // ============================================
 
 import React, { useEffect } from 'react';
@@ -33,7 +34,12 @@ import CalendarioCobros from './components/Calendario/CalendarioCobros';
 import NotificacionesInteligentes from './pages/NotificacionesInteligentes';
 
 // ============================================
-// ✅ NUEVO: IMPORTAR DASHBOARD EJECUTIVO Y TAREAS
+// ✅ NUEVO: ADMIN PANEL (Panel Central)
+// ============================================
+import AdminPanel from './pages/AdminPanel';
+
+// ============================================
+// ✅ NUEVO: DASHBOARD EJECUTIVO Y TAREAS
 // ============================================
 import DashboardExecutive from './pages/DashboardExecutive';
 import Tareas from './pages/Tareas';
@@ -73,10 +79,30 @@ function App() {
                         <Route path="/login" element={<Login />} />
                         
                         {/* ============================================ */}
-                        {/* RUTAS PROTEGIDAS - DASHBOARD */}
+                        {/* RUTAS PROTEGIDAS - ADMIN PANEL (HOME) */}
                         {/* ============================================ */}
                         <Route
+                            path="/admin"
+                            element={
+                                <ProtectedRoute>
+                                    <AdminPanel />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
                             path="/dashboard"
+                            element={
+                                <ProtectedRoute>
+                                    <AdminPanel />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* ============================================ */}
+                        {/* RUTAS PROTEGIDAS - DASHBOARD PRINCIPAL */}
+                        {/* ============================================ */}
+                        <Route
+                            path="/dashboard-principal"
                             element={
                                 <ProtectedRoute>
                                     <Dashboard />
@@ -84,12 +110,26 @@ function App() {
                             }
                         />
 
-                        {/* ✅ NUEVO: DASHBOARD EJECUTIVO */}
+                        {/* ============================================ */}
+                        {/* RUTAS PROTEGIDAS - DASHBOARD EJECUTIVO */}
+                        {/* ============================================ */}
                         <Route
                             path="/dashboard-executive"
                             element={
                                 <ProtectedRoute>
                                     <DashboardExecutive />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* ============================================ */}
+                        {/* RUTAS PROTEGIDAS - TAREAS */}
+                        {/* ============================================ */}
+                        <Route
+                            path="/tareas"
+                            element={
+                                <ProtectedRoute>
+                                    <Tareas />
                                 </ProtectedRoute>
                             }
                         />
@@ -199,21 +239,9 @@ function App() {
                         />
 
                         {/* ============================================ */}
-                        {/* ✅ NUEVO: SISTEMA DE TAREAS */}
-                        {/* ============================================ */}
-                        <Route
-                            path="/tareas"
-                            element={
-                                <ProtectedRoute>
-                                    <Tareas />
-                                </ProtectedRoute>
-                            }
-                        />
-
-                        {/* ============================================ */}
                         {/* RUTA 404 - NO ENCONTRADA */}
                         {/* ============================================ */}
-                        <Route path="*" element={<Navigate to="/" />} />
+                        <Route path="*" element={<Navigate to="/dashboard" />} />
                     </Routes>
                 </AuthProvider>
             </Router>
