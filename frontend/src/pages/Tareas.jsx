@@ -421,4 +421,4 @@ const TareasPremiumCompleto = () => {
   );
 };
 
-export default Tareas;
+export default TareasPremiumCompleto;
