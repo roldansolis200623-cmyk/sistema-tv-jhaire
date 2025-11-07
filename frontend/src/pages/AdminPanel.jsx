@@ -7,7 +7,7 @@ import {
   Eye, Download, Share2, MoreVertical, Plus, Filter
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import './AdminPanel_PREMIUM.css';
+import './AdminPanel.css';
 
 const AdminPanel = () => {
   const navigate = useNavigate();

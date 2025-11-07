@@ -5,7 +5,7 @@ import {
   MoreVertical, ChevronDown, Search, Filter, SortAsc, Eye, Share2, ArrowLeft
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import './02_Tareas_PREMIUM_COMPLETO.css';
+import './Tareas.css';
 
 const TareasPremiumCompleto = () => {
   const navigate = useNavigate();
