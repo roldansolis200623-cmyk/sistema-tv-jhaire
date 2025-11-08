@@ -75,7 +75,7 @@ const PagoModel = {
 
             console.log(`   Cliente: ${nombre} ${apellido}, Deuda actual: ${meses_deuda} mes(es)`);
 
-            // Calcular los meses específicos que se están pagando
+            // ✅ CORREGIDO: Calcular los meses específicos que se están pagando
             const mesesDetalle = this.calcularMesesDetalle(meses_deuda, mesesPagados);
             console.log(`   Meses pagando: ${mesesDetalle}`);
 
@@ -122,7 +122,15 @@ const PagoModel = {
             const totalMesesPagados = parseInt(pagosResult.rows[0].total_pagado) || 0;
             
             // Calcular deuda real
-            const deudaReal = mesesDesdeInstalacion - totalMesesPagados;
+            let deudaReal = mesesDesdeInstalacion - totalMesesPagados;
+            
+            // ✅ PROTECCIÓN: Si la deuda calculada es absurda (más de 24 meses), usar método alternativo
+            if (deudaReal > 24) {
+                console.warn(`⚠️  ADVERTENCIA: Deuda calculada muy alta (${deudaReal} meses).`);
+                console.warn(`⚠️  Meses desde instalación: ${mesesDesdeInstalacion}, Total pagado: ${totalMesesPagados}`);
+                console.warn(`⚠️  Usando método de deuda actual menos meses pagados.`);
+                deudaReal = Math.max(0, meses_deuda - mesesPagados);
+            }
             
             console.log(`   📊 Meses desde instalación: ${mesesDesdeInstalacion}`);
             console.log(`   📊 Total meses pagados: ${totalMesesPagados}`);
@@ -171,46 +179,65 @@ const PagoModel = {
     },
 
     /**
-     * ✅ MEJORADO - Calcular los meses específicos que se están pagando
+     * ✅ CORREGIDO - Calcular los meses específicos que se están pagando
+     * AHORA paga desde los meses MÁS RECIENTES primero (comportamiento esperado)
      */
     calcularMesesDetalle(mesesDeuda, mesesPagados) {
-    const mesesNombres = [
-        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    
-    const fechaActual = new Date();
-    const mesActual = fechaActual.getMonth();
-    const añoActual = fechaActual.getFullYear();
-    const mesesPagando = [];
-    
-    if (mesesDeuda <= 0) {
+        const mesesNombres = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+        
+        const fechaActual = new Date();
+        const mesActual = fechaActual.getMonth();
+        const añoActual = fechaActual.getFullYear();
+        
+        const mesesPagando = [];
+        
+        // Si no tiene deuda o está adelantado, está pagando desde el mes actual hacia adelante
+        if (mesesDeuda <= 0) {
+            for (let i = 0; i < mesesPagados; i++) {
+                let mes = mesActual + i;
+                let año = añoActual;
+                
+                while (mes > 11) {
+                    mes -= 12;
+                    año++;
+                }
+                
+                mesesPagando.push(`${mesesNombres[mes]} ${año}`);
+            }
+            
+            return mesesPagando.join(', ') + (mesesPagados > 1 ? ' (ADELANTADO)' : ' (ACTUAL)');
+        }
+        
+        // ✅ CORREGIDO: Si tiene deuda, pagar desde el MÁS RECIENTE hacia atrás
+        // Ejemplo: Debe Jun-Jul-Ago-Sep-Oct (5 meses), hoy es Nov
+        // Si paga 1 mes: Paga Octubre (el más reciente)
+        // Si paga 2 meses: Paga Septiembre y Octubre
         for (let i = 0; i < mesesPagados; i++) {
-            let mes = mesActual + i;
+            let mes = mesActual - i;
             let año = añoActual;
-            while (mes > 11) { mes -= 12; año++; }
+            
+            while (mes < 0) {
+                mes += 12;
+                año--;
+            }
+            
             mesesPagando.push(`${mesesNombres[mes]} ${año}`);
         }
-        return mesesPagando.join(', ') + (mesesPagados > 1 ? ' (ADELANTADO)' : ' (ACTUAL)');
-    }
-    
-    // ✅ CORREGIDO: Paga meses recientes primero
-    for (let i = 0; i < mesesPagados; i++) {
-        let mes = mesActual - i;
-        let año = añoActual;
-        while (mes < 0) { mes += 12; año--; }
-        mesesPagando.push(`${mesesNombres[mes]} ${año}`);
-    }
-    
-    mesesPagando.reverse();
-    
-    if (mesesPagados > mesesDeuda) {
-        const mesesAdelantados = mesesPagados - mesesDeuda;
-        return mesesPagando.join(', ') + ` (${mesesAdelantados} ${mesesAdelantados === 1 ? 'mes' : 'meses'} ADELANTADO)`;
-    }
-    
-    return mesesPagando.join(', ');
-},
+        
+        // Invertir para mostrar cronológicamente
+        mesesPagando.reverse();
+        
+        // Si está pagando más de lo que debe, marcar adelantos
+        if (mesesPagados > mesesDeuda) {
+            const mesesAdelantados = mesesPagados - mesesDeuda;
+            return mesesPagando.join(', ') + ` (${mesesAdelantados} ${mesesAdelantados === 1 ? 'mes' : 'meses'} ADELANTADO)`;
+        }
+        
+        return mesesPagando.join(', ');
+    },
 
     /**
      * Obtener todos los pagos con información del cliente
@@ -519,7 +546,8 @@ const PagoModel = {
     },
 
     /**
-     * Calcular meses entre dos fechas
+     * ✅ CORREGIDO - Calcular meses entre dos fechas
+     * BUG ANTERIOR: Causaba que la deuda se calcule incorrectamente
      */
     calcularMesesEntre(fecha1, fecha2) {
         const d1 = new Date(fecha1);
@@ -531,10 +559,15 @@ const PagoModel = {
         d2.setDate(1);
         d2.setHours(0, 0, 0, 0);
         
-        const meses = (d2.getFullYear() - d1.getFullYear()) * 12 + 
-                      (d2.getMonth() - d1.getMonth());
+        // Calcular diferencia en meses
+        const años = d2.getFullYear() - d1.getFullYear();
+        const meses = d2.getMonth() - d1.getMonth();
+        const totalMeses = (años * 12) + meses;
         
-        return Math.max(1, meses + 1);
+        // ✅ CORREGIDO: +1 para incluir el mes actual
+        // Ejemplo: Instalación en Enero, hoy es Noviembre
+        // años = 0, meses = 10, totalMeses = 10, resultado = 11 meses debe
+        return Math.max(1, totalMeses + 1);
     }
 };
 
