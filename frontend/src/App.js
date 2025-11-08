@@ -1,7 +1,7 @@
 // ============================================
 // frontend/src/App.js
-// APP COMPLETO CON TODAS LAS RUTAS + ADMIN PANEL
-// VERSIÓN 3.0 - NOVIEMBRE 2025
+// APP COMPLETO - SIN ADMIN PANEL
+// Dashboard Ejecutivo como página principal
 // ============================================
 
 import React, { useEffect } from 'react';
@@ -19,7 +19,7 @@ import ClientPortal from './pages/ClientPortal';
 import Login from './pages/Login';
 
 // ============================================
-// IMPORTAR PÁGINAS PROTEGIDAS (EXISTENTES)
+// IMPORTAR PÁGINAS PROTEGIDAS
 // ============================================
 import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
@@ -32,17 +32,12 @@ import PerfilesInternet from './pages/PerfilesInternet';
 import Incidencias from './pages/Incidencias';
 import CalendarioCobros from './components/Calendario/CalendarioCobros';
 import NotificacionesInteligentes from './pages/NotificacionesInteligentes';
+import Tareas from './pages/Tareas';
 
 // ============================================
-// ✅ NUEVO: ADMIN PANEL (Panel Central)
-// ============================================
-import AdminPanel from './pages/AdminPanel';
-
-// ============================================
-// ✅ NUEVO: DASHBOARD EJECUTIVO Y TAREAS
+// ✅ DASHBOARD EJECUTIVO (PÁGINA PRINCIPAL)
 // ============================================
 import DashboardExecutive from './pages/DashboardExecutive';
-import Tareas from './pages/Tareas';
 
 // ============================================
 // COMPONENTE DE RUTA PROTEGIDA
@@ -71,50 +66,18 @@ function App() {
             <Router>
                 <AuthProvider>
                     <Routes>
-                        {/* ============================================ */}
-                        {/* RUTAS PÚBLICAS */}
-                        {/* ============================================ */}
+                        {/* ═══════════════════════════════════════
+                            RUTAS PÚBLICAS
+                            ═══════════════════════════════════════ */}
                         <Route path="/" element={<Landing />} />
                         <Route path="/cliente/consulta" element={<ClientPortal />} />
                         <Route path="/login" element={<Login />} />
                         
-                        {/* ============================================ */}
-                        {/* RUTAS PROTEGIDAS - ADMIN PANEL (HOME) */}
-                        {/* ============================================ */}
-                        <Route
-                            path="/admin"
-                            element={
-                                <ProtectedRoute>
-                                    <AdminPanel />
-                                </ProtectedRoute>
-                            }
-                        />
+                        {/* ═══════════════════════════════════════
+                            DASHBOARD EJECUTIVO (PRINCIPAL)
+                            ═══════════════════════════════════════ */}
                         <Route
                             path="/dashboard"
-                            element={
-                                <ProtectedRoute>
-                                    <AdminPanel />
-                                </ProtectedRoute>
-                            }
-                        />
-
-                        {/* ============================================ */}
-                        {/* RUTAS PROTEGIDAS - DASHBOARD PRINCIPAL */}
-                        {/* ============================================ */}
-                        <Route
-                            path="/dashboard-principal"
-                            element={
-                                <ProtectedRoute>
-                                    <Dashboard />
-                                </ProtectedRoute>
-                            }
-                        />
-
-                        {/* ============================================ */}
-                        {/* RUTAS PROTEGIDAS - DASHBOARD EJECUTIVO */}
-                        {/* ============================================ */}
-                        <Route
-                            path="/dashboard-executive"
                             element={
                                 <ProtectedRoute>
                                     <DashboardExecutive />
@@ -122,21 +85,19 @@ function App() {
                             }
                         />
 
-                        {/* ============================================ */}
-                        {/* RUTAS PROTEGIDAS - TAREAS */}
-                        {/* ============================================ */}
+                        {/* ✅ Dashboard alternativo (si lo necesitas) */}
                         <Route
-                            path="/tareas"
+                            path="/dashboard-estadisticas"
                             element={
                                 <ProtectedRoute>
-                                    <Tareas />
+                                    <Dashboard />
                                 </ProtectedRoute>
                             }
                         />
-
-                        {/* ============================================ */}
-                        {/* RUTAS PROTEGIDAS - CLIENTES */}
-                        {/* ============================================ */}
+                        
+                        {/* ═══════════════════════════════════════
+                            GESTIÓN DE CLIENTES
+                            ═══════════════════════════════════════ */}
                         <Route
                             path="/clientes"
                             element={
@@ -162,9 +123,9 @@ function App() {
                             }
                         />
 
-                        {/* ============================================ */}
-                        {/* RUTAS PROTEGIDAS - PAGOS */}
-                        {/* ============================================ */}
+                        {/* ═══════════════════════════════════════
+                            PAGOS Y COBROS
+                            ═══════════════════════════════════════ */}
                         <Route
                             path="/pagos"
                             element={
@@ -181,10 +142,18 @@ function App() {
                                 </ProtectedRoute>
                             }
                         />
+                        <Route
+                            path="/calendario"
+                            element={
+                                <ProtectedRoute>
+                                    <CalendarioCobros />
+                                </ProtectedRoute>
+                            }
+                        />
 
-                        {/* ============================================ */}
-                        {/* RUTAS PROTEGIDAS - REPORTES Y ESTADÍSTICAS */}
-                        {/* ============================================ */}
+                        {/* ═══════════════════════════════════════
+                            REPORTES Y ESTADÍSTICAS
+                            ═══════════════════════════════════════ */}
                         <Route
                             path="/reportes"
                             element={
@@ -202,30 +171,34 @@ function App() {
                             }
                         />
 
-                        {/* ============================================ */}
-                        {/* RUTAS PROTEGIDAS - OTROS MÓDULOS */}
-                        {/* ============================================ */}
-                        <Route
-                            path="/incidencias"
-                            element={
-                                <ProtectedRoute>
-                                    <Incidencias />
-                                </ProtectedRoute>
-                            }
-                        />
-                        <Route
-                            path="/calendario"
-                            element={
-                                <ProtectedRoute>
-                                    <CalendarioCobros />
-                                </ProtectedRoute>
-                            }
-                        />
+                        {/* ═══════════════════════════════════════
+                            INTELIGENCIA ARTIFICIAL
+                            ═══════════════════════════════════════ */}
                         <Route
                             path="/notificaciones-inteligentes"
                             element={
                                 <ProtectedRoute>
                                     <NotificacionesInteligentes />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/tareas"
+                            element={
+                                <ProtectedRoute>
+                                    <Tareas />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* ═══════════════════════════════════════
+                            SISTEMA
+                            ═══════════════════════════════════════ */}
+                        <Route
+                            path="/incidencias"
+                            element={
+                                <ProtectedRoute>
+                                    <Incidencias />
                                 </ProtectedRoute>
                             }
                         />
@@ -238,10 +211,10 @@ function App() {
                             }
                         />
 
-                        {/* ============================================ */}
-                        {/* RUTA 404 - NO ENCONTRADA */}
-                        {/* ============================================ */}
-                        <Route path="*" element={<Navigate to="/dashboard" />} />
+                        {/* ═══════════════════════════════════════
+                            RUTA 404 - FALLBACK
+                            ═══════════════════════════════════════ */}
+                        <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </AuthProvider>
             </Router>
