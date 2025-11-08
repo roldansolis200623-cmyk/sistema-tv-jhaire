@@ -1,6 +1,5 @@
 const ClienteModel = require('../models/clienteModel');
 const pool = require('../config/database');
-const NotificacionModel = require('../models/NotificacionModel');
 
 const clienteController = {
     // Obtener todos los clientes
@@ -31,32 +30,22 @@ const clienteController = {
         }
     },
 
-    // ✅ CORREGIDO: Crear nuevo cliente
+    // ✅ SIMPLIFICADO: Crear nuevo cliente SIN notificaciones
     create: async (req, res) => {
         try {
+            console.log('📝 Creando cliente...', req.body);
+            
             const nuevoCliente = await ClienteModel.create(req.body);
             
-            // ✅ NOTIFICACIÓN SIMPLE (sin campos opcionales que causan error)
-            try {
-                await NotificacionModel.crear({
-                    tipo: 'nuevo_cliente',
-                    titulo: 'Nuevo cliente registrado',
-                    mensaje: `${nuevoCliente.nombre} ${nuevoCliente.apellido || ''} - ${nuevoCliente.tipo_servicio} - S/ ${nuevoCliente.precio_mensual}/mes`,
-                    cliente_id: nuevoCliente.id,
-                    prioridad: 'normal',
-                    url: `/clientes?id=${nuevoCliente.id}`
-                });
-            } catch (notifError) {
-                console.error('⚠️ Error creando notificación (no crítico):', notifError.message);
-                // No detener el proceso si falla la notificación
-            }
+            console.log('✅ Cliente creado exitosamente:', nuevoCliente.id);
             
             res.status(201).json({
                 message: 'Cliente creado exitosamente',
                 cliente: nuevoCliente
             });
         } catch (error) {
-            console.error('Error creando cliente:', error);
+            console.error('❌ Error creando cliente:', error);
+            console.error('Stack:', error.stack);
             res.status(500).json({ 
                 error: 'Error creando cliente',
                 details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -195,7 +184,7 @@ const clienteController = {
         }
     },
 
-    // ✅ CORREGIDO: SUSPENDER CLIENTE
+    // ✅ SIMPLIFICADO: SUSPENDER CLIENTE sin notificaciones
     suspender: async (req, res) => {
         try {
             const { id } = req.params;
@@ -218,20 +207,6 @@ const clienteController = {
                 suspendido_por: suspendido_por || 'Administrador'
             });
 
-            // ✅ NOTIFICACIÓN SIMPLE
-            try {
-                await NotificacionModel.crear({
-                    tipo: 'cliente_suspendido',
-                    titulo: 'Cliente suspendido',
-                    mensaje: `${clienteSuspendido.nombre} ${clienteSuspendido.apellido || ''} - Motivo: ${motivo || 'No especificado'}`,
-                    cliente_id: clienteSuspendido.id,
-                    prioridad: 'alta',
-                    url: `/clientes?id=${clienteSuspendido.id}`
-                });
-            } catch (notifError) {
-                console.error('⚠️ Error creando notificación:', notifError.message);
-            }
-
             res.json({
                 message: 'Cliente suspendido exitosamente',
                 cliente: clienteSuspendido
@@ -242,7 +217,7 @@ const clienteController = {
         }
     },
 
-    // ✅ CORREGIDO: REACTIVAR CLIENTE
+    // ✅ SIMPLIFICADO: REACTIVAR CLIENTE sin notificaciones
     reactivar: async (req, res) => {
         try {
             const { id } = req.params;
@@ -255,20 +230,6 @@ const clienteController = {
 
             const clienteReactivado = await ClienteModel.reactivar(id, reactivado_por || 'Administrador');
             await ClienteModel.registrarReactivacion(id, reactivado_por || 'Administrador');
-
-            // ✅ NOTIFICACIÓN SIMPLE
-            try {
-                await NotificacionModel.crear({
-                    tipo: 'cliente_reactivado',
-                    titulo: 'Cliente reactivado',
-                    mensaje: `${clienteReactivado.nombre} ${clienteReactivado.apellido || ''} ha sido reactivado`,
-                    cliente_id: clienteReactivado.id,
-                    prioridad: 'normal',
-                    url: `/clientes?id=${clienteReactivado.id}`
-                });
-            } catch (notifError) {
-                console.error('⚠️ Error creando notificación:', notifError.message);
-            }
 
             res.json({
                 message: 'Cliente reactivado exitosamente',
