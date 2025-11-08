@@ -1,7 +1,7 @@
 // ============================================
 // frontend/src/App.js
 // APP COMPLETO - SIN ADMIN PANEL
-// Dashboard Ejecutivo como página principal
+// Mantiene: Dashboard normal, Dashboard Ejecutivo, Tareas, etc.
 // ============================================
 
 import React, { useEffect } from 'react';
@@ -12,14 +12,14 @@ import AOS from 'aos';
 import 'aos/dist/aos.css';
 
 // ============================================
-// IMPORTAR PÁGINAS PÚBLICAS
+// PÁGINAS PÚBLICAS
 // ============================================
 import Landing from './pages/Landing';
 import ClientPortal from './pages/ClientPortal';
 import Login from './pages/Login';
 
 // ============================================
-// IMPORTAR PÁGINAS PROTEGIDAS
+// PÁGINAS PROTEGIDAS
 // ============================================
 import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
@@ -32,12 +32,12 @@ import PerfilesInternet from './pages/PerfilesInternet';
 import Incidencias from './pages/Incidencias';
 import CalendarioCobros from './components/Calendario/CalendarioCobros';
 import NotificacionesInteligentes from './pages/NotificacionesInteligentes';
-import Tareas from './pages/Tareas';
 
 // ============================================
-// ✅ DASHBOARD EJECUTIVO (PÁGINA PRINCIPAL)
+// ✅ MANTENER: DASHBOARD EJECUTIVO Y TAREAS
 // ============================================
 import DashboardExecutive from './pages/DashboardExecutive';
+import Tareas from './pages/Tareas';
 
 // ============================================
 // COMPONENTE DE RUTA PROTEGIDA
@@ -51,7 +51,6 @@ const ProtectedRoute = ({ children }) => {
 // COMPONENTE PRINCIPAL
 // ============================================
 function App() {
-    // Inicializar AOS para animaciones
     useEffect(() => {
         AOS.init({
             duration: 800,
@@ -74,23 +73,22 @@ function App() {
                         <Route path="/login" element={<Login />} />
                         
                         {/* ═══════════════════════════════════════
-                            DASHBOARD EJECUTIVO (PRINCIPAL)
+                            DASHBOARDS
                             ═══════════════════════════════════════ */}
                         <Route
                             path="/dashboard"
                             element={
                                 <ProtectedRoute>
-                                    <DashboardExecutive />
+                                    <Dashboard />
                                 </ProtectedRoute>
                             }
                         />
 
-                        {/* ✅ Dashboard alternativo (si lo necesitas) */}
                         <Route
-                            path="/dashboard-estadisticas"
+                            path="/dashboard-executive"
                             element={
                                 <ProtectedRoute>
-                                    <Dashboard />
+                                    <DashboardExecutive />
                                 </ProtectedRoute>
                             }
                         />
@@ -212,7 +210,7 @@ function App() {
                         />
 
                         {/* ═══════════════════════════════════════
-                            RUTA 404 - FALLBACK
+                            RUTA 404
                             ═══════════════════════════════════════ */}
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
