@@ -56,14 +56,15 @@ const ClienteModel = {
         return result.rows[0];
     },
 
+    // ✅ CORREGIDO: Ahora incluye EMAIL
     create: async (clienteData) => {
         const query = `
             INSERT INTO clientes (
-                nombre, apellido, dni, telefono, direccion, 
+                nombre, apellido, dni, telefono, email, direccion, 
                 tipo_servicio, tipo_senal, perfil_internet_id,
                 plan, precio_mensual, fecha_instalacion, 
                 estado, meses_deuda, estado_pago, suministro
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             RETURNING *
         `;
         const values = [
@@ -71,6 +72,7 @@ const ClienteModel = {
             clienteData.apellido,
             clienteData.dni,
             clienteData.telefono,
+            clienteData.email || null, // ✅ AGREGADO
             clienteData.direccion,
             clienteData.tipo_servicio,
             clienteData.tipo_senal || null,
@@ -87,16 +89,17 @@ const ClienteModel = {
         return result.rows[0];
     },
 
+    // ✅ CORREGIDO: Ahora incluye EMAIL en update también
     update: async (id, clienteData) => {
         const query = `
             UPDATE clientes SET
                 nombre = $1, apellido = $2, dni = $3, telefono = $4,
-                direccion = $5, tipo_servicio = $6, 
-                tipo_senal = $7, perfil_internet_id = $8,
-                plan = $9, precio_mensual = $10, estado = $11, 
-                meses_deuda = $12, estado_pago = $13, suministro = $14, 
+                email = $5, direccion = $6, tipo_servicio = $7, 
+                tipo_senal = $8, perfil_internet_id = $9,
+                plan = $10, precio_mensual = $11, estado = $12, 
+                meses_deuda = $13, estado_pago = $14, suministro = $15, 
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $15
+            WHERE id = $16
             RETURNING *
         `;
         const values = [
@@ -104,6 +107,7 @@ const ClienteModel = {
             clienteData.apellido,
             clienteData.dni,
             clienteData.telefono,
+            clienteData.email || null, // ✅ AGREGADO
             clienteData.direccion,
             clienteData.tipo_servicio,
             clienteData.tipo_senal || null,
@@ -148,13 +152,15 @@ const ClienteModel = {
         return result.rows[0];
     },
 
-    reactivar: async (id, reactivado_por) => {
+    reactivar: async (id, reactivado_por = 'Administrador') => {
         const query = `
             UPDATE clientes SET
                 estado = 'activo',
                 fecha_reactivacion = CURRENT_TIMESTAMP,
+                suspendido_por = NULL,
                 motivo_suspension = NULL,
                 observaciones_suspension = NULL,
+                fecha_suspension = NULL,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = $1
             RETURNING *
@@ -163,166 +169,92 @@ const ClienteModel = {
         return result.rows[0];
     },
 
-    registrarSuspension: async (cliente_id, datos) => {
+    registrarSuspension: async (clienteId, datos) => {
         const query = `
             INSERT INTO historial_suspensiones (
-                cliente_id, fecha_suspension, motivo, observaciones, suspendido_por
-            ) VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4)
+                cliente_id, motivo, observaciones, suspendido_por
+            ) VALUES ($1, $2, $3, $4)
             RETURNING *
         `;
         const values = [
-            cliente_id,
+            clienteId,
             datos.motivo,
             datos.observaciones,
-            datos.suspendido_por || 'Administrador'
+            datos.suspendido_por
         ];
         const result = await pool.query(query, values);
         return result.rows[0];
     },
 
-    registrarReactivacion: async (cliente_id, reactivado_por) => {
+    registrarReactivacion: async (clienteId, reactivado_por) => {
         const query = `
-            UPDATE historial_suspensiones SET
-                fecha_reactivacion = CURRENT_TIMESTAMP,
-                reactivado_por = $1
-            WHERE cliente_id = $2 AND fecha_reactivacion IS NULL
+            INSERT INTO historial_reactivaciones (
+                cliente_id, reactivado_por
+            ) VALUES ($1, $2)
             RETURNING *
         `;
-        const values = [reactivado_por || 'Administrador', cliente_id];
-        const result = await pool.query(query, values);
+        const result = await pool.query(query, [clienteId, reactivado_por]);
         return result.rows[0];
     },
 
-    getHistorialSuspensiones: async (cliente_id) => {
+    getHistorialSuspensiones: async (clienteId) => {
         const query = `
-            SELECT * FROM historial_suspensiones 
-            WHERE cliente_id = $1 
+            SELECT * FROM historial_suspensiones
+            WHERE cliente_id = $1
             ORDER BY fecha_suspension DESC
         `;
-        const result = await pool.query(query, [cliente_id]);
+        const result = await pool.query(query, [clienteId]);
         return result.rows;
     },
 
-    registrarMigracion: async (clienteId, datosAnteriores, datosNuevos, realizadoPor, motivoCambio) => {
-        const cambios = [];
+    /**
+     * ✅ NUEVO: Registrar migración de cliente
+     */
+    registrarMigracion: async (clienteId, datosAnteriores, datosNuevos, realizadoPor, motivo) => {
+        const migraciones = [];
         
-        if (datosAnteriores.tipo_servicio !== datosNuevos.tipo_servicio) {
-            cambios.push({
-                tipo_cambio: 'SERVICIO',
-                tipo_servicio_anterior: datosAnteriores.tipo_servicio,
-                tipo_servicio_nuevo: datosNuevos.tipo_servicio
-            });
-        }
-        
-        if (datosAnteriores.plan !== datosNuevos.plan && (datosAnteriores.plan || datosNuevos.plan)) {
-            cambios.push({
-                tipo_cambio: 'PLAN',
-                plan_anterior: datosAnteriores.plan,
-                plan_nuevo: datosNuevos.plan
-            });
-        }
-        
-        if (datosAnteriores.tipo_senal !== datosNuevos.tipo_senal && (datosAnteriores.tipo_senal || datosNuevos.tipo_senal)) {
-            cambios.push({
-                tipo_cambio: 'SENAL',
-                tipo_senal_anterior: datosAnteriores.tipo_senal,
-                tipo_senal_nuevo: datosNuevos.tipo_senal
-            });
-        }
-        
-        const perfilAnterior = datosAnteriores.perfil_internet_id ? parseInt(datosAnteriores.perfil_internet_id) : null;
-        const perfilNuevo = datosNuevos.perfil_internet_id ? parseInt(datosNuevos.perfil_internet_id) : null;
-        
-        if (perfilAnterior !== perfilNuevo) {
-            cambios.push({
-                tipo_cambio: 'PERFIL_INTERNET',
-                perfil_internet_anterior: datosAnteriores.perfil_internet_nombre,
-                perfil_internet_nuevo: datosNuevos.perfil_internet_nombre
-            });
-        }
-        
-        const precioAnterior = parseFloat(datosAnteriores.precio_mensual) || 0;
-        const precioNuevo = parseFloat(datosNuevos.precio_mensual) || 0;
-        
-        if (precioAnterior !== precioNuevo) {
-            cambios.push({
-                tipo_cambio: 'PRECIO',
-                precio_anterior: precioAnterior,
-                precio_nuevo: precioNuevo
-            });
-        }
-        
-        const resultados = [];
-        for (const cambio of cambios) {
-            const query = `
-                INSERT INTO historial_migraciones (
-                    cliente_id, tipo_cambio,
-                    tipo_servicio_anterior, tipo_servicio_nuevo,
-                    plan_anterior, plan_nuevo,
-                    tipo_senal_anterior, tipo_senal_nuevo,
-                    perfil_internet_anterior, perfil_internet_nuevo,
-                    precio_anterior, precio_nuevo,
-                    realizado_por, motivo_cambio, observaciones
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-                RETURNING *
-            `;
-            
-            let observaciones = '';
-            switch (cambio.tipo_cambio) {
-                case 'SERVICIO':
-                    observaciones = `Cambio de servicio: ${cambio.tipo_servicio_anterior} → ${cambio.tipo_servicio_nuevo}`;
-                    break;
-                case 'PLAN':
-                    observaciones = `Cambio de plan: ${cambio.plan_anterior || 'Ninguno'} → ${cambio.plan_nuevo || 'Ninguno'}`;
-                    break;
-                case 'SENAL':
-                    observaciones = `Cambio de señal: ${cambio.tipo_senal_anterior || 'Ninguna'} → ${cambio.tipo_senal_nuevo || 'Ninguna'}`;
-                    break;
-                case 'PERFIL_INTERNET':
-                    observaciones = `Cambio de perfil: ${cambio.perfil_internet_anterior || 'Ninguno'} → ${cambio.perfil_internet_nuevo || 'Ninguno'}`;
-                    break;
-                case 'PRECIO':
-                    observaciones = `Ajuste de precio: S/ ${cambio.precio_anterior.toFixed(2)} → S/ ${cambio.precio_nuevo.toFixed(2)}`;
-                    break;
+        // Detectar cambios y crear registro por cada uno
+        const campos = [
+            { key: 'tipo_servicio', nombre: 'Tipo de Servicio' },
+            { key: 'plan', nombre: 'Plan' },
+            { key: 'tipo_senal', nombre: 'Tipo de Señal' },
+            { key: 'perfil_internet_nombre', nombre: 'Perfil Internet' },
+            { key: 'precio_mensual', nombre: 'Precio Mensual' }
+        ];
+
+        for (const campo of campos) {
+            if (datosAnteriores[campo.key] !== datosNuevos[campo.key]) {
+                const query = `
+                    INSERT INTO migraciones_clientes (
+                        cliente_id, campo_modificado, valor_anterior, 
+                        valor_nuevo, realizado_por, motivo
+                    ) VALUES ($1, $2, $3, $4, $5, $6)
+                    RETURNING *
+                `;
+                
+                const values = [
+                    clienteId,
+                    campo.nombre,
+                    datosAnteriores[campo.key]?.toString() || 'N/A',
+                    datosNuevos[campo.key]?.toString() || 'N/A',
+                    realizadoPor,
+                    motivo
+                ];
+
+                const result = await pool.query(query, values);
+                migraciones.push(result.rows[0]);
             }
-            
-            const values = [
-                clienteId,
-                cambio.tipo_cambio,
-                cambio.tipo_servicio_anterior || null,
-                cambio.tipo_servicio_nuevo || null,
-                cambio.plan_anterior || null,
-                cambio.plan_nuevo || null,
-                cambio.tipo_senal_anterior || null,
-                cambio.tipo_senal_nuevo || null,
-                cambio.perfil_internet_anterior || null,
-                cambio.perfil_internet_nuevo || null,
-                cambio.precio_anterior || null,
-                cambio.precio_nuevo || null,
-                realizadoPor || 'Sistema',
-                motivoCambio || 'Actualización de servicio',
-                observaciones
-            ];
-            
-            const result = await pool.query(query, values);
-            resultados.push(result.rows[0]);
         }
-        
-        return resultados;
+
+        return migraciones;
     },
 
+    /**
+     * ✅ NUEVO: Obtener historial de migraciones
+     */
     getHistorialMigraciones: async (clienteId) => {
         const query = `
-            SELECT 
-                id, tipo_cambio,
-                tipo_servicio_anterior, tipo_servicio_nuevo,
-                plan_anterior, plan_nuevo,
-                tipo_senal_anterior, tipo_senal_nuevo,
-                perfil_internet_anterior, perfil_internet_nuevo,
-                precio_anterior, precio_nuevo,
-                fecha_migracion, realizado_por,
-                motivo_cambio, observaciones
-            FROM historial_migraciones
+            SELECT * FROM migraciones_clientes
             WHERE cliente_id = $1
             ORDER BY fecha_migracion DESC
         `;
@@ -330,26 +262,17 @@ const ClienteModel = {
         return result.rows;
     },
 
+    /**
+     * ✅ NUEVO: Obtener historial completo (suspensiones + migraciones)
+     */
     getHistorialCompleto: async (clienteId) => {
         const suspensiones = await ClienteModel.getHistorialSuspensiones(clienteId);
         const migraciones = await ClienteModel.getHistorialMigraciones(clienteId);
         
-        const historial = [
-            ...suspensiones.map(s => ({ 
-                ...s, 
-                tipo: 'suspension',
-                fecha_evento: s.fecha_suspension 
-            })),
-            ...migraciones.map(m => ({ 
-                ...m, 
-                tipo: 'migracion',
-                fecha_evento: m.fecha_migracion 
-            }))
-        ].sort((a, b) => {
-            return new Date(b.fecha_evento) - new Date(a.fecha_evento);
-        });
-        
-        return historial;
+        return {
+            suspensiones,
+            migraciones
+        };
     }
 };
 
