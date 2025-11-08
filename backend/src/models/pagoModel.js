@@ -174,60 +174,43 @@ const PagoModel = {
      * ✅ MEJORADO - Calcular los meses específicos que se están pagando
      */
     calcularMesesDetalle(mesesDeuda, mesesPagados) {
-        const mesesNombres = [
-            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-        ];
-        
-        const fechaActual = new Date();
-        const mesActual = fechaActual.getMonth();
-        const añoActual = fechaActual.getFullYear();
-        
-        const mesesPagando = [];
-        
-        // Si no tiene deuda o está adelantado, está pagando desde el mes actual hacia adelante
-        if (mesesDeuda <= 0) {
-            for (let i = 0; i < mesesPagados; i++) {
-                let mes = mesActual + i;
-                let año = añoActual;
-                
-                while (mes > 11) {
-                    mes -= 12;
-                    año++;
-                }
-                
-                mesesPagando.push(`${mesesNombres[mes]} ${año}`);
-            }
-            
-            return mesesPagando.join(', ') + (mesesPagados > 1 ? ' (ADELANTADO)' : ' (ACTUAL)');
-        }
-        
-        // Si tiene deuda, calcular desde el mes más antiguo adeudado
+    const mesesNombres = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    const fechaActual = new Date();
+    const mesActual = fechaActual.getMonth();
+    const añoActual = fechaActual.getFullYear();
+    const mesesPagando = [];
+    
+    if (mesesDeuda <= 0) {
         for (let i = 0; i < mesesPagados; i++) {
-            let mes = mesActual - mesesDeuda + 1 + i;
+            let mes = mesActual + i;
             let año = añoActual;
-            
-            while (mes < 0) {
-                mes += 12;
-                año--;
-            }
-            
-            while (mes > 11) {
-                mes -= 12;
-                año++;
-            }
-            
+            while (mes > 11) { mes -= 12; año++; }
             mesesPagando.push(`${mesesNombres[mes]} ${año}`);
         }
-        
-        // Si está pagando más de lo que debe, marcar adelantos
-        if (mesesPagados > mesesDeuda) {
-            const mesesAdelantados = mesesPagados - mesesDeuda;
-            return mesesPagando.join(', ') + ` (${mesesAdelantados} ${mesesAdelantados === 1 ? 'mes' : 'meses'} ADELANTADO)`;
-        }
-        
-        return mesesPagando.join(', ');
-    },
+        return mesesPagando.join(', ') + (mesesPagados > 1 ? ' (ADELANTADO)' : ' (ACTUAL)');
+    }
+    
+    // ✅ CORREGIDO: Paga meses recientes primero
+    for (let i = 0; i < mesesPagados; i++) {
+        let mes = mesActual - i;
+        let año = añoActual;
+        while (mes < 0) { mes += 12; año--; }
+        mesesPagando.push(`${mesesNombres[mes]} ${año}`);
+    }
+    
+    mesesPagando.reverse();
+    
+    if (mesesPagados > mesesDeuda) {
+        const mesesAdelantados = mesesPagados - mesesDeuda;
+        return mesesPagando.join(', ') + ` (${mesesAdelantados} ${mesesAdelantados === 1 ? 'mes' : 'meses'} ADELANTADO)`;
+    }
+    
+    return mesesPagando.join(', ');
+},
 
     /**
      * Obtener todos los pagos con información del cliente
