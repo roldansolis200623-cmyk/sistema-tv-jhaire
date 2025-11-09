@@ -51,12 +51,7 @@ const enviarAlerta = async (asunto, mensaje) => {
             from: process.env.SMTP_USER,
             to: emailDestino,
             subject: `[TV Jhaire] ${asunto}`,
-            html: `
-                <h2>🔔 Alerta del Sistema</h2>
-                <p>${mensaje}</p>
-                <hr>
-                <small>Este es un mensaje automático del sistema TV Jhaire</small>
-            `
+            html: mensaje
         });
         
         console.log('✅ Alerta enviada:', asunto);
@@ -106,8 +101,13 @@ const incrementarDeudaMensual = async () => {
         if (clientesAfectados > 10) {
             await enviarAlerta(
                 'Incremento Mensual de Deuda',
-                `Se ha incrementado la deuda de <strong>${clientesAfectados} clientes</strong>. 
-                Revise el sistema para gestionar la cobranza.`
+                `
+                <h2>🔔 Alerta del Sistema</h2>
+                <p>Se ha incrementado la deuda de <strong>${clientesAfectados} clientes</strong>. 
+                Revise el sistema para gestionar la cobranza.</p>
+                <hr>
+                <small>Este es un mensaje automático del sistema TV Jhaire</small>
+                `
             );
         }
         
@@ -123,79 +123,159 @@ const incrementarDeudaMensual = async () => {
         
         await enviarAlerta(
             'ERROR: Incremento de Deuda Falló',
-            `Error al incrementar deuda mensual: ${error.message}`
+            `
+            <h2>🔔 Alerta del Sistema</h2>
+            <p>Error al incrementar deuda mensual: ${error.message}</p>
+            <hr>
+            <small>Este es un mensaje automático del sistema TV Jhaire</small>
+            `
         );
     }
 };
 
 // ============================================
-// TAREA 2: SUSPENSIÓN AUTOMÁTICA
+// ✅ TAREA 2: ALERTA DE SUSPENSIÓN (NO SUSPENDE)
 // ============================================
 
 const suspensionAutomatica = async () => {
     const inicio = Date.now();
-    console.log('🔄 Iniciando suspensión automática...');
+    console.log('🔄 Verificando clientes en riesgo de suspensión...');
     
     try {
-        // Obtener días antes de suspensión desde configuración
+        // Obtener configuración de meses antes de alerta
         const configResult = await pool.query(
             "SELECT valor FROM configuracion_sistema WHERE clave = 'dias_antes_suspension'"
         );
-        const diasMora = parseInt(configResult.rows[0]?.valor || 5);
+        const mesesAlerta = parseInt(configResult.rows[0]?.valor || 5);
         
-        // Suspender clientes con mora >= diasMora
+        // ✅ MODIFICADO: Solo OBTENER clientes en riesgo, NO SUSPENDER
         const result = await pool.query(`
-            UPDATE clientes
-            SET 
-                estado = 'suspendido',
-                fecha_suspension = CURRENT_TIMESTAMP,
-                motivo_suspension = 'Suspensión automática por morosidad',
-                suspendido_por = 'Sistema Automático',
-                updated_at = CURRENT_TIMESTAMP
+            SELECT 
+                id, codigo, nombre, apellido, dni, telefono, email, direccion,
+                tipo_servicio, plan, precio_mensual, meses_deuda, estado_pago,
+                (meses_deuda * precio_mensual) as deuda_total
+            FROM clientes
             WHERE estado = 'activo'
             AND meses_deuda >= $1
-            RETURNING id, nombre, apellido, dni, meses_deuda
-        `, [diasMora]);
+            ORDER BY meses_deuda DESC, deuda_total DESC
+        `, [mesesAlerta]);
         
-        const clientesSuspendidos = result.rows;
+        const clientesEnRiesgo = result.rows;
         const tiempoEjecucion = Date.now() - inicio;
         
-        // Registrar en historial de suspensiones
-        for (const cliente of clientesSuspendidos) {
-            await pool.query(`
-                INSERT INTO historial_suspensiones (cliente_id, accion, motivo, observaciones)
-                VALUES ($1, 'suspensión', 'Mora de ' || $2 || ' meses', 'Suspensión automática del sistema')
-            `, [cliente.id, cliente.meses_deuda]);
-        }
-        
-        // Registrar log
+        // ✅ MODIFICADO: Registrar log de ALERTA, no de suspensión
         await registrarLog(
-            'suspension_automatica',
-            'success',
-            `Se suspendieron ${clientesSuspendidos.length} clientes por mora >= ${diasMora} meses`,
-            clientesSuspendidos.length,
+            'alerta_suspension',
+            'info',
+            `Se identificaron ${clientesEnRiesgo.length} clientes en riesgo con mora >= ${mesesAlerta} meses (NO SE SUSPENDIERON)`,
+            clientesEnRiesgo.length,
             tiempoEjecucion
         );
         
-        console.log(`✅ ${clientesSuspendidos.length} clientes suspendidos en ${tiempoEjecucion}ms`);
+        console.log(`⚠️ ${clientesEnRiesgo.length} clientes en riesgo identificados en ${tiempoEjecucion}ms`);
+        console.log('ℹ️ NO SE SUSPENDIÓ AUTOMÁTICAMENTE - Solo se generaron alertas');
         
-        // Enviar alerta con detalles
-        if (clientesSuspendidos.length > 0) {
-            const listaClientes = clientesSuspendidos
-                .map(c => `• ${c.nombre} ${c.apellido} (DNI: ${c.dni}) - ${c.meses_deuda} meses`)
-                .join('<br>');
+        // ✅ MODIFICADO: Enviar ALERTA en vez de suspender
+        if (clientesEnRiesgo.length > 0) {
+            const listaClientes = clientesEnRiesgo
+                .map(c => `
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 8px;">${c.codigo || c.id}</td>
+                        <td style="padding: 8px;"><strong>${c.nombre} ${c.apellido}</strong></td>
+                        <td style="padding: 8px;">${c.dni}</td>
+                        <td style="padding: 8px;">${c.telefono || '-'}</td>
+                        <td style="padding: 8px; text-align: center; font-weight: bold; color: ${c.meses_deuda > 5 ? '#dc2626' : '#f59e0b'};">${c.meses_deuda}</td>
+                        <td style="padding: 8px; text-align: right; font-weight: bold;">S/ ${parseFloat(c.deuda_total).toFixed(2)}</td>
+                    </tr>
+                `)
+                .join('');
             
             await enviarAlerta(
-                'Suspensiones Automáticas Realizadas',
-                `Se han suspendido <strong>${clientesSuspendidos.length} clientes</strong> 
-                por mora mayor a ${diasMora} meses:<br><br>${listaClientes}`
+                `⚠️ ALERTA: ${clientesEnRiesgo.length} Clientes Requieren Atención`,
+                `
+                <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+                    <h2 style="color: #dc2626;">⚠️ Clientes en Riesgo de Suspensión</h2>
+                    <p style="font-size: 16px; color: #374151;">
+                        Los siguientes <strong>${clientesEnRiesgo.length} clientes</strong> tienen mora mayor a 
+                        <strong>${mesesAlerta} meses</strong> y requieren atención inmediata:
+                    </p>
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #e5e7eb;">
+                        <thead>
+                            <tr style="background-color: #f3f4f6; border-bottom: 2px solid #d1d5db;">
+                                <th style="padding: 10px; text-align: left;">Código</th>
+                                <th style="padding: 10px; text-align: left;">Cliente</th>
+                                <th style="padding: 10px; text-align: left;">DNI</th>
+                                <th style="padding: 10px; text-align: left;">Teléfono</th>
+                                <th style="padding: 10px; text-align: center;">Meses</th>
+                                <th style="padding: 10px; text-align: right;">Deuda Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${listaClientes}
+                        </tbody>
+                    </table>
+                    
+                    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
+                        <p style="margin: 0; color: #92400e;">
+                            <strong>📋 Acción Requerida:</strong><br>
+                            Esta es una alerta informativa. Los clientes <strong>NO han sido suspendidos automáticamente</strong>.
+                            Debe revisar cada caso y decidir las acciones apropiadas desde el sistema de gestión.
+                        </p>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background-color: #f9fafb; border-radius: 5px;">
+                        <h3 style="color: #111827; margin-top: 0;">Acciones Recomendadas:</h3>
+                        <ul style="color: #374151;">
+                            <li>Contactar telefónicamente a cada cliente</li>
+                            <li>Enviar recordatorios de pago vía WhatsApp</li>
+                            <li>Evaluar casos especiales para planes de pago</li>
+                            <li>Decidir suspensiones caso por caso desde el sistema</li>
+                        </ul>
+                    </div>
+                    
+                    <p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 30px;">
+                        Sistema de Gestión TV Jhaire | Alerta Automática<br>
+                        Fecha: ${new Date().toLocaleString('es-PE')}
+                    </p>
+                </div>
+                `
             );
+            
+            // ✅ NUEVO: Crear notificaciones en el sistema para cada cliente
+            for (const cliente of clientesEnRiesgo) {
+                try {
+                    await pool.query(`
+                        INSERT INTO notificaciones (
+                            tipo, titulo, mensaje, prioridad, cliente_id, icono, color, leido
+                        ) VALUES (
+                            'alerta_suspension',
+                            'Cliente en Riesgo de Suspensión',
+                            $1,
+                            'alta',
+                            $2,
+                            'alert-triangle',
+                            'red',
+                            false
+                        )
+                    `, [
+                        `${cliente.nombre} ${cliente.apellido} tiene ${cliente.meses_deuda} meses de deuda (S/ ${parseFloat(cliente.deuda_total).toFixed(2)}). Requiere contacto urgente.`,
+                        cliente.id
+                    ]);
+                } catch (notifError) {
+                    console.error('Error creando notificación:', notifError);
+                }
+            }
+            
+            console.log(`✅ Se crearon ${clientesEnRiesgo.length} notificaciones en el sistema`);
+        } else {
+            console.log('✅ No hay clientes en riesgo de suspensión');
         }
         
     } catch (error) {
-        console.error('❌ Error en suspensión automática:', error);
+        console.error('❌ Error en verificación de suspensión:', error);
         await registrarLog(
-            'suspension_automatica',
+            'alerta_suspension',
             'error',
             error.message,
             0,
@@ -203,8 +283,13 @@ const suspensionAutomatica = async () => {
         );
         
         await enviarAlerta(
-            'ERROR: Suspensión Automática Falló',
-            `Error en suspensión automática: ${error.message}`
+            'ERROR: Verificación de Suspensión Falló',
+            `
+            <h2>🔔 Alerta del Sistema</h2>
+            <p>Error en verificación automática: ${error.message}</p>
+            <hr>
+            <small>Este es un mensaje automático del sistema TV Jhaire</small>
+            `
         );
     }
 };
@@ -261,8 +346,13 @@ const reactivacionAutomatica = async () => {
             
             await enviarAlerta(
                 'Reactivaciones Automáticas',
-                `Se han reactivado <strong>${clientesReactivados.length} clientes</strong> 
-                que completaron sus pagos:<br><br>${listaClientes}`
+                `
+                <h2>🔔 Alerta del Sistema</h2>
+                <p>Se han reactivado <strong>${clientesReactivados.length} clientes</strong> 
+                que completaron sus pagos:<br><br>${listaClientes}</p>
+                <hr>
+                <small>Este es un mensaje automático del sistema TV Jhaire</small>
+                `
             );
         }
         
@@ -454,7 +544,12 @@ const backupAutomatico = async () => {
         
         await enviarAlerta(
             'Backup Diario Completado',
-            'El backup automático se ha completado exitosamente.'
+            `
+            <h2>🔔 Alerta del Sistema</h2>
+            <p>El backup automático se ha completado exitosamente.</p>
+            <hr>
+            <small>Este es un mensaje automático del sistema TV Jhaire</small>
+            `
         );
         
     } catch (error) {
@@ -469,7 +564,12 @@ const backupAutomatico = async () => {
         
         await enviarAlerta(
             'ERROR: Backup Falló',
-            `Error en backup automático: ${error.message}`
+            `
+            <h2>🔔 Alerta del Sistema</h2>
+            <p>Error en backup automático: ${error.message}</p>
+            <hr>
+            <small>Este es un mensaje automático del sistema TV Jhaire</small>
+            `
         );
     }
 };
@@ -487,11 +587,11 @@ const configurarCronJobs = () => {
     });
     console.log('✅ CRON: Incremento deuda mensual - 1er día a las 00:00');
     
-    // 2. Suspensión automática - Todos los días a las 02:00
+    // ✅ 2. Verificación de riesgo (SOLO ALERTA, NO SUSPENDE)
     cron.schedule('0 2 * * *', suspensionAutomatica, {
         timezone: "America/Lima"
     });
-    console.log('✅ CRON: Suspensión automática - Diario a las 02:00');
+    console.log('⚠️ CRON: Verificación de riesgo - Diario a las 02:00 (SOLO ALERTAS, NO SUSPENDE)');
     
     // 3. Reactivación automática - Todos los días a las 03:00
     cron.schedule('0 3 * * *', reactivacionAutomatica, {
@@ -525,6 +625,7 @@ const configurarCronJobs = () => {
     
     console.log('✅ Todos los CRON jobs configurados correctamente');
     console.log('🕐 Timezone: America/Lima (UTC-5)');
+    console.log('⚠️ IMPORTANTE: La suspensión es MANUAL, solo se envían alertas');
 };
 
 // ============================================
