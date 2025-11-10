@@ -94,11 +94,12 @@ const clienteService = {
         }
     },
 
-    // 🆕 REACTIVAR CLIENTE
-    reactivar: async (id, reactivado_por) => {
+    // ✅ REACTIVAR CLIENTE - CORREGIDO
+    reactivar: async (id, datos) => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.post(`${API_URL}/${id}/reactivar`, { reactivado_por }, {
+            // ✅ AHORA RECIBE OBJETO: { reactivado_por: "..." }
+            const response = await axios.post(`${API_URL}/${id}/reactivar`, datos, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
