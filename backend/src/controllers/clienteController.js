@@ -251,7 +251,7 @@ const clienteController = {
         }
     },
 
-    // ✅ MEJORADO: REACTIVAR CLIENTE - Ahora con más validaciones
+    // ✅ CORREGIDO: REACTIVAR CLIENTE - Eliminar llamada a registrarReactivacion que no existe
     reactivar: async (req, res) => {
         try {
             const { id } = req.params;
@@ -271,8 +271,8 @@ const clienteController = {
 
             console.log(`▶️ Reactivando cliente: ${cliente.nombre} ${cliente.apellido}`);
 
-            const clienteReactivado = await ClienteModel.reactivar(id, reactivado_por || 'Administrador');
-            await ClienteModel.registrarReactivacion(id, reactivado_por || 'Administrador');
+            // ✅ SOLO REACTIVAR - Sin llamar a registrarReactivacion
+            const clienteReactivado = await ClienteModel.reactivar(id);
 
             // ✅ AGREGAR: Crear notificación inteligente
             try {
