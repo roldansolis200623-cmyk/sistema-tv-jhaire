@@ -12,12 +12,15 @@ const ReactivarClienteModal = ({ cliente, onClose, onSuccess }) => {
         
         setLoading(true);
         try {
-            await clienteService.reactivar(cliente.id, reactivadoPor);
+            // ✅ CORREGIDO: Enviar como objeto { reactivado_por: ... }
+            await clienteService.reactivar(cliente.id, { 
+                reactivado_por: reactivadoPor 
+            });
             onSuccess();
             onClose();
         } catch (error) {
             console.error('Error:', error);
-            alert('Error al reactivar cliente');
+            alert('Error al reactivar cliente: ' + (error.response?.data?.error || error.message));
         } finally {
             setLoading(false);
         }
