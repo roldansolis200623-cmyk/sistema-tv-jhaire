@@ -2,25 +2,15 @@ const express = require('express');
 const router = express.Router();
 const pagoController = require('../controllers/pagoController');
 
-// Obtener todos los pagos
-router.get('/', pagoController.getAll);
-
-// Obtener estadísticas de pagos
+// ✅ ENDPOINTS ESPECÍFICOS PRIMERO (sin parámetros dinámicos)
 router.get('/estadisticas', pagoController.getEstadisticas);
-
-// 🆕 Recalcular todas las deudas (endpoint nuevo)
+router.get('/rango', pagoController.getPorRangoFechas);
 router.post('/recalcular-deudas', pagoController.recalcularDeudas);
 
-// Obtener pagos por rango de fechas
-router.get('/rango', pagoController.getPorRangoFechas);
-
-// Obtener pagos de un cliente específico
-router.get('/cliente/:clienteId', pagoController.getPorCliente);
-
-// Registrar nuevo pago
+// ✅ ENDPOINTS GENÉRICOS DESPUÉS (con parámetros dinámicos)
+router.get('/', pagoController.getAll);
 router.post('/', pagoController.crear);
-
-// Eliminar pago
+router.get('/cliente/:clienteId', pagoController.getPorCliente);
 router.delete('/:id', pagoController.eliminar);
 
 module.exports = router;
