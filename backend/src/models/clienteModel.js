@@ -10,7 +10,6 @@ const Cliente = {
             throw error;
         }
     },
-
     async getById(id) {
         try {
             const result = await pool.query('SELECT * FROM clientes WHERE id = $1', [id]);
@@ -52,7 +51,15 @@ const Cliente = {
     // ✅ UPDATE CON CONVERSIÓN DE STRINGS VACÍOS A NULL
     async update(id, data) {
         try {
-            console.log(`📝 Actualizando cliente ${id}`);
+            console.log(`📝 Actualizando cliente ${id} con datos:`, data);
+            
+            // ✅ CONVERTIR STRINGS VACÍOS A NULL para campos INTEGER
+            if (data.perfil_internet_id === '') {
+                data.perfil_internet_id = null;
+            }
+            if (data.plan === '') {
+                data.plan = null;
+            }
             
             const fields = [];
             const values = [];
@@ -66,19 +73,10 @@ const Cliente = {
             
             allowedFields.forEach(field => {
                 if (data[field] !== undefined) {
-                    let value = data[field];
-                    
-                    // ✅ CONVERTIR STRINGS VACÍOS A NULL para campos INTEGER
-                    if (field === 'perfil_internet_id' && value === '') {
-                        value = null;
-                    }
-                    
-                    // Si es null o tiene valor, agregarlo
-                    if (value !== null || data[field] === null) {
-                        fields.push(`${field} = $${paramCount}`);
-                        values.push(value);
-                        paramCount++;
-                    }
+                    const value = data[field];
+                    fields.push(`${field} = $${paramCount}`);
+                    values.push(value);
+                    paramCount++;
                 }
             });
             
