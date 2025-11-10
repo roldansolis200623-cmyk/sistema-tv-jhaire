@@ -1,279 +1,300 @@
 const pool = require('../config/database');
 
-const ClienteModel = {
-    crearTabla: async () => {
-        const query = `
-            CREATE TABLE IF NOT EXISTS clientes (
-                id SERIAL PRIMARY KEY,
-                nombre VARCHAR(100) NOT NULL,
-                apellido VARCHAR(100) NOT NULL,
-                dni VARCHAR(20) UNIQUE NOT NULL,
-                telefono VARCHAR(20),
-                email VARCHAR(100),
-                direccion TEXT,
-                tipo_servicio VARCHAR(50) NOT NULL,
-                tipo_senal VARCHAR(50),
-                perfil_internet_id INTEGER,
-                plan VARCHAR(100),
-                precio_mensual DECIMAL(10, 2) DEFAULT 0,
-                fecha_instalacion DATE,
-                estado VARCHAR(20) DEFAULT 'activo',
-                estado_pago VARCHAR(20) DEFAULT 'deudor',
-                meses_deuda INTEGER DEFAULT 0,
-                suministro VARCHAR(8) UNIQUE,
-                fecha_suspension TIMESTAMP,
-                motivo_suspension VARCHAR(100),
-                observaciones_suspension TEXT,
-                fecha_reactivacion TIMESTAMP,
-                suspendido_por VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_clientes_dni ON clientes(dni);
-            CREATE INDEX IF NOT EXISTS idx_clientes_estado ON clientes(estado);
-            CREATE INDEX IF NOT EXISTS idx_clientes_suministro ON clientes(suministro);
-        `;
-        
+const Cliente = {
+    // Obtener todos los clientes
+    async getAll() {
         try {
-            await pool.query(query);
-            console.log('✅ Tabla clientes creada/verificada');
+            const result = await pool.query(`
+                SELECT 
+                    c.*,
+                    COALESCE(c.deuda_total, c.meses_deuda * c.precio_mensual) as deuda_calculada
+                FROM clientes c
+                ORDER BY c.id DESC
+            `);
+            return result.rows;
         } catch (error) {
-            console.error('Error creando tabla clientes:', error);
+            console.error('Error en getAll:', error);
             throw error;
         }
     },
 
-    getAll: async () => {
-        const query = 'SELECT * FROM clientes ORDER BY created_at DESC';
-        const result = await pool.query(query);
-        return result.rows;
-    },
-
-    getById: async (id) => {
-        const query = 'SELECT * FROM clientes WHERE id = $1';
-        const result = await pool.query(query, [id]);
-        return result.rows[0];
-    },
-
-    // ✅ CORREGIDO: Ahora incluye EMAIL
-    create: async (clienteData) => {
-        const query = `
-            INSERT INTO clientes (
-                nombre, apellido, dni, telefono, email, direccion, 
-                tipo_servicio, tipo_senal, perfil_internet_id,
-                plan, precio_mensual, fecha_instalacion, 
-                estado, meses_deuda, estado_pago, suministro
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-            RETURNING *
-        `;
-        const values = [
-            clienteData.nombre,
-            clienteData.apellido,
-            clienteData.dni,
-            clienteData.telefono,
-            clienteData.email || null, // ✅ AGREGADO
-            clienteData.direccion,
-            clienteData.tipo_servicio,
-            clienteData.tipo_senal || null,
-            clienteData.perfil_internet_id || null,
-            clienteData.plan,
-            clienteData.precio_mensual,
-            clienteData.fecha_instalacion,
-            clienteData.estado || 'activo',
-            clienteData.meses_deuda || 0,
-            clienteData.estado_pago || 'deudor',
-            clienteData.suministro || null
-        ];
-        const result = await pool.query(query, values);
-        return result.rows[0];
-    },
-
-    // ✅ CORREGIDO: Ahora incluye EMAIL en update también
-    update: async (id, clienteData) => {
-        const query = `
-            UPDATE clientes SET
-                nombre = $1, apellido = $2, dni = $3, telefono = $4,
-                email = $5, direccion = $6, tipo_servicio = $7, 
-                tipo_senal = $8, perfil_internet_id = $9,
-                plan = $10, precio_mensual = $11, estado = $12, 
-                meses_deuda = $13, estado_pago = $14, suministro = $15, 
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $16
-            RETURNING *
-        `;
-        const values = [
-            clienteData.nombre,
-            clienteData.apellido,
-            clienteData.dni,
-            clienteData.telefono,
-            clienteData.email || null, // ✅ AGREGADO
-            clienteData.direccion,
-            clienteData.tipo_servicio,
-            clienteData.tipo_senal || null,
-            clienteData.perfil_internet_id || null,
-            clienteData.plan,
-            clienteData.precio_mensual,
-            clienteData.estado,
-            clienteData.meses_deuda || 0,
-            clienteData.estado_pago || 'deudor',
-            clienteData.suministro || null,
-            id
-        ];
-        const result = await pool.query(query, values);
-        return result.rows[0];
-    },
-
-    delete: async (id) => {
-        const query = 'DELETE FROM clientes WHERE id = $1 RETURNING *';
-        const result = await pool.query(query, [id]);
-        return result.rows[0];
-    },
-
-    suspender: async (id, datos) => {
-        const query = `
-            UPDATE clientes SET
-                estado = 'suspendido',
-                fecha_suspension = CURRENT_TIMESTAMP,
-                motivo_suspension = $1,
-                observaciones_suspension = $2,
-                suspendido_por = $3,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $4
-            RETURNING *
-        `;
-        const values = [
-            datos.motivo,
-            datos.observaciones,
-            datos.suspendido_por || 'Administrador',
-            id
-        ];
-        const result = await pool.query(query, values);
-        return result.rows[0];
-    },
-
-    reactivar: async (id, reactivado_por = 'Administrador') => {
-        const query = `
-            UPDATE clientes SET
-                estado = 'activo',
-                fecha_reactivacion = CURRENT_TIMESTAMP,
-                suspendido_por = NULL,
-                motivo_suspension = NULL,
-                observaciones_suspension = NULL,
-                fecha_suspension = NULL,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $1
-            RETURNING *
-        `;
-        const result = await pool.query(query, [id]);
-        return result.rows[0];
-    },
-
-    registrarSuspension: async (clienteId, datos) => {
-        const query = `
-            INSERT INTO historial_suspensiones (
-                cliente_id, motivo, observaciones, suspendido_por
-            ) VALUES ($1, $2, $3, $4)
-            RETURNING *
-        `;
-        const values = [
-            clienteId,
-            datos.motivo,
-            datos.observaciones,
-            datos.suspendido_por
-        ];
-        const result = await pool.query(query, values);
-        return result.rows[0];
-    },
-
-    registrarReactivacion: async (clienteId, reactivado_por) => {
-        const query = `
-            INSERT INTO historial_reactivaciones (
-                cliente_id, reactivado_por
-            ) VALUES ($1, $2)
-            RETURNING *
-        `;
-        const result = await pool.query(query, [clienteId, reactivado_por]);
-        return result.rows[0];
-    },
-
-    getHistorialSuspensiones: async (clienteId) => {
-        const query = `
-            SELECT * FROM historial_suspensiones
-            WHERE cliente_id = $1
-            ORDER BY fecha_suspension DESC
-        `;
-        const result = await pool.query(query, [clienteId]);
-        return result.rows;
-    },
-
-    /**
-     * ✅ NUEVO: Registrar migración de cliente
-     */
-    registrarMigracion: async (clienteId, datosAnteriores, datosNuevos, realizadoPor, motivo) => {
-        const migraciones = [];
-        
-        // Detectar cambios y crear registro por cada uno
-        const campos = [
-            { key: 'tipo_servicio', nombre: 'Tipo de Servicio' },
-            { key: 'plan', nombre: 'Plan' },
-            { key: 'tipo_senal', nombre: 'Tipo de Señal' },
-            { key: 'perfil_internet_nombre', nombre: 'Perfil Internet' },
-            { key: 'precio_mensual', nombre: 'Precio Mensual' }
-        ];
-
-        for (const campo of campos) {
-            if (datosAnteriores[campo.key] !== datosNuevos[campo.key]) {
-                const query = `
-                    INSERT INTO migraciones_clientes (
-                        cliente_id, campo_modificado, valor_anterior, 
-                        valor_nuevo, realizado_por, motivo
-                    ) VALUES ($1, $2, $3, $4, $5, $6)
-                    RETURNING *
-                `;
-                
-                const values = [
-                    clienteId,
-                    campo.nombre,
-                    datosAnteriores[campo.key]?.toString() || 'N/A',
-                    datosNuevos[campo.key]?.toString() || 'N/A',
-                    realizadoPor,
-                    motivo
-                ];
-
-                const result = await pool.query(query, values);
-                migraciones.push(result.rows[0]);
-            }
+    // Obtener cliente por ID
+    async getById(id) {
+        try {
+            const result = await pool.query(`
+                SELECT 
+                    c.*,
+                    COALESCE(c.deuda_total, c.meses_deuda * c.precio_mensual) as deuda_calculada
+                FROM clientes c
+                WHERE c.id = $1
+            `, [id]);
+            return result.rows[0];
+        } catch (error) {
+            console.error('Error en getById:', error);
+            throw error;
         }
-
-        return migraciones;
     },
 
-    /**
-     * ✅ NUEVO: Obtener historial de migraciones
-     */
-    getHistorialMigraciones: async (clienteId) => {
-        const query = `
-            SELECT * FROM migraciones_clientes
-            WHERE cliente_id = $1
-            ORDER BY fecha_migracion DESC
-        `;
-        const result = await pool.query(query, [clienteId]);
-        return result.rows;
+    // Crear nuevo cliente
+    async create(data) {
+        const {
+            nombre,
+            apellido,
+            dni,
+            telefono,
+            correo,
+            direccion,
+            numero_suministro,
+            tipo_servicio,
+            tipo_senal,
+            perfil_internet_id,
+            plan,
+            precio_mensual,
+            fecha_instalacion,
+            estado = 'activo',
+            estado_pago = 'al_dia',
+            meses_deuda = 0
+        } = data;
+
+        try {
+            const result = await pool.query(`
+                INSERT INTO clientes (
+                    nombre, apellido, dni, telefono, correo, direccion,
+                    numero_suministro, tipo_servicio, tipo_senal, perfil_internet_id,
+                    plan, precio_mensual, fecha_instalacion, estado, estado_pago, meses_deuda
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                RETURNING *
+            `, [
+                nombre, apellido, dni, telefono, correo, direccion,
+                numero_suministro, tipo_servicio, tipo_senal, perfil_internet_id,
+                plan, precio_mensual, fecha_instalacion, estado, estado_pago, meses_deuda
+            ]);
+
+            return result.rows[0];
+        } catch (error) {
+            console.error('Error en create:', error);
+            throw error;
+        }
     },
 
-    /**
-     * ✅ NUEVO: Obtener historial completo (suspensiones + migraciones)
-     */
-    getHistorialCompleto: async (clienteId) => {
-        const suspensiones = await ClienteModel.getHistorialSuspensiones(clienteId);
-        const migraciones = await ClienteModel.getHistorialMigraciones(clienteId);
-        
-        return {
-            suspensiones,
-            migraciones
-        };
+    // Actualizar cliente
+    async update(id, data) {
+        const {
+            nombre,
+            apellido,
+            dni,
+            telefono,
+            correo,
+            direccion,
+            numero_suministro,
+            tipo_servicio,
+            tipo_senal,
+            perfil_internet_id,
+            plan,
+            precio_mensual,
+            fecha_instalacion,
+            estado,
+            estado_pago,
+            meses_deuda
+        } = data;
+
+        try {
+            const result = await pool.query(`
+                UPDATE clientes SET
+                    nombre = COALESCE($1, nombre),
+                    apellido = COALESCE($2, apellido),
+                    dni = COALESCE($3, dni),
+                    telefono = COALESCE($4, telefono),
+                    correo = COALESCE($5, correo),
+                    direccion = COALESCE($6, direccion),
+                    numero_suministro = COALESCE($7, numero_suministro),
+                    tipo_servicio = COALESCE($8, tipo_servicio),
+                    tipo_senal = COALESCE($9, tipo_senal),
+                    perfil_internet_id = COALESCE($10, perfil_internet_id),
+                    plan = COALESCE($11, plan),
+                    precio_mensual = COALESCE($12, precio_mensual),
+                    fecha_instalacion = COALESCE($13, fecha_instalacion),
+                    estado = COALESCE($14, estado),
+                    estado_pago = COALESCE($15, estado_pago),
+                    meses_deuda = COALESCE($16, meses_deuda),
+                    fecha_actualizacion = CURRENT_TIMESTAMP
+                WHERE id = $17
+                RETURNING *
+            `, [
+                nombre, apellido, dni, telefono, correo, direccion,
+                numero_suministro, tipo_servicio, tipo_senal, perfil_internet_id,
+                plan, precio_mensual, fecha_instalacion, estado, estado_pago, meses_deuda, id
+            ]);
+
+            return result.rows[0];
+        } catch (error) {
+            console.error('Error en update:', error);
+            throw error;
+        }
+    },
+
+    // Eliminar cliente
+    async delete(id) {
+        try {
+            const result = await pool.query('DELETE FROM clientes WHERE id = $1 RETURNING *', [id]);
+            return result.rows[0];
+        } catch (error) {
+            console.error('Error en delete:', error);
+            throw error;
+        }
+    },
+
+    // ✅ REACTIVAR CLIENTE - SIN HISTORIAL (O CON MANEJO DE ERROR)
+    async reactivar(id) {
+        try {
+            console.log(`🔄 Reactivando cliente ID: ${id}`);
+            
+            // Obtener estado anterior
+            const clienteAnterior = await this.getById(id);
+            if (!clienteAnterior) {
+                console.log('❌ Cliente no encontrado');
+                return null;
+            }
+            
+            console.log(`📊 Estado anterior: ${clienteAnterior.estado}`);
+            
+            // Actualizar el estado a 'activo'
+            const result = await pool.query(`
+                UPDATE clientes 
+                SET 
+                    estado = 'activo',
+                    fecha_actualizacion = CURRENT_TIMESTAMP
+                WHERE id = $1
+                RETURNING *
+            `, [id]);
+
+            if (result.rows.length === 0) {
+                console.log('❌ No se pudo actualizar el cliente');
+                return null;
+            }
+
+            console.log('✅ Cliente reactivado en BD');
+            
+            // ✅ INTENTAR registrar en historial (sin romper si no existe la tabla)
+            try {
+                await pool.query(`
+                    INSERT INTO historial_reactivaciones (
+                        cliente_id,
+                        fecha_reactivacion,
+                        estado_anterior,
+                        estado_nuevo,
+                        notas
+                    ) VALUES ($1, CURRENT_TIMESTAMP, $2, 'activo', 'Reactivación manual')
+                `, [id, clienteAnterior.estado]);
+                
+                console.log('✅ Historial registrado');
+            } catch (historialError) {
+                // Si falla el historial, NO romper la reactivación
+                console.log('⚠️ No se pudo registrar historial (tabla no existe), pero cliente reactivado correctamente');
+            }
+            
+            return result.rows[0];
+            
+        } catch (error) {
+            console.error('❌ Error en reactivar:', error);
+            throw error;
+        }
+    },
+
+    // Suspender cliente
+    async suspender(id) {
+        try {
+            console.log(`⏸️ Suspendiendo cliente ID: ${id}`);
+            
+            const result = await pool.query(`
+                UPDATE clientes 
+                SET 
+                    estado = 'suspendido',
+                    fecha_actualizacion = CURRENT_TIMESTAMP
+                WHERE id = $1
+                RETURNING *
+            `, [id]);
+
+            if (result.rows.length === 0) {
+                console.log('❌ No se encontró el cliente para suspender');
+                return null;
+            }
+
+            console.log('✅ Cliente suspendido en BD');
+            return result.rows[0];
+            
+        } catch (error) {
+            console.error('❌ Error en suspender:', error);
+            throw error;
+        }
+    },
+
+    // Obtener clientes deudores
+    async getDeudores() {
+        try {
+            const result = await pool.query(`
+                SELECT 
+                    c.*,
+                    COALESCE(c.deuda_total, c.meses_deuda * c.precio_mensual) as deuda_calculada
+                FROM clientes c
+                WHERE c.meses_deuda > 0
+                ORDER BY c.meses_deuda DESC, c.id DESC
+            `);
+            return result.rows;
+        } catch (error) {
+            console.error('Error en getDeudores:', error);
+            throw error;
+        }
+    },
+
+    // Obtener estadísticas
+    async getEstadisticas() {
+        try {
+            const result = await pool.query(`
+                SELECT 
+                    COUNT(*) as total,
+                    COUNT(*) FILTER (WHERE estado = 'activo') as activos,
+                    COUNT(*) FILTER (WHERE estado = 'suspendido') as suspendidos,
+                    COUNT(*) FILTER (WHERE estado = 'cancelado') as cancelados,
+                    COUNT(*) FILTER (WHERE meses_deuda = 0) as al_dia,
+                    COUNT(*) FILTER (WHERE meses_deuda > 0 AND meses_deuda < 3) as deudores,
+                    COUNT(*) FILTER (WHERE meses_deuda >= 3) as morosos,
+                    COALESCE(SUM(precio_mensual), 0) as ingreso_mensual_total,
+                    COALESCE(SUM(CASE WHEN estado = 'activo' THEN precio_mensual ELSE 0 END), 0) as ingreso_activos,
+                    COALESCE(SUM(meses_deuda * precio_mensual), 0) as deuda_total
+                FROM clientes
+            `);
+            return result.rows[0];
+        } catch (error) {
+            console.error('Error en getEstadisticas:', error);
+            throw error;
+        }
+    },
+
+    // Buscar clientes
+    async buscar(query) {
+        try {
+            const searchPattern = `%${query}%`;
+            const result = await pool.query(`
+                SELECT 
+                    c.*,
+                    COALESCE(c.deuda_total, c.meses_deuda * c.precio_mensual) as deuda_calculada
+                FROM clientes c
+                WHERE 
+                    c.nombre ILIKE $1 OR
+                    c.apellido ILIKE $1 OR
+                    c.dni ILIKE $1 OR
+                    c.telefono ILIKE $1 OR
+                    c.direccion ILIKE $1
+                ORDER BY c.id DESC
+                LIMIT 50
+            `, [searchPattern]);
+            return result.rows;
+        } catch (error) {
+            console.error('Error en buscar:', error);
+            throw error;
+        }
     }
 };
 
-module.exports = ClienteModel;
+module.exports = Cliente;
