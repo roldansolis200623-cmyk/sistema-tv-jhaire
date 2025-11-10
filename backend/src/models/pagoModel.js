@@ -52,7 +52,7 @@ const PagoModel = {
     },
 
     /**
-     * ✅✅✅ CORREGIDO - Registrar pago con cálculo EXACTO de meses
+     * ✅✅✅ CORREGIDO - Registrar pago con cálculo SIMPLE de deuda
      */
     async crear(pago) {
         const client = await pool.connect();
@@ -75,7 +75,7 @@ const PagoModel = {
 
             console.log(`   Cliente: ${nombre} ${apellido}, Deuda actual: ${meses_deuda} mes(es)`);
 
-            // ✅ CALCULAR LOS MESES ESPECÍFICOS - AHORA CORRECTO
+            // ✅ CALCULAR LOS MESES ESPECÍFICOS
             const mesesDetalle = this.generarMesesEspecificosAlPagar(
                 meses_deuda, 
                 mesesPagados, 
@@ -111,39 +111,26 @@ const PagoModel = {
 
             console.log(`   ✅ Pago registrado con ID: ${pagoInsertado.id}`);
 
-            // ✅ CALCULAR DEUDA DENTRO DE LA MISMA TRANSACCIÓN
-            if (!fecha_instalacion) {
-                throw new Error(`Cliente ${nombre} ${apellido} no tiene fecha de instalación`);
-            }
+            // ✅ CALCULAR DEUDA - SIMPLE: RESTAR MESES PAGADOS DE LO QUE DEBÍA
+            const deudaAnterior = meses_deuda || 0;
+            const deudaNueva = Math.max(0, deudaAnterior - mesesPagados);
 
-            const hoy = new Date();
-            const instalacion = new Date(fecha_instalacion);
-            const mesesDesdeInstalacion = this.calcularMesesEntre(instalacion, hoy);
-            
-            // Obtener total de meses pagados (incluye el pago recién insertado)
-            const pagosQuery = 'SELECT COALESCE(SUM(meses_pagados), 0) as total_pagado FROM pagos WHERE cliente_id = $1';
-            const pagosResult = await client.query(pagosQuery, [pago.cliente_id]);
-            const totalMesesPagados = parseInt(pagosResult.rows[0].total_pagado) || 0;
-            
-            // Calcular deuda real
-            const deudaReal = mesesDesdeInstalacion - totalMesesPagados;
-            
-            console.log(`   📊 Meses desde instalación: ${mesesDesdeInstalacion}`);
-            console.log(`   📊 Total meses pagados: ${totalMesesPagados}`);
-            console.log(`   📊 Deuda real: ${deudaReal}`);
-            
+            console.log(`   📊 Deuda anterior: ${deudaAnterior} meses`);
+            console.log(`   📊 Pagando: ${mesesPagados} meses`);
+            console.log(`   📊 Deuda nueva: ${deudaNueva} meses`);
+
             // Determinar estado de pago
             let estadoPago = 'deudor';
-            if (deudaReal < 0) {
+            if (deudaNueva === 0) {
+                estadoPago = 'al_dia';
+            } else if (deudaNueva < 0) {
                 estadoPago = 'adelantado';
-            } else if (deudaReal === 0) {
-                estadoPago = 'pagado';
-            } else if (deudaReal <= 1) {
+            } else if (deudaNueva <= 1) {
                 estadoPago = 'al_dia';
             }
 
             console.log(`   📊 Nuevo estado: ${estadoPago}`);
-            
+
             // Actualizar la deuda del cliente
             const updateQuery = `
                 UPDATE clientes SET
@@ -152,16 +139,16 @@ const PagoModel = {
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = $3
             `;
-            await client.query(updateQuery, [deudaReal, estadoPago, pago.cliente_id]);
+            await client.query(updateQuery, [deudaNueva, estadoPago, pago.cliente_id]);
 
             await client.query('COMMIT');
             
-            if (deudaReal < 0) {
-                console.log(`✅ ¡PAGO EXITOSO! Cliente ${nombre} ${apellido} tiene ${Math.abs(deudaReal)} mes(es) ADELANTADOS 🎉`);
-            } else if (deudaReal === 0) {
+            if (deudaNueva < 0) {
+                console.log(`✅ ¡PAGO EXITOSO! Cliente ${nombre} ${apellido} tiene ${Math.abs(deudaNueva)} mes(es) ADELANTADOS 🎉`);
+            } else if (deudaNueva === 0) {
                 console.log(`✅ ¡PAGO EXITOSO! Cliente ${nombre} ${apellido} está AL DÍA ✨`);
             } else {
-                console.log(`✅ ¡PAGO EXITOSO! Cliente ${nombre} ${apellido} ahora debe ${deudaReal} mes(es)`);
+                console.log(`✅ ¡PAGO EXITOSO! Cliente ${nombre} ${apellido} ahora debe ${deudaNueva} mes(es)`);
             }
             
             return pagoInsertado;
@@ -176,11 +163,6 @@ const PagoModel = {
 
     /**
      * ✅✅✅ NUEVA FUNCIÓN - CALCULA LOS MESES ESPECÍFICOS CORRECTAMENTE
-     * 
-     * LÓGICA:
-     * - Si cliente DEBE X meses: Paga retroactivamente desde el mes más reciente
-     *   Ejemplo: Hoy Nov, debe 3 meses (ago, sep, oct) → Paga oct, sep, ago (del más reciente)
-     * - Si cliente NO DEBE: Paga meses adelantados desde hoy
      */
     generarMesesEspecificosAlPagar(mesesDeuda, mesesPagados, fechaPago) {
         const mesesNombres = [
@@ -196,21 +178,13 @@ const PagoModel = {
         console.log(`   → Deuda: ${mesesDeuda} mes(es), Pagando: ${mesesPagados} meses`);
         console.log(`   → Fecha de pago: ${mesesNombres[mesActual]} ${añoActual}`);
         
-        // ============================================
-        // CASO 1: Cliente DEBE dinero (meses_deuda > 0)
-        // ============================================
         if (mesesDeuda > 0) {
             console.log(`   → CASO: Cliente debe, paga retroactivamente desde más reciente`);
-            
-            // Empezar desde hace "mesesDeuda" meses y retroceder
-            // Ejemplo: Hoy=Nov(10), debe=3 meses
-            // Entonces: (10-1)=9=Oct, (10-2)=8=Sep, (10-3)=7=Aug
             
             for (let i = 0; i < mesesPagados && i < mesesDeuda; i++) {
                 let mesRetroceso = (mesActual - 1) - i;
                 let año = añoActual;
                 
-                // Ajustar si mes es negativo (mes del año anterior)
                 while (mesRetroceso < 0) {
                     mesRetroceso += 12;
                     año -= 1;
@@ -221,7 +195,6 @@ const PagoModel = {
                 console.log(`   → ${i + 1}: ${nombreMes} ${año}`);
             }
             
-            // Si paga más meses de los que debe, son adelantos
             if (mesesPagados > mesesDeuda) {
                 const mesesAdelantados = mesesPagados - mesesDeuda;
                 console.log(`   → ADELANTOS: ${mesesAdelantados} mes(es) adicionales`);
@@ -237,9 +210,6 @@ const PagoModel = {
                 }
             }
         } 
-        // ============================================
-        // CASO 2: Cliente NO debe (meses_deuda <= 0)
-        // ============================================
         else {
             console.log(`   → CASO: Cliente sin deuda, paga adelantado`);
             
@@ -262,7 +232,6 @@ const PagoModel = {
 
     /**
      * ✅ MEJORADO - Función antigua para compatibilidad
-     * (Mantener para no romper código existente)
      */
     calcularMesesDetalle(mesesDeuda, mesesPagados) {
         return this.generarMesesEspecificosAlPagar(mesesDeuda, mesesPagados, new Date());
@@ -386,39 +355,34 @@ const PagoModel = {
             
             console.log(`🗑️  Eliminando pago ID ${id}: Cliente ${cliente_id}, S/ ${monto}, ${meses_pagados} mes(es)`);
             
-            // Obtener fecha de instalación y datos del cliente
-            const clienteQuery = 'SELECT fecha_instalacion, nombre, apellido FROM clientes WHERE id = $1';
+            // Obtener datos del cliente
+            const clienteQuery = 'SELECT meses_deuda, nombre, apellido FROM clientes WHERE id = $1';
             const clienteResult = await client.query(clienteQuery, [cliente_id]);
             
             if (clienteResult.rows.length === 0) {
                 throw new Error('Cliente no encontrado');
             }
             
-            const { fecha_instalacion, nombre, apellido } = clienteResult.rows[0];
+            const { meses_deuda, nombre, apellido } = clienteResult.rows[0];
             
             // Eliminar el pago
             await client.query('DELETE FROM pagos WHERE id = $1', [id]);
             console.log(`   ✅ Pago eliminado`);
             
-            // ✅ RECALCULAR DEUDA DESPUÉS DE ELIMINAR
-            const hoy = new Date();
-            const instalacion = new Date(fecha_instalacion);
-            const mesesDesdeInstalacion = this.calcularMesesEntre(instalacion, hoy);
+            // ✅ RECALCULAR DEUDA - SUMAR DE VUELTA LOS MESES PAGADOS
+            const deudaRestablecida = (meses_deuda || 0) + meses_pagados;
             
-            // Obtener total de meses pagados DESPUÉS de eliminar
-            const pagosQuery = 'SELECT COALESCE(SUM(meses_pagados), 0) as total_pagado FROM pagos WHERE cliente_id = $1';
-            const pagosResult = await client.query(pagosQuery, [cliente_id]);
-            const totalMesesPagados = parseInt(pagosResult.rows[0].total_pagado) || 0;
-            
-            const deudaReal = mesesDesdeInstalacion - totalMesesPagados;
+            console.log(`   📊 Deuda anterior: ${meses_deuda} meses`);
+            console.log(`   📊 Restaurando: ${meses_pagados} meses`);
+            console.log(`   📊 Deuda nueva: ${deudaRestablecida} meses`);
             
             // Determinar estado
             let estadoPago = 'deudor';
-            if (deudaReal < 0) {
+            if (deudaRestablecida === 0) {
+                estadoPago = 'al_dia';
+            } else if (deudaRestablecida < 0) {
                 estadoPago = 'adelantado';
-            } else if (deudaReal === 0) {
-                estadoPago = 'pagado';
-            } else if (deudaReal <= 1) {
+            } else if (deudaRestablecida <= 1) {
                 estadoPago = 'al_dia';
             }
             
@@ -430,15 +394,11 @@ const PagoModel = {
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = $3
             `;
-            await client.query(updateQuery, [deudaReal, estadoPago, cliente_id]);
+            await client.query(updateQuery, [deudaRestablecida, estadoPago, cliente_id]);
             
             await client.query('COMMIT');
             
-            console.log(`✅ Pago eliminado exitosamente. Cliente ${nombre} ${apellido} ahora ${
-                deudaReal < 0 ? `tiene ${Math.abs(deudaReal)} mes(es) adelantados` : 
-                deudaReal === 0 ? 'está al día' :
-                `debe ${deudaReal} mes(es)`
-            }`);
+            console.log(`✅ Pago eliminado exitosamente. Cliente ${nombre} ${apellido} ahora debe ${deudaRestablecida} mes(es)`);
             
             return true;
         } catch (error) {
@@ -456,30 +416,14 @@ const PagoModel = {
     async calcularDeudaReal(clienteId) {
         const client = await pool.connect();
         try {
-            const clienteQuery = 'SELECT fecha_instalacion FROM clientes WHERE id = $1';
+            const clienteQuery = 'SELECT meses_deuda FROM clientes WHERE id = $1';
             const clienteResult = await client.query(clienteQuery, [clienteId]);
             
             if (clienteResult.rows.length === 0) {
                 throw new Error('Cliente no encontrado');
             }
             
-            const { fecha_instalacion } = clienteResult.rows[0];
-            
-            if (!fecha_instalacion) {
-                return 1;
-            }
-            
-            const hoy = new Date();
-            const instalacion = new Date(fecha_instalacion);
-            const mesesDesdeInstalacion = this.calcularMesesEntre(instalacion, hoy);
-            
-            const pagosQuery = 'SELECT COALESCE(SUM(meses_pagados), 0) as total_pagado FROM pagos WHERE cliente_id = $1';
-            const pagosResult = await client.query(pagosQuery, [clienteId]);
-            const totalMesesPagados = parseInt(pagosResult.rows[0].total_pagado) || 0;
-            
-            const deudaReal = mesesDesdeInstalacion - totalMesesPagados;
-            
-            return deudaReal;
+            return clienteResult.rows[0].meses_deuda || 0;
             
         } finally {
             client.release();
@@ -505,22 +449,21 @@ const PagoModel = {
                     const deudaReal = await this.calcularDeudaReal(cliente.id);
                     
                     let estadoPago = 'deudor';
-                    if (deudaReal < 0) {
+                    if (deudaReal === 0) {
+                        estadoPago = 'al_dia';
+                    } else if (deudaReal < 0) {
                         estadoPago = 'adelantado';
-                    } else if (deudaReal === 0) {
-                        estadoPago = 'pagado';
                     } else if (deudaReal <= 1) {
                         estadoPago = 'al_dia';
                     }
                     
                     const updateQuery = `
                         UPDATE clientes 
-                        SET meses_deuda = $1,
-                            estado_pago = $2,
+                        SET estado_pago = $1,
                             updated_at = CURRENT_TIMESTAMP
-                        WHERE id = $3
+                        WHERE id = $2
                     `;
-                    await client.query(updateQuery, [deudaReal, estadoPago, cliente.id]);
+                    await client.query(updateQuery, [estadoPago, cliente.id]);
                     
                     actualizados++;
                     
@@ -546,25 +489,24 @@ const PagoModel = {
         }
     },
 
-    // ✅ CORREGIDA - Calcular meses entre dos fechas (SIN +1 extra)
-calcularMesesEntre(fecha1, fecha2) {
-    const d1 = new Date(fecha1);
-    const d2 = new Date(fecha2);
-    
-    // Normalizar a inicio de mes
-    d1.setDate(1);
-    d1.setHours(0, 0, 0, 0);
-    d2.setDate(1);
-    d2.setHours(0, 0, 0, 0);
-    
-    // Calcular diferencia en meses
-    const años = d2.getFullYear() - d1.getFullYear();
-    const meses = d2.getMonth() - d1.getMonth();
-    const totalMeses = (años * 12) + meses;
-    
-    // ✅ SOLO sumar +1 si es el mismo mes
-    return Math.max(1, totalMeses + 1);
-}
+    /**
+     * Obtener pagos por rango de fechas
+     */
+    async getPorRangoFechas(fechaInicio, fechaFin) {
+        const query = `
+            SELECT * FROM pagos 
+            WHERE fecha_pago >= $1 AND fecha_pago <= $2
+            ORDER BY fecha_pago DESC
+        `;
+
+        try {
+            const result = await pool.query(query, [fechaInicio, fechaFin]);
+            return result.rows;
+        } catch (error) {
+            console.error('Error obteniendo pagos por rango:', error);
+            throw error;
+        }
+    }
 };
 
 module.exports = PagoModel;
