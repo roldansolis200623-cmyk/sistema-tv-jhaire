@@ -6,7 +6,13 @@ class PDFService {
     constructor() {
         this.logoPath = path.join(__dirname, '../assets/logo.png');
         
-        // Paleta de colores moderna
+        // Dimensiones exactas A4 landscape
+        this.pageWidth = 841.89; // A4 landscape en puntos
+        this.pageHeight = 595.28; // A4 landscape en puntos
+        this.margin = 30;
+        this.contentWidth = this.pageWidth - (this.margin * 2); // 781.89
+        
+        // Paleta de colores
         this.colors = {
             primary: '#6366F1',
             secondary: '#8B5CF6',
@@ -33,25 +39,23 @@ class PDFService {
     crearDocumento() {
         return new PDFDocument({
             size: 'A4',
-            layout: 'landscape',
+            layout: 'landscape', // 841.89 x 595.28 puntos
             margins: {
-                top: 30,
-                bottom: 30,
-                left: 30,
-                right: 30
+                top: this.margin,
+                bottom: this.margin,
+                left: this.margin,
+                right: this.margin
             },
-            bufferPages: true
+            bufferPages: true,
+            autoFirstPage: true
         });
     }
 
-    // Encabezado profesional sin símbolos raros
+    // Encabezado que NO se sale del A4
     agregarEncabezado(doc, titulo) {
-        const pageWidth = 812;
-        const contentWidth = pageWidth - 60;
-        
-        // Fondo degradado
-        doc.rect(0, 0, pageWidth, 85).fill(this.colors.primary);
-        doc.rect(0, 60, pageWidth, 25)
+        // Fondo degradado que respeta el ancho total
+        doc.rect(0, 0, this.pageWidth, 85).fill(this.colors.primary);
+        doc.rect(0, 60, this.pageWidth, 25)
            .fillOpacity(0.3)
            .fill(this.colors.secondary)
            .fillOpacity(1);
@@ -73,7 +77,8 @@ class PDFService {
            .font('Helvetica-Bold')
            .fillColor(this.colors.white)
            .text(titulo.toUpperCase(), 140, 25, {
-               width: contentWidth - 300
+               width: this.contentWidth - 250,
+               align: 'left'
            });
         
         // Info empresa
@@ -84,7 +89,7 @@ class PDFService {
            .text('RUC: 20606847291 | Trujillo, La Libertad', 140, 58)
            .fillOpacity(1);
         
-        // Fecha
+        // Badge fecha - respeta margen derecho
         const ahora = new Date();
         const fechaTexto = ahora.toLocaleDateString('es-PE', {
             day: '2-digit',
@@ -96,7 +101,7 @@ class PDFService {
             minute: '2-digit'
         });
         
-        const badgeX = contentWidth - 110;
+        const badgeX = this.pageWidth - 140; // Respeta margen
         doc.roundedRect(badgeX, 25, 130, 40, 5)
            .fillOpacity(0.2)
            .fill(this.colors.white)
@@ -118,76 +123,79 @@ class PDFService {
         return doc;
     }
 
-    // Tabla optimizada para A4 landscape
+    // Tabla optimizada que CABE en A4 landscape
     agregarTablaClientes(doc, clientes, y = 95) {
-        const alturaFila = 30;
+        const alturaFila = 28;
+        const maxY = this.pageHeight - this.margin - 10; // Límite antes de nueva página
         
-        // Columnas ajustadas para A4 landscape (752px disponibles)
+        // ✅ Columnas OPTIMIZADAS para 781px disponibles (contentWidth)
         const columnWidths = {
-            num: 28,       // #
-            dni: 60,       // DNI
-            nombre: 125,   // Cliente
-            telefono: 72,  // Telefono
-            direccion: 155, // Direccion
-            servicio: 68,  // Servicio
-            plan: 70,      // Plan
-            precio: 55,    // Precio
-            deuda: 42,     // Meses
-            total: 52,     // Total S/
-            estado: 65     // Estado
+            num: 26,       // #
+            dni: 58,       // DNI
+            nombre: 118,   // Cliente
+            telefono: 68,  // Telefono
+            direccion: 148, // Direccion (la más ancha)
+            servicio: 64,  // Servicio
+            plan: 66,      // Plan
+            precio: 52,    // Precio
+            deuda: 40,     // Meses
+            total: 50,     // Total S/
+            estado: 62     // Estado
         };
         
         const totalWidth = Object.values(columnWidths).reduce((a, b) => a + b, 0);
-        let xPos = 30;
+        console.log(`✅ Ancho total tabla: ${totalWidth}px | Disponible: ${this.contentWidth}px`);
+        
+        let xPos = this.margin;
         
         // ENCABEZADO
-        doc.rect(30, y, totalWidth, alturaFila - 2).fill(this.colors.primary);
+        doc.rect(this.margin, y, totalWidth, alturaFila - 2).fill(this.colors.primary);
         
         doc.fontSize(8)
            .font('Helvetica-Bold')
            .fillColor(this.colors.white);
         
-        const headerY = y + 9;
+        const headerY = y + 8;
         
-        doc.text('#', xPos + 3, headerY, { width: columnWidths.num - 6, align: 'center' });
+        doc.text('#', xPos + 2, headerY, { width: columnWidths.num - 4, align: 'center' });
         xPos += columnWidths.num;
         
-        doc.text('DNI', xPos + 3, headerY, { width: columnWidths.dni - 6 });
+        doc.text('DNI', xPos + 2, headerY, { width: columnWidths.dni - 4 });
         xPos += columnWidths.dni;
         
-        doc.text('CLIENTE', xPos + 3, headerY, { width: columnWidths.nombre - 6 });
+        doc.text('CLIENTE', xPos + 2, headerY, { width: columnWidths.nombre - 4 });
         xPos += columnWidths.nombre;
         
-        doc.text('TELEFONO', xPos + 3, headerY, { width: columnWidths.telefono - 6 });
+        doc.text('TELEFONO', xPos + 2, headerY, { width: columnWidths.telefono - 4 });
         xPos += columnWidths.telefono;
         
-        doc.text('DIRECCION', xPos + 3, headerY, { width: columnWidths.direccion - 6 });
+        doc.text('DIRECCION', xPos + 2, headerY, { width: columnWidths.direccion - 4 });
         xPos += columnWidths.direccion;
         
-        doc.text('SERVICIO', xPos + 3, headerY, { width: columnWidths.servicio - 6 });
+        doc.text('SERVICIO', xPos + 2, headerY, { width: columnWidths.servicio - 4 });
         xPos += columnWidths.servicio;
         
-        doc.text('PLAN', xPos + 3, headerY, { width: columnWidths.plan - 6 });
+        doc.text('PLAN', xPos + 2, headerY, { width: columnWidths.plan - 4 });
         xPos += columnWidths.plan;
         
-        doc.text('PRECIO', xPos + 3, headerY, { width: columnWidths.precio - 6, align: 'right' });
+        doc.text('PRECIO', xPos + 2, headerY, { width: columnWidths.precio - 4, align: 'right' });
         xPos += columnWidths.precio;
         
-        doc.text('MESES', xPos + 3, headerY, { width: columnWidths.deuda - 6, align: 'center' });
+        doc.text('MESES', xPos + 2, headerY, { width: columnWidths.deuda - 4, align: 'center' });
         xPos += columnWidths.deuda;
         
-        doc.text('DEUDA', xPos + 3, headerY, { width: columnWidths.total - 6, align: 'right' });
+        doc.text('DEUDA', xPos + 2, headerY, { width: columnWidths.total - 4, align: 'right' });
         xPos += columnWidths.total;
         
-        doc.text('ESTADO', xPos + 3, headerY, { width: columnWidths.estado - 6, align: 'center' });
+        doc.text('ESTADO', xPos + 2, headerY, { width: columnWidths.estado - 4, align: 'center' });
         
         y += alturaFila - 2;
         
-        // Línea dorada
+        // Línea separadora
         doc.strokeColor('#FFD700')
            .lineWidth(2)
-           .moveTo(30, y)
-           .lineTo(30 + totalWidth, y)
+           .moveTo(this.margin, y)
+           .lineTo(this.margin + totalWidth, y)
            .stroke();
         
         y += 2;
@@ -196,9 +204,21 @@ class PDFService {
         doc.font('Helvetica').fontSize(7);
         
         clientes.forEach((cliente, index) => {
-            if (y > 520) {
-                doc.addPage({ layout: 'landscape' });
-                y = 30;
+            // ✅ VERIFICAR ESPACIO - si no cabe, nueva página
+            if (y + alturaFila > maxY) {
+                doc.addPage({ 
+                    size: 'A4', 
+                    layout: 'landscape',
+                    margins: {
+                        top: this.margin,
+                        bottom: this.margin,
+                        left: this.margin,
+                        right: this.margin
+                    }
+                });
+                y = this.margin + 5;
+                
+                // Repetir encabezado
                 this.agregarEncabezadoTabla(doc, y, columnWidths, alturaFila);
                 y += alturaFila;
             }
@@ -226,10 +246,9 @@ class PDFService {
                 colorFondo = this.colors.bgLight;
             }
             
-            doc.rect(30, y, totalWidth, alturaFila).fill(colorFondo);
-            doc.rect(30, y, 3, alturaFila).fill(bordeIzq);
+            doc.rect(this.margin, y, totalWidth, alturaFila).fill(colorFondo);
+            doc.rect(this.margin, y, 3, alturaFila).fill(bordeIzq);
             
-            // Color de texto
             let colorTexto = this.colors.dark;
             if (cliente.meses_deuda >= 3) {
                 colorTexto = this.colors.danger;
@@ -239,8 +258,8 @@ class PDFService {
                 colorTexto = this.colors.success;
             }
             
-            const textY = y + 5;
-            xPos = 33;
+            const textY = y + 4;
+            xPos = this.margin + 3;
             
             // # Numero
             doc.fontSize(8)
@@ -257,7 +276,7 @@ class PDFService {
                .font('Helvetica')
                .fillColor(colorTexto)
                .text(cliente.dni || '-', xPos, textY + 5, {
-                   width: columnWidths.dni - 6,
+                   width: columnWidths.dni - 4,
                    ellipsis: true
                });
             xPos += columnWidths.dni;
@@ -267,8 +286,8 @@ class PDFService {
             doc.fontSize(7)
                .font('Helvetica-Bold')
                .fillColor(this.colors.dark)
-               .text(nombreCompleto, xPos, textY + 2, {
-                   width: columnWidths.nombre - 6,
+               .text(nombreCompleto, xPos, textY + 1, {
+                   width: columnWidths.nombre - 4,
                    ellipsis: true,
                    lineBreak: true,
                    height: 18
@@ -280,7 +299,7 @@ class PDFService {
                .font('Helvetica')
                .fillColor(this.colors.dark)
                .text(cliente.telefono || '-', xPos, textY + 5, {
-                   width: columnWidths.telefono - 6,
+                   width: columnWidths.telefono - 4,
                    ellipsis: true
                });
             xPos += columnWidths.telefono;
@@ -289,8 +308,8 @@ class PDFService {
             doc.fontSize(6.5)
                .font('Helvetica')
                .fillColor('#4B5563')
-               .text(cliente.direccion || '-', xPos, textY + 2, {
-                   width: columnWidths.direccion - 6,
+               .text(cliente.direccion || '-', xPos, textY + 1, {
+                   width: columnWidths.direccion - 4,
                    ellipsis: true,
                    lineBreak: true,
                    height: 20
@@ -302,7 +321,7 @@ class PDFService {
                .font('Helvetica-Bold')
                .fillColor(this.colors.primary)
                .text((cliente.tipo_servicio || '-').toUpperCase(), xPos, textY + 5, {
-                   width: columnWidths.servicio - 6,
+                   width: columnWidths.servicio - 4,
                    ellipsis: true
                });
             xPos += columnWidths.servicio;
@@ -312,7 +331,7 @@ class PDFService {
                .font('Helvetica')
                .fillColor(this.colors.dark)
                .text(cliente.plan || '-', xPos, textY + 5, {
-                   width: columnWidths.plan - 6,
+                   width: columnWidths.plan - 4,
                    ellipsis: true
                });
             xPos += columnWidths.plan;
@@ -322,7 +341,7 @@ class PDFService {
                .font('Helvetica-Bold')
                .fillColor(this.colors.success)
                .text(`S/ ${parseFloat(cliente.precio_mensual || 0).toFixed(2)}`, xPos, textY + 5, {
-                   width: columnWidths.precio - 6,
+                   width: columnWidths.precio - 4,
                    align: 'right'
                });
             xPos += columnWidths.precio;
@@ -333,7 +352,7 @@ class PDFService {
             if (mesesDeuda >= 3) badgeColor = this.colors.danger;
             else if (mesesDeuda > 0) badgeColor = this.colors.warning;
             
-            doc.circle(xPos + 18, textY + 10, 10)
+            doc.circle(xPos + 17, textY + 10, 9)
                .fillOpacity(0.2)
                .fill(badgeColor)
                .fillOpacity(1);
@@ -342,7 +361,7 @@ class PDFService {
                .font('Helvetica-Bold')
                .fillColor(badgeColor)
                .text(mesesDeuda.toString(), xPos, textY + 5, {
-                   width: columnWidths.deuda - 6,
+                   width: columnWidths.deuda - 4,
                    align: 'center'
                });
             xPos += columnWidths.deuda;
@@ -353,7 +372,7 @@ class PDFService {
                .font('Helvetica-Bold')
                .fillColor(deudaTotal > 0 ? this.colors.danger : this.colors.success)
                .text(`S/ ${deudaTotal.toFixed(2)}`, xPos, textY + 5, {
-                   width: columnWidths.total - 6,
+                   width: columnWidths.total - 4,
                    align: 'right'
                });
             xPos += columnWidths.total;
@@ -381,22 +400,22 @@ class PDFService {
                 estadoBg = this.colors.bgWarning;
             }
             
-            doc.roundedRect(xPos + 5, textY + 3, columnWidths.estado - 10, 16, 8)
+            doc.roundedRect(xPos + 4, textY + 3, columnWidths.estado - 8, 16, 8)
                .fill(estadoBg);
             
             doc.fontSize(7)
                .font('Helvetica-Bold')
                .fillColor(estadoColor)
-               .text(estadoTexto, xPos + 5, textY + 7, {
-                   width: columnWidths.estado - 10,
+               .text(estadoTexto, xPos + 4, textY + 7, {
+                   width: columnWidths.estado - 8,
                    align: 'center'
                });
             
             // Línea separadora
             doc.strokeColor('#E5E7EB')
                .lineWidth(0.5)
-               .moveTo(33, y + alturaFila)
-               .lineTo(33 + totalWidth - 3, y + alturaFila)
+               .moveTo(this.margin + 3, y + alturaFila)
+               .lineTo(this.margin + totalWidth - 3, y + alturaFila)
                .stroke();
             
             y += alturaFila;
@@ -407,68 +426,79 @@ class PDFService {
 
     agregarEncabezadoTabla(doc, y, columnWidths, alturaFila) {
         const totalWidth = Object.values(columnWidths).reduce((a, b) => a + b, 0);
-        let xPos = 30;
+        let xPos = this.margin;
         
-        doc.rect(30, y, totalWidth, alturaFila - 2).fill(this.colors.primary);
+        doc.rect(this.margin, y, totalWidth, alturaFila - 2).fill(this.colors.primary);
         
         doc.fontSize(8)
            .font('Helvetica-Bold')
            .fillColor(this.colors.white);
         
-        const headerY = y + 9;
+        const headerY = y + 8;
         
-        doc.text('#', xPos + 3, headerY, { width: columnWidths.num - 6, align: 'center' });
+        doc.text('#', xPos + 2, headerY, { width: columnWidths.num - 4, align: 'center' });
         xPos += columnWidths.num;
-        doc.text('DNI', xPos + 3, headerY, { width: columnWidths.dni - 6 });
+        doc.text('DNI', xPos + 2, headerY, { width: columnWidths.dni - 4 });
         xPos += columnWidths.dni;
-        doc.text('CLIENTE', xPos + 3, headerY, { width: columnWidths.nombre - 6 });
+        doc.text('CLIENTE', xPos + 2, headerY, { width: columnWidths.nombre - 4 });
         xPos += columnWidths.nombre;
-        doc.text('TELEFONO', xPos + 3, headerY, { width: columnWidths.telefono - 6 });
+        doc.text('TELEFONO', xPos + 2, headerY, { width: columnWidths.telefono - 4 });
         xPos += columnWidths.telefono;
-        doc.text('DIRECCION', xPos + 3, headerY, { width: columnWidths.direccion - 6 });
+        doc.text('DIRECCION', xPos + 2, headerY, { width: columnWidths.direccion - 4 });
         xPos += columnWidths.direccion;
-        doc.text('SERVICIO', xPos + 3, headerY, { width: columnWidths.servicio - 6 });
+        doc.text('SERVICIO', xPos + 2, headerY, { width: columnWidths.servicio - 4 });
         xPos += columnWidths.servicio;
-        doc.text('PLAN', xPos + 3, headerY, { width: columnWidths.plan - 6 });
+        doc.text('PLAN', xPos + 2, headerY, { width: columnWidths.plan - 4 });
         xPos += columnWidths.plan;
-        doc.text('PRECIO', xPos + 3, headerY, { width: columnWidths.precio - 6, align: 'right' });
+        doc.text('PRECIO', xPos + 2, headerY, { width: columnWidths.precio - 4, align: 'right' });
         xPos += columnWidths.precio;
-        doc.text('MESES', xPos + 3, headerY, { width: columnWidths.deuda - 6, align: 'center' });
+        doc.text('MESES', xPos + 2, headerY, { width: columnWidths.deuda - 4, align: 'center' });
         xPos += columnWidths.deuda;
-        doc.text('DEUDA', xPos + 3, headerY, { width: columnWidths.total - 6, align: 'right' });
+        doc.text('DEUDA', xPos + 2, headerY, { width: columnWidths.total - 4, align: 'right' });
         xPos += columnWidths.total;
-        doc.text('ESTADO', xPos + 3, headerY, { width: columnWidths.estado - 6, align: 'center' });
+        doc.text('ESTADO', xPos + 2, headerY, { width: columnWidths.estado - 4, align: 'center' });
         
         doc.strokeColor('#FFD700')
            .lineWidth(2)
-           .moveTo(30, y + alturaFila - 2)
-           .lineTo(30 + totalWidth, y + alturaFila - 2)
+           .moveTo(this.margin, y + alturaFila - 2)
+           .lineTo(this.margin + totalWidth, y + alturaFila - 2)
            .stroke();
     }
 
     agregarResumen(doc, estadisticas, y) {
-        y += 20;
+        const maxY = this.pageHeight - this.margin - 150;
         
-        if (y > 450) {
-            doc.addPage({ layout: 'landscape' });
-            y = 30;
+        if (y > maxY) {
+            doc.addPage({ 
+                size: 'A4', 
+                layout: 'landscape',
+                margins: {
+                    top: this.margin,
+                    bottom: this.margin,
+                    left: this.margin,
+                    right: this.margin
+                }
+            });
+            y = this.margin + 10;
+        } else {
+            y += 20;
         }
         
-        // Título
-        doc.rect(30, y, 752, 35)
+        // Título - respeta ancho total
+        doc.rect(this.margin, y, this.contentWidth, 35)
            .fill(this.colors.primary);
         
         doc.fontSize(14)
            .font('Helvetica-Bold')
            .fillColor(this.colors.white)
-           .text('RESUMEN EJECUTIVO', 40, y + 10);
+           .text('RESUMEN EJECUTIVO', this.margin + 10, y + 10);
         
         y += 45;
         
         // Tarjetas
-        const cardWidth = 145;
+        const cardWidth = 148;
         const cardHeight = 70;
-        const gap = 8;
+        const gap = 7;
         
         const metricas = [
             {
@@ -508,7 +538,7 @@ class PDFService {
         ];
         
         metricas.forEach((metrica, index) => {
-            const xPos = 30 + (index * (cardWidth + gap));
+            const xPos = this.margin + (index * (cardWidth + gap));
             const yPos = y;
             
             // Sombra
@@ -560,8 +590,8 @@ class PDFService {
         
         y += cardHeight + 15;
         
-        // Análisis
-        doc.rect(30, y, 752, 45)
+        // Análisis - respeta ancho
+        doc.rect(this.margin, y, this.contentWidth, 45)
            .fillOpacity(0.05)
            .fill(this.colors.primary)
            .fillOpacity(1);
@@ -569,7 +599,7 @@ class PDFService {
         doc.fontSize(10)
            .font('Helvetica-Bold')
            .fillColor(this.colors.primary)
-           .text('ANALISIS FINANCIERO', 40, y + 8);
+           .text('ANALISIS FINANCIERO', this.margin + 10, y + 8);
         
         const tasaCobranza = ((estadisticas.pagados / estadisticas.total) * 100).toFixed(1);
         const deudaTotal = (estadisticas.morosos * 150).toFixed(2);
@@ -578,8 +608,8 @@ class PDFService {
         doc.fontSize(8)
            .font('Helvetica')
            .fillColor(this.colors.dark)
-           .text(`Tasa de Cobranza: ${tasaCobranza}% | Deuda Total Estimada: S/ ${deudaTotal} | Promedio por Cliente: S/ ${promedio}`, 40, y + 25, {
-               width: 700
+           .text(`Tasa de Cobranza: ${tasaCobranza}% | Deuda Total Estimada: S/ ${deudaTotal} | Promedio por Cliente: S/ ${promedio}`, this.margin + 10, y + 25, {
+               width: this.contentWidth - 20
            });
         
         return y + 60;
@@ -587,22 +617,28 @@ class PDFService {
 
     agregarPiePagina(doc) {
         const pageCount = doc.bufferedPageRange().count;
+        const pieY = this.pageHeight - 20;
         
         for (let i = 0; i < pageCount; i++) {
             doc.switchToPage(i);
             
             doc.strokeColor(this.colors.light)
                .lineWidth(1)
-               .moveTo(30, 565)
-               .lineTo(782, 565)
+               .moveTo(this.margin, pieY - 5)
+               .lineTo(this.pageWidth - this.margin, pieY - 5)
                .stroke();
             
             doc.fontSize(7)
                .font('Helvetica')
                .fillColor(this.colors.dark)
                .fillOpacity(0.6)
-               .text('TV JHAIRE - Sistema de Gestion Integral', 30, 570, { width: 300 })
-               .text(`Pagina ${i + 1} de ${pageCount}`, 500, 570, { width: 282, align: 'right' })
+               .text('TV JHAIRE - Sistema de Gestion Integral', this.margin, pieY, { 
+                   width: this.contentWidth / 2 
+               })
+               .text(`Pagina ${i + 1} de ${pageCount}`, this.pageWidth / 2, pieY, { 
+                   width: this.contentWidth / 2, 
+                   align: 'right' 
+               })
                .fillOpacity(1);
         }
     }
