@@ -131,17 +131,6 @@ const Cliente = {
             
             console.log('✅ Cliente reactivado');
             
-            // Historial (opcional)
-            try {
-                await pool.query(`
-                    INSERT INTO historial_reactivaciones (
-                        cliente_id, usuario, motivo, estado_anterior, estado_nuevo, notas
-                    ) VALUES ($1, $2, $3, $4, $5, $6)
-                `, [id, 'Sistema', 'Reactivación manual', 'suspendido', 'activo', 'Reactivado']);
-            } catch (histError) {
-                console.log('⚠️ Historial no guardado (no crítico)');
-            }
-            
             return result.rows[0];
             
         } catch (error) {
@@ -202,6 +191,203 @@ const Cliente = {
             return result.rows;
         } catch (error) {
             console.error('Error en buscar:', error);
+            throw error;
+        }
+    },
+
+    // ✅ REGISTRAR SUSPENSIÓN
+    async registrarSuspension(id, datos) {
+        try {
+            console.log(`📌 Registrando suspensión del cliente ${id}`);
+            
+            const result = await pool.query(`
+                INSERT INTO historial_suspensiones (
+                    cliente_id, motivo, observaciones, suspendido_por, fecha_suspension
+                ) VALUES ($1, $2, $3, $4, NOW())
+                RETURNING *
+            `, [
+                id,
+                datos.motivo || null,
+                datos.observaciones || null,
+                datos.suspendido_por || 'Administrador'
+            ]);
+            
+            console.log('✅ Suspensión registrada');
+            return result.rows[0];
+        } catch (error) {
+            console.error('❌ Error registrando suspensión:', error);
+            throw error;
+        }
+    },
+
+    // ✅ REGISTRAR MIGRACIONES (cambios en cliente)
+    async registrarMigracion(id, clienteAnterior, clienteNuevo, usuario, motivo) {
+        try {
+            console.log(`📌 Registrando migraciones del cliente ${id}`);
+            
+            const migraciones = [];
+            
+            // Detectar cambios
+            if (clienteAnterior.tipo_servicio !== clienteNuevo.tipo_servicio) {
+                const result = await pool.query(`
+                    INSERT INTO historial_migraciones (
+                        cliente_id, tipo_cambio, valor_anterior, valor_nuevo, 
+                        realizado_por, motivo_cambio, fecha_cambio
+                    ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                    RETURNING *
+                `, [
+                    id, 'SERVICIO', clienteAnterior.tipo_servicio, clienteNuevo.tipo_servicio,
+                    usuario, motivo
+                ]);
+                migraciones.push(result.rows[0]);
+            }
+            
+            if (clienteAnterior.plan !== clienteNuevo.plan) {
+                const result = await pool.query(`
+                    INSERT INTO historial_migraciones (
+                        cliente_id, tipo_cambio, valor_anterior, valor_nuevo, 
+                        realizado_por, motivo_cambio, fecha_cambio
+                    ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                    RETURNING *
+                `, [
+                    id, 'PLAN', clienteAnterior.plan, clienteNuevo.plan,
+                    usuario, motivo
+                ]);
+                migraciones.push(result.rows[0]);
+            }
+            
+            if (clienteAnterior.tipo_senal !== clienteNuevo.tipo_senal) {
+                const result = await pool.query(`
+                    INSERT INTO historial_migraciones (
+                        cliente_id, tipo_cambio, valor_anterior, valor_nuevo, 
+                        realizado_por, motivo_cambio, fecha_cambio
+                    ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                    RETURNING *
+                `, [
+                    id, 'SENAL', clienteAnterior.tipo_senal, clienteNuevo.tipo_senal,
+                    usuario, motivo
+                ]);
+                migraciones.push(result.rows[0]);
+            }
+            
+            if (clienteAnterior.perfil_internet_id !== clienteNuevo.perfil_internet_id) {
+                const result = await pool.query(`
+                    INSERT INTO historial_migraciones (
+                        cliente_id, tipo_cambio, valor_anterior, valor_nuevo, 
+                        realizado_por, motivo_cambio, fecha_cambio
+                    ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                    RETURNING *
+                `, [
+                    id, 'PERFIL_INTERNET', 
+                    clienteAnterior.perfil_internet_nombre || clienteAnterior.perfil_internet_id,
+                    clienteNuevo.perfil_internet_nombre || clienteNuevo.perfil_internet_id,
+                    usuario, motivo
+                ]);
+                migraciones.push(result.rows[0]);
+            }
+            
+            if (parseFloat(clienteAnterior.precio_mensual) !== parseFloat(clienteNuevo.precio_mensual)) {
+                const result = await pool.query(`
+                    INSERT INTO historial_migraciones (
+                        cliente_id, tipo_cambio, valor_anterior, valor_nuevo, 
+                        realizado_por, motivo_cambio, fecha_cambio
+                    ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                    RETURNING *
+                `, [
+                    id, 'PRECIO', clienteAnterior.precio_mensual, clienteNuevo.precio_mensual,
+                    usuario, motivo
+                ]);
+                migraciones.push(result.rows[0]);
+            }
+            
+            console.log(`✅ ${migraciones.length} migraciones registradas`);
+            return migraciones;
+        } catch (error) {
+            console.error('❌ Error registrando migraciones:', error);
+            throw error;
+        }
+    },
+
+    // ✅ OBTENER HISTORIAL DE SUSPENSIONES
+    async getHistorialSuspensiones(id) {
+        try {
+            console.log(`🔍 Obteniendo suspensiones del cliente ${id}`);
+            
+            const result = await pool.query(`
+                SELECT * FROM historial_suspensiones
+                WHERE cliente_id = $1
+                ORDER BY fecha_suspension DESC
+            `, [id]);
+            
+            return result.rows;
+        } catch (error) {
+            console.error('❌ Error obteniendo suspensiones:', error);
+            throw error;
+        }
+    },
+
+    // ✅ OBTENER HISTORIAL DE MIGRACIONES
+    async getHistorialMigraciones(id) {
+        try {
+            console.log(`🔍 Obteniendo migraciones del cliente ${id}`);
+            
+            const result = await pool.query(`
+                SELECT * FROM historial_migraciones
+                WHERE cliente_id = $1
+                ORDER BY fecha_cambio DESC
+            `, [id]);
+            
+            return result.rows;
+        } catch (error) {
+            console.error('❌ Error obteniendo migraciones:', error);
+            throw error;
+        }
+    },
+
+    // ✅ OBTENER HISTORIAL COMPLETO (Suspensiones + Migraciones)
+    async getHistorialCompleto(id) {
+        try {
+            console.log(`🔍 Obteniendo historial completo del cliente ${id}`);
+            
+            // Obtener suspensiones
+            const suspensiones = await pool.query(`
+                SELECT 
+                    'suspension' as tipo,
+                    fecha_suspension as fecha_evento,
+                    motivo,
+                    observaciones,
+                    suspendido_por,
+                    fecha_reactivacion
+                FROM historial_suspensiones
+                WHERE cliente_id = $1
+                ORDER BY fecha_suspension DESC
+            `, [id]);
+            
+            // Obtener migraciones
+            const migraciones = await pool.query(`
+                SELECT 
+                    'migracion' as tipo,
+                    fecha_cambio as fecha_evento,
+                    tipo_cambio,
+                    valor_anterior,
+                    valor_nuevo,
+                    realizado_por,
+                    motivo_cambio
+                FROM historial_migraciones
+                WHERE cliente_id = $1
+                ORDER BY fecha_cambio DESC
+            `, [id]);
+            
+            // Combinar y ordenar por fecha
+            const historialCombinado = [
+                ...suspensiones.rows,
+                ...migraciones.rows
+            ].sort((a, b) => new Date(b.fecha_evento) - new Date(a.fecha_evento));
+            
+            console.log(`✅ Historial completo obtenido: ${historialCombinado.length} eventos`);
+            return historialCombinado;
+        } catch (error) {
+            console.error('❌ Error en getHistorialCompleto:', error);
             throw error;
         }
     }
