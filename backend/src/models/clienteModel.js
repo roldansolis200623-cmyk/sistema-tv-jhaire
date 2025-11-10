@@ -77,61 +77,67 @@ const Cliente = {
         }
     },
 
-    // Actualizar cliente
-    async update(id, data) {
-        const {
-            nombre,
-            apellido,
-            dni,
-            telefono,
-            correo,
-            direccion,
-            numero_suministro,
-            tipo_servicio,
-            tipo_senal,
-            perfil_internet_id,
-            plan,
-            precio_mensual,
-            fecha_instalacion,
-            estado,
-            estado_pago,
-            meses_deuda
-        } = data;
+    // REEMPLAZAR ESTE MÉTODO en tu clienteModel.js actual:
 
-        try {
-            const result = await pool.query(`
-                UPDATE clientes SET
-                    nombre = COALESCE($1, nombre),
-                    apellido = COALESCE($2, apellido),
-                    dni = COALESCE($3, dni),
-                    telefono = COALESCE($4, telefono),
-                    correo = COALESCE($5, correo),
-                    direccion = COALESCE($6, direccion),
-                    numero_suministro = COALESCE($7, numero_suministro),
-                    tipo_servicio = COALESCE($8, tipo_servicio),
-                    tipo_senal = COALESCE($9, tipo_senal),
-                    perfil_internet_id = COALESCE($10, perfil_internet_id),
-                    plan = COALESCE($11, plan),
-                    precio_mensual = COALESCE($12, precio_mensual),
-                    fecha_instalacion = COALESCE($13, fecha_instalacion),
-                    estado = COALESCE($14, estado),
-                    estado_pago = COALESCE($15, estado_pago),
-                    meses_deuda = COALESCE($16, meses_deuda),
-                    fecha_actualizacion = CURRENT_TIMESTAMP
-                WHERE id = $17
-                RETURNING *
-            `, [
-                nombre, apellido, dni, telefono, correo, direccion,
-                numero_suministro, tipo_servicio, tipo_senal, perfil_internet_id,
-                plan, precio_mensual, fecha_instalacion, estado, estado_pago, meses_deuda, id
-            ]);
-
-            return result.rows[0];
-        } catch (error) {
-            console.error('Error en update:', error);
-            throw error;
+async update(id, data) {
+    try {
+        console.log(`📝 Actualizando cliente ${id} con:`, data);
+        
+        // Construir query dinámicamente solo con campos que vienen
+        const fields = [];
+        const values = [];
+        let paramCount = 1;
+        
+        const allowedFields = [
+            'nombre', 'apellido', 'dni', 'telefono', 'correo', 'direccion',
+            'numero_suministro', 'tipo_servicio', 'tipo_senal', 'perfil_internet_id',
+            'plan', 'precio_mensual', 'fecha_instalacion', 'estado', 'estado_pago', 'meses_deuda'
+        ];
+        
+        allowedFields.forEach(field => {
+            if (data[field] !== undefined && data[field] !== null) {
+                fields.push(`${field} = $${paramCount}`);
+                values.push(data[field]);
+                paramCount++;
+            }
+        });
+        
+        if (fields.length === 0) {
+            console.log('⚠️ No hay campos para actualizar');
+            return await this.getById(id);
         }
-    },
+        
+        // Agregar fecha_actualizacion
+        fields.push(`fecha_actualizacion = CURRENT_TIMESTAMP`);
+        
+        // Agregar ID al final
+        values.push(id);
+        
+        const query = `
+            UPDATE clientes 
+            SET ${fields.join(', ')}
+            WHERE id = $${paramCount}
+            RETURNING *
+        `;
+        
+        console.log('🔍 Query:', query);
+        console.log('🔍 Values:', values);
+        
+        const result = await pool.query(query, values);
+        
+        if (result.rows.length === 0) {
+            console.log('❌ Cliente no encontrado');
+            return null;
+        }
+        
+        console.log('✅ Cliente actualizado');
+        return result.rows[0];
+        
+    } catch (error) {
+        console.error('❌ Error en update:', error);
+        throw error;
+    }
+},
 
     // Eliminar cliente
     async delete(id) {
