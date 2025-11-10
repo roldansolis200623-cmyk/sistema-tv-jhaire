@@ -144,22 +144,29 @@ const Cliente = {
         }
     },
 
-    // ✅ REACTIVAR CLIENTE - SIN HISTORIAL (O CON MANEJO DE ERROR)
+    // ✅✅✅ REACTIVAR CLIENTE - CON TODAS LAS COLUMNAS DE LA TABLA
     async reactivar(id) {
+        const client = await pool.connect();
+        
         try {
+            await client.query('BEGIN');
+            
             console.log(`🔄 Reactivando cliente ID: ${id}`);
             
-            // Obtener estado anterior
-            const clienteAnterior = await this.getById(id);
-            if (!clienteAnterior) {
+            // 1. Obtener cliente actual
+            const clienteResult = await client.query('SELECT * FROM clientes WHERE id = $1', [id]);
+            
+            if (clienteResult.rows.length === 0) {
+                await client.query('ROLLBACK');
                 console.log('❌ Cliente no encontrado');
                 return null;
             }
             
-            console.log(`📊 Estado anterior: ${clienteAnterior.estado}`);
+            const estadoAnterior = clienteResult.rows[0].estado;
+            console.log(`📊 Estado anterior: ${estadoAnterior}`);
             
-            // Actualizar el estado a 'activo'
-            const result = await pool.query(`
+            // 2. Actualizar estado a activo
+            const updateResult = await client.query(`
                 UPDATE clientes 
                 SET 
                     estado = 'activo',
@@ -167,37 +174,48 @@ const Cliente = {
                 WHERE id = $1
                 RETURNING *
             `, [id]);
-
-            if (result.rows.length === 0) {
-                console.log('❌ No se pudo actualizar el cliente');
-                return null;
-            }
-
-            console.log('✅ Cliente reactivado en BD');
             
-            // ✅ INTENTAR registrar en historial (sin romper si no existe la tabla)
+            console.log('✅ Cliente actualizado a activo');
+            
+            // 3. ✅ Registrar en historial con TODAS las columnas
             try {
-                await pool.query(`
+                await client.query(`
                     INSERT INTO historial_reactivaciones (
                         cliente_id,
                         fecha_reactivacion,
+                        usuario,
+                        motivo,
                         estado_anterior,
                         estado_nuevo,
                         notas
-                    ) VALUES ($1, CURRENT_TIMESTAMP, $2, 'activo', 'Reactivación manual')
-                `, [id, clienteAnterior.estado]);
+                    ) VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6)
+                `, [
+                    id,
+                    'Sistema',
+                    'Reactivación manual desde panel',
+                    estadoAnterior,
+                    'activo',
+                    `Cliente reactivado. Estado anterior: ${estadoAnterior}`
+                ]);
                 
-                console.log('✅ Historial registrado');
-            } catch (historialError) {
-                // Si falla el historial, NO romper la reactivación
-                console.log('⚠️ No se pudo registrar historial (tabla no existe), pero cliente reactivado correctamente');
+                console.log('✅ Historial registrado correctamente');
+            } catch (histError) {
+                console.error('⚠️ Error al registrar historial:', histError.message);
+                console.error('⚠️ Detalle completo:', histError);
+                // NO hacer rollback - la reactivación ya está hecha
             }
             
-            return result.rows[0];
+            await client.query('COMMIT');
+            
+            console.log('✅ Reactivación completada exitosamente');
+            return updateResult.rows[0];
             
         } catch (error) {
-            console.error('❌ Error en reactivar:', error);
+            await client.query('ROLLBACK');
+            console.error('❌ Error crítico en reactivar:', error);
             throw error;
+        } finally {
+            client.release();
         }
     },
 
