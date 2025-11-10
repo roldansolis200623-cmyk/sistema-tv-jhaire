@@ -7,221 +7,326 @@ class PDFService {
         this.logoPath = path.join(__dirname, '../assets/logo.png');
     }
 
-    // ✅ MEJORADO: Crear documento en HORIZONTAL (Landscape)
+    // ✅ MEJORADO: Documento HORIZONTAL con márgenes optimizados
     crearDocumento() {
         return new PDFDocument({
             size: 'A4',
-            layout: 'landscape', // ✅ HORIZONTAL
+            layout: 'landscape', // HORIZONTAL
             margins: {
-                top: 40,
-                bottom: 40,
-                left: 40,
-                right: 40
+                top: 35,
+                bottom: 35,
+                left: 35,
+                right: 35
             }
         });
     }
 
-    // Agregar encabezado con logo
+    // ✅ MEJORADO: Encabezado moderno y compacto
     agregarEncabezado(doc, titulo) {
+        const pageWidth = 802; // A4 landscape width - margins
+        
         // Logo (si existe)
         if (fs.existsSync(this.logoPath)) {
             try {
-                doc.image(this.logoPath, 40, 35, { width: 80 });
+                doc.image(this.logoPath, 35, 30, { width: 70 });
             } catch (error) {
                 console.log('Logo no disponible');
             }
         }
 
-        // Título
+        // Título con gradiente visual
         doc.fontSize(16)
            .font('Helvetica-Bold')
-           .fillColor('#4F46E5')
-           .text(titulo, 140, 40, { align: 'left' });
+           .fillColor('#6366F1')
+           .text(titulo, 120, 35);
 
         // Fecha de generación
-        doc.fontSize(9)
+        doc.fontSize(8)
            .font('Helvetica')
            .fillColor('#6B7280')
-           .text(`Generado: ${new Date().toLocaleString('es-PE')}`, 140, 62);
+           .text(`Generado: ${new Date().toLocaleString('es-PE')}`, 120, 52);
 
-        // Línea separadora
-        doc.strokeColor('#E5E7EB')
+        // Línea separadora moderna
+        doc.strokeColor('#E0E7FF')
            .lineWidth(2)
-           .moveTo(40, 90)
-           .lineTo(802, 90) // 802 = ancho A4 landscape - margen
+           .moveTo(35, 75)
+           .lineTo(pageWidth + 35, 75)
            .stroke();
 
         return doc;
     }
 
-    // ✅ MEJORADO: Tabla HORIZONTAL con DIRECCIÓN y colores
-    agregarTablaClientes(doc, clientes, y = 105) {
-        const alturaFila = 18;
+    // ✅✅ MEGA MEJORADO: Tabla con MÁS ALTURA por fila y columnas anchas
+    agregarTablaClientes(doc, clientes, y = 90) {
+        const alturaFila = 28; // ✅ AUMENTADO de 18 a 28 (55% más espacio)
+        
+        // ✅ Columnas MÁS ANCHAS para que no se corten
         const columnWidths = {
-            dni: 55,
-            nombre: 100,
-            telefono: 65,
-            direccion: 130, // ✅ AGREGADO
-            servicio: 70,
-            precio: 50,
-            deuda: 40,
-            estado: 55
+            dni: 60,
+            nombre: 130,     // ✅ AUMENTADO de 100 a 130
+            telefono: 75,
+            direccion: 160,  // ✅ AUMENTADO de 130 a 160
+            servicio: 75,
+            precio: 55,
+            deuda: 45,
+            estado: 60
         };
         
-        let xPos = 40;
+        const totalWidth = Object.values(columnWidths).reduce((a, b) => a + b, 0);
+        let xPos = 35;
         
         // ============================================
-        // ENCABEZADOS DE TABLA
+        // ENCABEZADOS DE TABLA - Diseño moderno
         // ============================================
         doc.fontSize(9)
            .font('Helvetica-Bold')
            .fillColor('#ffffff');
 
-        // Fondo morado para encabezados
-        doc.rect(40, y, 762, alturaFila).fill('#6366F1');
+        // Fondo degradado para encabezados
+        doc.rect(35, y, totalWidth, alturaFila)
+           .fillAndStroke('#6366F1', '#4F46E5');
 
+        // Textos de encabezado centrados verticalmente
+        const headerY = y + 9; // Centrado vertical
         doc.fillColor('#ffffff')
-           .text('DNI', xPos + 2, y + 5, { width: columnWidths.dni })
-           .text('Nombre Completo', xPos + columnWidths.dni + 2, y + 5, { width: columnWidths.nombre })
-           .text('Teléfono', xPos + columnWidths.dni + columnWidths.nombre + 2, y + 5, { width: columnWidths.telefono })
-           .text('Dirección', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + 2, y + 5, { width: columnWidths.direccion })
-           .text('Servicio', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + 2, y + 5, { width: columnWidths.servicio })
-           .text('Precio', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + columnWidths.servicio + 2, y + 5, { width: columnWidths.precio })
-           .text('Deuda', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + columnWidths.servicio + columnWidths.precio + 2, y + 5, { width: columnWidths.deuda })
-           .text('Estado', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + columnWidths.servicio + columnWidths.precio + columnWidths.deuda + 2, y + 5, { width: columnWidths.estado });
+           .text('DNI', xPos + 2, headerY, { width: columnWidths.dni, align: 'center' });
+        xPos += columnWidths.dni;
+        
+        doc.text('Nombre Completo', xPos + 2, headerY, { width: columnWidths.nombre, align: 'center' });
+        xPos += columnWidths.nombre;
+        
+        doc.text('Teléfono', xPos + 2, headerY, { width: columnWidths.telefono, align: 'center' });
+        xPos += columnWidths.telefono;
+        
+        doc.text('Dirección', xPos + 2, headerY, { width: columnWidths.direccion, align: 'center' });
+        xPos += columnWidths.direccion;
+        
+        doc.text('Servicio', xPos + 2, headerY, { width: columnWidths.servicio, align: 'center' });
+        xPos += columnWidths.servicio;
+        
+        doc.text('Precio', xPos + 2, headerY, { width: columnWidths.precio, align: 'center' });
+        xPos += columnWidths.precio;
+        
+        doc.text('Deuda', xPos + 2, headerY, { width: columnWidths.deuda, align: 'center' });
+        xPos += columnWidths.deuda;
+        
+        doc.text('Estado', xPos + 2, headerY, { width: columnWidths.estado, align: 'center' });
 
         y += alturaFila;
 
         // ============================================
-        // FILAS DE DATOS
+        // FILAS DE DATOS con más espacio
         // ============================================
         doc.font('Helvetica').fontSize(8);
 
         clientes.forEach((cliente, index) => {
             // Verificar si necesita nueva página
-            if (y > 520) { // 520 para landscape
+            if (y > 500) { // Límite para landscape
                 doc.addPage({ layout: 'landscape' });
-                y = 40;
+                y = 35;
                 
                 // Repetir encabezados
+                xPos = 35;
                 doc.fontSize(9).font('Helvetica-Bold').fillColor('#ffffff');
-                doc.rect(40, y, 762, alturaFila).fill('#6366F1');
+                doc.rect(35, y, totalWidth, alturaFila).fillAndStroke('#6366F1', '#4F46E5');
                 
-                xPos = 40;
+                const headerY2 = y + 9;
                 doc.fillColor('#ffffff')
-                   .text('DNI', xPos + 2, y + 5, { width: columnWidths.dni })
-                   .text('Nombre Completo', xPos + columnWidths.dni + 2, y + 5, { width: columnWidths.nombre })
-                   .text('Teléfono', xPos + columnWidths.dni + columnWidths.nombre + 2, y + 5, { width: columnWidths.telefono })
-                   .text('Dirección', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + 2, y + 5, { width: columnWidths.direccion })
-                   .text('Servicio', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + 2, y + 5, { width: columnWidths.servicio })
-                   .text('Precio', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + columnWidths.servicio + 2, y + 5, { width: columnWidths.precio })
-                   .text('Deuda', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + columnWidths.servicio + columnWidths.precio + 2, y + 5, { width: columnWidths.deuda })
-                   .text('Estado', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + columnWidths.servicio + columnWidths.precio + columnWidths.deuda + 2, y + 5, { width: columnWidths.estado });
+                   .text('DNI', xPos + 2, headerY2, { width: columnWidths.dni, align: 'center' });
+                xPos += columnWidths.dni;
+                doc.text('Nombre Completo', xPos + 2, headerY2, { width: columnWidths.nombre, align: 'center' });
+                xPos += columnWidths.nombre;
+                doc.text('Teléfono', xPos + 2, headerY2, { width: columnWidths.telefono, align: 'center' });
+                xPos += columnWidths.telefono;
+                doc.text('Dirección', xPos + 2, headerY2, { width: columnWidths.direccion, align: 'center' });
+                xPos += columnWidths.direccion;
+                doc.text('Servicio', xPos + 2, headerY2, { width: columnWidths.servicio, align: 'center' });
+                xPos += columnWidths.servicio;
+                doc.text('Precio', xPos + 2, headerY2, { width: columnWidths.precio, align: 'center' });
+                xPos += columnWidths.precio;
+                doc.text('Deuda', xPos + 2, headerY2, { width: columnWidths.deuda, align: 'center' });
+                xPos += columnWidths.deuda;
+                doc.text('Estado', xPos + 2, headerY2, { width: columnWidths.estado, align: 'center' });
                 
                 y += alturaFila;
                 doc.font('Helvetica').fontSize(8);
             }
 
-            // ✅ Color de fondo según estado
+            // ✅ Colores profesionales según estado
             let colorFondo = '#ffffff';
             if (cliente.estado === 'suspendido') {
-                colorFondo = '#FEF3C7'; // Amarillo claro
+                colorFondo = '#FEF3C7';
             } else if (cliente.estado === 'cancelado') {
-                colorFondo = '#FEE2E2'; // Rojo claro
+                colorFondo = '#FEE2E2';
             } else if (cliente.meses_deuda === 0) {
-                colorFondo = '#D1FAE5'; // Verde claro
+                colorFondo = '#D1FAE5';
+            } else if (cliente.meses_deuda >= 3) {
+                colorFondo = '#FEE2E2';
             } else if (index % 2 === 0) {
-                colorFondo = '#F9FAFB'; // Gris claro (zebra)
+                colorFondo = '#F9FAFB';
             }
             
-            doc.rect(40, y, 762, alturaFila).fill(colorFondo);
+            // Rectángulo de fondo
+            doc.rect(35, y, totalWidth, alturaFila).fill(colorFondo);
 
-            // ✅ Color según estado de pago
+            // ✅ Color de texto según meses de deuda
             let colorTexto = '#000000';
             if (cliente.meses_deuda >= 3) {
-                colorTexto = '#DC2626'; // Rojo (moroso)
+                colorTexto = '#DC2626'; // Rojo moroso
             } else if (cliente.meses_deuda > 0) {
-                colorTexto = '#F59E0B'; // Amarillo (deudor)
+                colorTexto = '#F59E0B'; // Naranja deudor
             } else {
-                colorTexto = '#059669'; // Verde (al día)
+                colorTexto = '#059669'; // Verde al día
             }
 
-            xPos = 40;
-            doc.fillColor(colorTexto)
-               .text(cliente.dni || '-', xPos + 2, y + 5, { width: columnWidths.dni, ellipsis: true })
-               .text(`${cliente.nombre || ''} ${cliente.apellido || ''}`.trim(), xPos + columnWidths.dni + 2, y + 5, { width: columnWidths.nombre, ellipsis: true })
-               .text(cliente.telefono || '-', xPos + columnWidths.dni + columnWidths.nombre + 2, y + 5, { width: columnWidths.telefono, ellipsis: true })
-               .text(cliente.direccion || '-', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + 2, y + 5, { width: columnWidths.direccion, ellipsis: true }) // ✅ DIRECCIÓN
-               .text(cliente.tipo_servicio || '-', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + 2, y + 5, { width: columnWidths.servicio, ellipsis: true })
-               .text(`S/ ${parseFloat(cliente.precio_mensual || 0).toFixed(2)}`, xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + columnWidths.servicio + 2, y + 5, { width: columnWidths.precio })
-               .text((cliente.meses_deuda || '0').toString(), xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + columnWidths.servicio + columnWidths.precio + 2, y + 5, { width: columnWidths.deuda, align: 'center' });
+            // ✅ Centrado vertical del texto (importante para que se vea bien)
+            const textY = y + 10; // Centrado vertical en la fila de 28px de altura
             
-            // Estado con color
+            xPos = 35;
+            
+            // DNI
+            doc.fillColor(colorTexto)
+               .font('Helvetica')
+               .text(cliente.dni || '-', xPos + 3, textY, { 
+                   width: columnWidths.dni - 6, 
+                   ellipsis: true,
+                   align: 'left'
+               });
+            xPos += columnWidths.dni;
+            
+            // Nombre Completo - ✅ MÁS ANCHO para que no se corte
+            doc.text(`${cliente.nombre || ''} ${cliente.apellido || ''}`.trim(), 
+                     xPos + 3, textY, { 
+                         width: columnWidths.nombre - 6, 
+                         ellipsis: true 
+                     });
+            xPos += columnWidths.nombre;
+            
+            // Teléfono
+            doc.text(cliente.telefono || '-', xPos + 3, textY, { 
+                width: columnWidths.telefono - 6, 
+                ellipsis: true 
+            });
+            xPos += columnWidths.telefono;
+            
+            // Dirección - ✅ MÁS ANCHO
+            doc.fillColor('#374151')
+               .text(cliente.direccion || '-', xPos + 3, textY, { 
+                   width: columnWidths.direccion - 6, 
+                   ellipsis: true 
+               });
+            xPos += columnWidths.direccion;
+            
+            // Servicio
+            doc.fillColor(colorTexto)
+               .text(cliente.tipo_servicio || '-', xPos + 3, textY, { 
+                   width: columnWidths.servicio - 6, 
+                   ellipsis: true 
+               });
+            xPos += columnWidths.servicio;
+            
+            // Precio
+            doc.text(`S/ ${parseFloat(cliente.precio_mensual || 0).toFixed(2)}`, 
+                     xPos + 3, textY, { 
+                         width: columnWidths.precio - 6,
+                         align: 'right'
+                     });
+            xPos += columnWidths.precio;
+            
+            // Deuda
+            doc.font('Helvetica-Bold')
+               .text((cliente.meses_deuda || '0').toString(), 
+                     xPos + 3, textY, { 
+                         width: columnWidths.deuda - 6, 
+                         align: 'center' 
+                     });
+            xPos += columnWidths.deuda;
+            
+            // Estado
             doc.font('Helvetica-Bold');
-            if (cliente.meses_deuda === 0) {
-                doc.fillColor('#059669').text('AL DÍA', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + columnWidths.servicio + columnWidths.precio + columnWidths.deuda + 2, y + 5, { width: columnWidths.estado });
-            } else if (cliente.meses_deuda >= 3) {
-                doc.fillColor('#DC2626').text('MOROSO', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + columnWidths.servicio + columnWidths.precio + columnWidths.deuda + 2, y + 5, { width: columnWidths.estado });
-            } else {
-                doc.fillColor('#F59E0B').text('DEUDOR', xPos + columnWidths.dni + columnWidths.nombre + columnWidths.telefono + columnWidths.direccion + columnWidths.servicio + columnWidths.precio + columnWidths.deuda + 2, y + 5, { width: columnWidths.estado });
+            let estadoTexto = 'AL DÍA';
+            let estadoColor = '#059669';
+            
+            if (cliente.meses_deuda >= 3) {
+                estadoTexto = 'MOROSO';
+                estadoColor = '#DC2626';
+            } else if (cliente.meses_deuda > 0) {
+                estadoTexto = 'DEUDOR';
+                estadoColor = '#F59E0B';
             }
-            doc.font('Helvetica');
+            
+            doc.fillColor(estadoColor)
+               .text(estadoTexto, xPos + 3, textY, { 
+                   width: columnWidths.estado - 6,
+                   align: 'center'
+               });
 
-            // Línea separadora sutil
+            // Línea separadora muy sutil
             doc.strokeColor('#E5E7EB')
                .lineWidth(0.5)
-               .moveTo(40, y + alturaFila)
-               .lineTo(802, y + alturaFila)
+               .moveTo(35, y + alturaFila)
+               .lineTo(35 + totalWidth, y + alturaFila)
                .stroke();
 
             y += alturaFila;
+            doc.font('Helvetica');
         });
 
         return y;
     }
 
-    // ✅ MEJORADO: Resumen con diseño profesional
+    // ✅ MEJORADO: Resumen ejecutivo moderno
     agregarResumen(doc, estadisticas, y) {
-        y += 15;
+        y += 20;
 
-        // Verificar si necesita nueva página
-        if (y > 480) {
+        // Verificar espacio
+        if (y > 450) {
             doc.addPage({ layout: 'landscape' });
-            y = 40;
+            y = 35;
         }
 
         // Título resumen
-        doc.fontSize(12)
+        doc.fontSize(13)
            .font('Helvetica-Bold')
            .fillColor('#4F46E5')
-           .text('📊 RESUMEN EJECUTIVO', 40, y);
+           .text('📊 RESUMEN EJECUTIVO', 35, y);
 
-        y += 25;
+        y += 30;
 
         doc.fontSize(10).font('Helvetica');
         
         const resumenData = [
-            { label: 'Total de Clientes:', valor: estadisticas.total, color: '#3B82F6' },
-            { label: 'Clientes al Día:', valor: estadisticas.pagados, color: '#059669' },
-            { label: 'Clientes Deudores:', valor: estadisticas.deudores, color: '#F59E0B' },
-            { label: 'Clientes Morosos:', valor: estadisticas.morosos, color: '#DC2626' },
-            { label: 'Ingreso Mensual:', valor: `S/ ${estadisticas.ingresos.toFixed(2)}`, color: '#10B981' }
+            { label: 'Total Clientes', valor: estadisticas.total, color: '#3B82F6', icon: '👥' },
+            { label: 'Al Día', valor: estadisticas.pagados, color: '#059669', icon: '✅' },
+            { label: 'Deudores', valor: estadisticas.deudores, color: '#F59E0B', icon: '⚠️' },
+            { label: 'Morosos', valor: estadisticas.morosos, color: '#DC2626', icon: '🚨' },
+            { label: 'Ingreso Mensual', valor: `S/ ${estadisticas.ingresos.toFixed(2)}`, color: '#10B981', icon: '💰' }
         ];
 
-        resumenData.forEach(({ label, valor, color }, index) => {
-            const xPos = 40 + (index % 3) * 250; // 3 columnas
-            const yPos = y + Math.floor(index / 3) * 30;
+        resumenData.forEach(({ label, valor, color, icon }, index) => {
+            const xPos = 35 + (index % 5) * 150;
+            const yPos = y + Math.floor(index / 5) * 45;
             
-            // Caja con color
-            doc.rect(xPos, yPos, 220, 25)
-               .fillAndStroke(color + '20', color); // Color con transparencia
+            // Caja moderna con sombra
+            doc.rect(xPos, yPos, 140, 35)
+               .fillAndStroke(color + '15', color);
             
-            doc.fillColor('#1F2937')
+            // Icono
+            doc.fontSize(14)
+               .fillColor('#000000')
+               .text(icon, xPos + 8, yPos + 8);
+            
+            // Label
+            doc.fontSize(8)
                .font('Helvetica')
-               .text(label, xPos + 5, yPos + 5, { width: 120, continued: true })
+               .fillColor('#6B7280')
+               .text(label, xPos + 30, yPos + 8, { width: 100 });
+            
+            // Valor
+            doc.fontSize(13)
                .font('Helvetica-Bold')
                .fillColor(color)
-               .text(valor.toString(), { align: 'right', width: 90 });
+               .text(valor.toString(), xPos + 30, yPos + 18, { width: 100 });
         });
 
         return y + 80;
