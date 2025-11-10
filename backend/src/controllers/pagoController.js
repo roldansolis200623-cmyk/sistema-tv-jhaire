@@ -1,6 +1,7 @@
 const PagoModel = require('../models/pagoModel');
 const ClienteModel = require('../models/clienteModel');
 const notificacionService = require('../services/notificacionService');
+const pool = require('../config/database');
 
 const pagoController = {
     /**
@@ -192,10 +193,12 @@ const pagoController = {
     },
 
     /**
-     * Obtener estadísticas de pagos
+     * ✅ CORREGIDO - Obtener estadísticas de pagos con queries directas
      */
     async getEstadisticas(req, res) {
         try {
+            console.log('📊 Calculando estadísticas de pagos...');
+            
             const hoy = new Date();
             const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
                 .toISOString().split('T')[0];
@@ -203,20 +206,41 @@ const pagoController = {
                 .toISOString().split('T')[0];
             const hoyStr = hoy.toISOString().split('T')[0];
 
-            const [pagosHoy, pagosMes, pagosTotal] = await Promise.all([
-                PagoModel.calcularIngresos(hoyStr, hoyStr),
-                PagoModel.calcularIngresos(primerDiaMes, ultimoDiaMes),
-                PagoModel.calcularIngresos('2000-01-01', ultimoDiaMes)
-            ]);
+            // Pagos de hoy
+            const resultHoy = await pool.query(`
+                SELECT COALESCE(SUM(monto), 0) as total
+                FROM pagos
+                WHERE DATE(fecha_pago) = $1
+            `, [hoyStr]);
 
-            res.json({
-                pagos_hoy: pagosHoy,
-                pagos_mes: pagosMes,
-                pagos_total: pagosTotal
-            });
+            // Pagos del mes
+            const resultMes = await pool.query(`
+                SELECT COALESCE(SUM(monto), 0) as total
+                FROM pagos
+                WHERE fecha_pago >= $1 AND fecha_pago <= $2
+            `, [primerDiaMes, ultimoDiaMes]);
+
+            // Pagos totales históricos
+            const resultTotal = await pool.query(`
+                SELECT COALESCE(SUM(monto), 0) as total
+                FROM pagos
+            `);
+
+            const estadisticas = {
+                pagos_hoy: parseFloat(resultHoy.rows[0].total) || 0,
+                pagos_mes: parseFloat(resultMes.rows[0].total) || 0,
+                pagos_total: parseFloat(resultTotal.rows[0].total) || 0
+            };
+
+            console.log('✅ Estadísticas calculadas:', estadisticas);
+            res.json(estadisticas);
+            
         } catch (error) {
-            console.error('Error obteniendo estadísticas:', error);
-            res.status(500).json({ error: 'Error obteniendo estadísticas' });
+            console.error('❌ Error obteniendo estadísticas:', error);
+            res.status(500).json({ 
+                error: 'Error obteniendo estadísticas',
+                details: error.message 
+            });
         }
     },
 
