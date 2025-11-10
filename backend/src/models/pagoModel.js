@@ -546,27 +546,25 @@ const PagoModel = {
         }
     },
 
-    /**
-     * ✅ CORREGIDO - Calcular meses entre dos fechas
-     */
-    calcularMesesEntre(fecha1, fecha2) {
-        const d1 = new Date(fecha1);
-        const d2 = new Date(fecha2);
-        
-        // Normalizar a inicio de mes
-        d1.setDate(1);
-        d1.setHours(0, 0, 0, 0);
-        d2.setDate(1);
-        d2.setHours(0, 0, 0, 0);
-        
-        // Calcular diferencia en meses
-        const años = d2.getFullYear() - d1.getFullYear();
-        const meses = d2.getMonth() - d1.getMonth();
-        const totalMeses = (años * 12) + meses;
-        
-        // +1 para incluir el mes actual
-        return Math.max(1, totalMeses + 1);
-    }
+    // ✅ CORREGIDA - Calcular meses entre dos fechas (SIN +1 extra)
+calcularMesesEntre(fecha1, fecha2) {
+    const d1 = new Date(fecha1);
+    const d2 = new Date(fecha2);
+    
+    // Normalizar a inicio de mes
+    d1.setDate(1);
+    d1.setHours(0, 0, 0, 0);
+    d2.setDate(1);
+    d2.setHours(0, 0, 0, 0);
+    
+    // Calcular diferencia en meses
+    const años = d2.getFullYear() - d1.getFullYear();
+    const meses = d2.getMonth() - d1.getMonth();
+    const totalMeses = (años * 12) + meses;
+    
+    // ✅ SOLO sumar +1 si es el mismo mes
+    return Math.max(1, totalMeses + 1);
+}
 };
 
 module.exports = PagoModel;
