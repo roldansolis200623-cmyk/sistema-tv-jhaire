@@ -48,12 +48,10 @@ const Cliente = {
         }
     },
 
-    // ✅ UPDATE CON CONVERSIÓN DE STRINGS VACÍOS A NULL
     async update(id, data) {
         try {
             console.log(`📝 Actualizando cliente ${id} con datos:`, data);
             
-            // ✅ CONVERTIR STRINGS VACÍOS A NULL para campos INTEGER
             if (data.perfil_internet_id === '') {
                 data.perfil_internet_id = null;
             }
@@ -66,8 +64,8 @@ const Cliente = {
             let paramCount = 1;
             
             const allowedFields = [
-                'nombre', 'apellido', 'dni', 'telefono', 'correo', 'direccion',
-                'numero_suministro', 'tipo_servicio', 'tipo_senal', 'perfil_internet_id',
+                'nombre', 'apellido', 'dni', 'telefono', 'email', 'correo', 'direccion',
+                'suministro', 'numero_suministro', 'tipo_servicio', 'tipo_senal', 'perfil_internet_id',
                 'plan', 'precio_mensual', 'fecha_instalacion', 'estado', 'estado_pago', 'meses_deuda'
             ];
             
@@ -130,7 +128,6 @@ const Cliente = {
             }
             
             console.log('✅ Cliente reactivado');
-            
             return result.rows[0];
             
         } catch (error) {
@@ -139,7 +136,7 @@ const Cliente = {
         }
     },
 
-    async suspender(id) {
+    async suspender(id, datos) {
         try {
             const result = await pool.query('UPDATE clientes SET estado = $1 WHERE id = $2 RETURNING *', ['suspendido', id]);
             return result.rows[0];
@@ -195,7 +192,7 @@ const Cliente = {
         }
     },
 
-    // ✅ REGISTRAR SUSPENSIÓN
+    // ✅ REGISTRAR SUSPENSIÓN - AJUSTADO A TU BD
     async registrarSuspension(id, datos) {
         try {
             console.log(`📌 Registrando suspensión del cliente ${id}`);
@@ -220,19 +217,19 @@ const Cliente = {
         }
     },
 
-    // ✅ REGISTRAR MIGRACIONES (cambios en cliente)
+    // ✅ REGISTRAR MIGRACIONES - AJUSTADO A TU SCHEMA REAL
     async registrarMigracion(id, clienteAnterior, clienteNuevo, usuario, motivo) {
         try {
             console.log(`📌 Registrando migraciones del cliente ${id}`);
             
             const migraciones = [];
             
-            // Detectar cambios
+            // Detectar cambios y guardar con los campos reales de tu BD
             if (clienteAnterior.tipo_servicio !== clienteNuevo.tipo_servicio) {
                 const result = await pool.query(`
                     INSERT INTO historial_migraciones (
-                        cliente_id, tipo_cambio, valor_anterior, valor_nuevo, 
-                        realizado_por, motivo_cambio, fecha_cambio
+                        cliente_id, tipo_cambio, tipo_servicio_anterior, tipo_servicio_nuevo,
+                        realizado_por, motivo_cambio, fecha_migracion
                     ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
                     RETURNING *
                 `, [
@@ -245,8 +242,8 @@ const Cliente = {
             if (clienteAnterior.plan !== clienteNuevo.plan) {
                 const result = await pool.query(`
                     INSERT INTO historial_migraciones (
-                        cliente_id, tipo_cambio, valor_anterior, valor_nuevo, 
-                        realizado_por, motivo_cambio, fecha_cambio
+                        cliente_id, tipo_cambio, plan_anterior, plan_nuevo,
+                        realizado_por, motivo_cambio, fecha_migracion
                     ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
                     RETURNING *
                 `, [
@@ -259,8 +256,8 @@ const Cliente = {
             if (clienteAnterior.tipo_senal !== clienteNuevo.tipo_senal) {
                 const result = await pool.query(`
                     INSERT INTO historial_migraciones (
-                        cliente_id, tipo_cambio, valor_anterior, valor_nuevo, 
-                        realizado_por, motivo_cambio, fecha_cambio
+                        cliente_id, tipo_cambio, tipo_senal_anterior, tipo_senal_nuevo,
+                        realizado_por, motivo_cambio, fecha_migracion
                     ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
                     RETURNING *
                 `, [
@@ -273,14 +270,14 @@ const Cliente = {
             if (clienteAnterior.perfil_internet_id !== clienteNuevo.perfil_internet_id) {
                 const result = await pool.query(`
                     INSERT INTO historial_migraciones (
-                        cliente_id, tipo_cambio, valor_anterior, valor_nuevo, 
-                        realizado_por, motivo_cambio, fecha_cambio
+                        cliente_id, tipo_cambio, perfil_internet_anterior, perfil_internet_nuevo,
+                        realizado_por, motivo_cambio, fecha_migracion
                     ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
                     RETURNING *
                 `, [
                     id, 'PERFIL_INTERNET', 
-                    clienteAnterior.perfil_internet_nombre || clienteAnterior.perfil_internet_id,
-                    clienteNuevo.perfil_internet_nombre || clienteNuevo.perfil_internet_id,
+                    clienteAnterior.perfil_internet_nombre || clienteAnterior.perfil_internet_id || 'N/A',
+                    clienteNuevo.perfil_internet_nombre || clienteNuevo.perfil_internet_id || 'N/A',
                     usuario, motivo
                 ]);
                 migraciones.push(result.rows[0]);
@@ -289,8 +286,8 @@ const Cliente = {
             if (parseFloat(clienteAnterior.precio_mensual) !== parseFloat(clienteNuevo.precio_mensual)) {
                 const result = await pool.query(`
                     INSERT INTO historial_migraciones (
-                        cliente_id, tipo_cambio, valor_anterior, valor_nuevo, 
-                        realizado_por, motivo_cambio, fecha_cambio
+                        cliente_id, tipo_cambio, precio_anterior, precio_nuevo,
+                        realizado_por, motivo_cambio, fecha_migracion
                     ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
                     RETURNING *
                 `, [
@@ -334,7 +331,7 @@ const Cliente = {
             const result = await pool.query(`
                 SELECT * FROM historial_migraciones
                 WHERE cliente_id = $1
-                ORDER BY fecha_cambio DESC
+                ORDER BY fecha_migracion DESC
             `, [id]);
             
             return result.rows;
@@ -344,7 +341,7 @@ const Cliente = {
         }
     },
 
-    // ✅ OBTENER HISTORIAL COMPLETO (Suspensiones + Migraciones)
+    // ✅ OBTENER HISTORIAL COMPLETO - AJUSTADO A TU BD
     async getHistorialCompleto(id) {
         try {
             console.log(`🔍 Obteniendo historial completo del cliente ${id}`);
@@ -363,19 +360,21 @@ const Cliente = {
                 ORDER BY fecha_suspension DESC
             `, [id]);
             
-            // Obtener migraciones
+            // Obtener migraciones - USANDO LOS CAMPOS REALES DE TU BD
             const migraciones = await pool.query(`
                 SELECT 
                     'migracion' as tipo,
-                    fecha_cambio as fecha_evento,
+                    fecha_migracion as fecha_evento,
                     tipo_cambio,
-                    valor_anterior,
-                    valor_nuevo,
+                    COALESCE(tipo_servicio_anterior, plan_anterior, tipo_senal_anterior, 
+                             perfil_internet_anterior, precio_anterior::text, 'N/A') as valor_anterior,
+                    COALESCE(tipo_servicio_nuevo, plan_nuevo, tipo_senal_nuevo, 
+                             perfil_internet_nuevo, precio_nuevo::text, 'N/A') as valor_nuevo,
                     realizado_por,
                     motivo_cambio
                 FROM historial_migraciones
                 WHERE cliente_id = $1
-                ORDER BY fecha_cambio DESC
+                ORDER BY fecha_migracion DESC
             `, [id]);
             
             // Combinar y ordenar por fecha
