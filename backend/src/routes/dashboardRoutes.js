@@ -12,6 +12,7 @@ router.use(authMiddleware);
 
 // KPIs principales
 router.get('/kpis', dashboardController.getKPIs);
+router.get('/estadisticas', dashboardController.getEstadisticas);
 router.get('/ingresos-mensuales', dashboardController.getIngresosMensuales);
 router.get('/mejores-pagadores', dashboardController.getTop10MejoresPagadores);
 router.get('/peores-pagadores', dashboardController.getTop10PeoresPagadores);

@@ -1,6 +1,7 @@
 // ============================================
 // backend/src/services/cronService.js
 // SERVICIO DE AUTOMATIZACIÓN CON CRON JOBS
+// ✅ CORREGIDO: Sin suspensión automática
 // ============================================
 
 const cron = require('node-cron');
@@ -61,15 +62,14 @@ const enviarAlerta = async (asunto, mensaje) => {
 };
 
 // ============================================
-// TAREA 1: INCREMENTAR DEUDA MENSUALMENTE
+// TAREA: INCREMENTAR DEUDA MENSUALMENTE
 // ============================================
 
 const incrementarDeudaMensual = async () => {
     const inicio = Date.now();
-    console.log('🔄 Iniciando incremento mensual de deuda...');
+    console.log('🔄 Incrementando deuda mensual...');
     
     try {
-        // Incrementar meses_deuda para clientes activos que no pagaron
         const result = await pool.query(`
             UPDATE clientes
             SET 
@@ -86,7 +86,6 @@ const incrementarDeudaMensual = async () => {
         const clientesAfectados = result.rowCount;
         const tiempoEjecucion = Date.now() - inicio;
         
-        // Registrar log
         await registrarLog(
             'incremento_deuda_mensual',
             'success',
@@ -95,24 +94,10 @@ const incrementarDeudaMensual = async () => {
             tiempoEjecucion
         );
         
-        console.log(`✅ Deuda incrementada para ${clientesAfectados} clientes en ${tiempoEjecucion}ms`);
-        
-        // Enviar alerta si hay muchos clientes con deuda
-        if (clientesAfectados > 10) {
-            await enviarAlerta(
-                'Incremento Mensual de Deuda',
-                `
-                <h2>🔔 Alerta del Sistema</h2>
-                <p>Se ha incrementado la deuda de <strong>${clientesAfectados} clientes</strong>. 
-                Revise el sistema para gestionar la cobranza.</p>
-                <hr>
-                <small>Este es un mensaje automático del sistema TV Jhaire</small>
-                `
-            );
-        }
+        console.log(`✅ Deuda incrementada para ${clientesAfectados} clientes`);
         
     } catch (error) {
-        console.error('❌ Error incrementando deuda:', error);
+        console.error('❌ Error en incrementarDeudaMensual:', error);
         await registrarLog(
             'incremento_deuda_mensual',
             'error',
@@ -120,286 +105,179 @@ const incrementarDeudaMensual = async () => {
             0,
             Date.now() - inicio
         );
-        
-        await enviarAlerta(
-            'ERROR: Incremento de Deuda Falló',
-            `
-            <h2>🔔 Alerta del Sistema</h2>
-            <p>Error al incrementar deuda mensual: ${error.message}</p>
-            <hr>
-            <small>Este es un mensaje automático del sistema TV Jhaire</small>
-            `
-        );
     }
 };
 
 // ============================================
-// ✅ TAREA 2: ALERTA DE SUSPENSIÓN (NO SUSPENDE)
+// ✅✅✅ SOLUCIÓN 3: VERIFICAR DEUDA ALTA
+// NO SUSPENDE AUTOMÁTICAMENTE, SOLO NOTIFICA
 // ============================================
 
-const suspensionAutomatica = async () => {
+const verificarClientesConDeudaAlta = async () => {
     const inicio = Date.now();
-    console.log('🔄 Verificando clientes en riesgo de suspensión...');
+    console.log('🔍 Verificando clientes con deuda ALTA...');
     
     try {
-        // Obtener configuración de meses antes de alerta
-        const configResult = await pool.query(
-            "SELECT valor FROM configuracion_sistema WHERE clave = 'dias_antes_suspension'"
-        );
-        const mesesAlerta = parseInt(configResult.rows[0]?.valor || 5);
-        
-        // ✅ MODIFICADO: Solo OBTENER clientes en riesgo, NO SUSPENDER
+        // Obtener clientes con deuda > 5 meses
         const result = await pool.query(`
             SELECT 
-                id, codigo, nombre, apellido, dni, telefono, email, direccion,
-                tipo_servicio, plan, precio_mensual, meses_deuda, estado_pago,
-                (meses_deuda * precio_mensual) as deuda_total
-            FROM clientes
-            WHERE estado = 'activo'
-            AND meses_deuda >= $1
-            ORDER BY meses_deuda DESC, deuda_total DESC
-        `, [mesesAlerta]);
+                id, 
+                nombre, 
+                apellido, 
+                meses_deuda,
+                email,
+                telefono,
+                precio_mensual,
+                COALESCE(deuda_total, 0) as deuda_total,
+                COALESCE(fecha_ultimo_pago, fecha_instalacion) as ultima_fecha
+            FROM clientes 
+            WHERE estado = 'activo' 
+            AND meses_deuda > 5
+            ORDER BY meses_deuda DESC
+        `);
+
+        console.log(`ℹ️ Encontrados ${result.rows.length} clientes con deuda > 5 meses`);
+
+        let notificacionesCreadas = 0;
         
-        const clientesEnRiesgo = result.rows;
-        const tiempoEjecucion = Date.now() - inicio;
-        
-        // ✅ MODIFICADO: Registrar log de ALERTA, no de suspensión
-        await registrarLog(
-            'alerta_suspension',
-            'info',
-            `Se identificaron ${clientesEnRiesgo.length} clientes en riesgo con mora >= ${mesesAlerta} meses (NO SE SUSPENDIERON)`,
-            clientesEnRiesgo.length,
-            tiempoEjecucion
-        );
-        
-        console.log(`⚠️ ${clientesEnRiesgo.length} clientes en riesgo identificados en ${tiempoEjecucion}ms`);
-        console.log('ℹ️ NO SE SUSPENDIÓ AUTOMÁTICAMENTE - Solo se generaron alertas');
-        
-        // ✅ MODIFICADO: Enviar ALERTA en vez de suspender
-        if (clientesEnRiesgo.length > 0) {
-            const listaClientes = clientesEnRiesgo
-                .map(c => `
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 8px;">${c.codigo || c.id}</td>
-                        <td style="padding: 8px;"><strong>${c.nombre} ${c.apellido}</strong></td>
-                        <td style="padding: 8px;">${c.dni}</td>
-                        <td style="padding: 8px;">${c.telefono || '-'}</td>
-                        <td style="padding: 8px; text-align: center; font-weight: bold; color: ${c.meses_deuda > 5 ? '#dc2626' : '#f59e0b'};">${c.meses_deuda}</td>
-                        <td style="padding: 8px; text-align: right; font-weight: bold;">S/ ${parseFloat(c.deuda_total).toFixed(2)}</td>
-                    </tr>
-                `)
-                .join('');
-            
-            await enviarAlerta(
-                `⚠️ ALERTA: ${clientesEnRiesgo.length} Clientes Requieren Atención`,
-                `
-                <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-                    <h2 style="color: #dc2626;">⚠️ Clientes en Riesgo de Suspensión</h2>
-                    <p style="font-size: 16px; color: #374151;">
-                        Los siguientes <strong>${clientesEnRiesgo.length} clientes</strong> tienen mora mayor a 
-                        <strong>${mesesAlerta} meses</strong> y requieren atención inmediata:
-                    </p>
-                    
-                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0; border: 1px solid #e5e7eb;">
-                        <thead>
-                            <tr style="background-color: #f3f4f6; border-bottom: 2px solid #d1d5db;">
-                                <th style="padding: 10px; text-align: left;">Código</th>
-                                <th style="padding: 10px; text-align: left;">Cliente</th>
-                                <th style="padding: 10px; text-align: left;">DNI</th>
-                                <th style="padding: 10px; text-align: left;">Teléfono</th>
-                                <th style="padding: 10px; text-align: center;">Meses</th>
-                                <th style="padding: 10px; text-align: right;">Deuda Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${listaClientes}
-                        </tbody>
-                    </table>
-                    
-                    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-                        <p style="margin: 0; color: #92400e;">
-                            <strong>📋 Acción Requerida:</strong><br>
-                            Esta es una alerta informativa. Los clientes <strong>NO han sido suspendidos automáticamente</strong>.
-                            Debe revisar cada caso y decidir las acciones apropiadas desde el sistema de gestión.
-                        </p>
-                    </div>
-                    
-                    <div style="margin-top: 20px; padding: 15px; background-color: #f9fafb; border-radius: 5px;">
-                        <h3 style="color: #111827; margin-top: 0;">Acciones Recomendadas:</h3>
-                        <ul style="color: #374151;">
-                            <li>Contactar telefónicamente a cada cliente</li>
-                            <li>Enviar recordatorios de pago vía WhatsApp</li>
-                            <li>Evaluar casos especiales para planes de pago</li>
-                            <li>Decidir suspensiones caso por caso desde el sistema</li>
-                        </ul>
-                    </div>
-                    
-                    <p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 30px;">
-                        Sistema de Gestión TV Jhaire | Alerta Automática<br>
-                        Fecha: ${new Date().toLocaleString('es-PE')}
-                    </p>
-                </div>
-                `
-            );
-            
-            // ✅ NUEVO: Crear notificaciones en el sistema para cada cliente
-            for (const cliente of clientesEnRiesgo) {
-                try {
-                    await pool.query(`
-                        INSERT INTO notificaciones (
-                            tipo, titulo, mensaje, prioridad, cliente_id, icono, color, leido
-                        ) VALUES (
-                            'alerta_suspension',
-                            'Cliente en Riesgo de Suspensión',
-                            $1,
-                            'alta',
-                            $2,
-                            'alert-triangle',
-                            'red',
-                            false
-                        )
-                    `, [
-                        `${cliente.nombre} ${cliente.apellido} tiene ${cliente.meses_deuda} meses de deuda (S/ ${parseFloat(cliente.deuda_total).toFixed(2)}). Requiere contacto urgente.`,
-                        cliente.id
-                    ]);
-                } catch (notifError) {
-                    console.error('Error creando notificación:', notifError);
+        // ✅ CREAR NOTIFICACIONES (NO SUSPENDER AUTOMÁTICAMENTE)
+        for (const cliente of result.rows) {
+            try {
+                // Verificar si ya existe notificación reciente (últimas 24 horas)
+                const existeNotif = await pool.query(`
+                    SELECT id FROM notificaciones_inteligentes
+                    WHERE cliente_id = $1
+                    AND tipo = 'ALERTA_DEUDA_ALTA'
+                    AND fecha_creacion > CURRENT_TIMESTAMP - INTERVAL '24 hours'
+                    LIMIT 1
+                `, [cliente.id]);
+                
+                if (existeNotif.rows.length > 0) {
+                    console.log(`  ⏭️  ${cliente.nombre}: Ya existe notificación reciente`);
+                    continue;
                 }
+
+                // Determinar prioridad según deuda
+                let prioridad = 'HIGH';
+                if (cliente.meses_deuda > 10) {
+                    prioridad = 'CRITICAL';
+                } else if (cliente.meses_deuda > 8) {
+                    prioridad = 'CRITICAL';
+                }
+
+                // Crear notificación inteligente
+                await pool.query(`
+                    INSERT INTO notificaciones_inteligentes (
+                        cliente_id,
+                        tipo,
+                        prioridad,
+                        titulo,
+                        mensaje,
+                        deuda_actual,
+                        dias_sin_pagar,
+                        patron_detectado,
+                        accion_sugerida,
+                        leida,
+                        fecha_creacion,
+                        origen
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, CURRENT_TIMESTAMP, $10)
+                `, [
+                    cliente.id,
+                    'ALERTA_DEUDA_ALTA',
+                    prioridad,
+                    `⚠️ ALERTA CRÍTICA - Deuda de ${cliente.meses_deuda} meses`,
+                    `${cliente.nombre} ${cliente.apellido} debe ${cliente.meses_deuda} meses. Deuda total: S/ ${cliente.deuda_total}. REQUIERE ATENCIÓN INMEDIATA - Riesgo de suspensión de servicio si no regulariza el pago`,
+                    cliente.deuda_total || 0,
+                    Math.floor((Date.now() - new Date(cliente.ultima_fecha || new Date().getTime()).getTime()) / (1000 * 60 * 60 * 24)),
+                    cliente.meses_deuda,
+                    cliente.meses_deuda > 8 ? 'CONTACTO URGENTE Y CONSIDERACIÓN DE SUSPENSIÓN' : 'Contactar cliente urgentemente para negociar plan de pago',
+                    'contactar-deudor'
+                ]);
+
+                // También crear en tabla notificaciones normal (para dashboard)
+                await pool.query(`
+                    INSERT INTO notificaciones (
+                        tipo,
+                        titulo,
+                        mensaje,
+                        cliente_id,
+                        prioridad,
+                        leida,
+                        fecha_creacion
+                    ) VALUES ($1, $2, $3, $4, $5, false, CURRENT_TIMESTAMP)
+                `, [
+                    'DEUDA_CRITICA',
+                    `⚠️ DEUDA ALTA: ${cliente.nombre}`,
+                    `Deuda de ${cliente.meses_deuda} meses. Total: S/ ${cliente.deuda_total}`,
+                    cliente.id,
+                    prioridad
+                ]);
+
+                notificacionesCreadas++;
+                console.log(`  ✅ Notificación creada para ${cliente.nombre} (deuda: ${cliente.meses_deuda} meses, prioridad: ${prioridad})`);
+
+            } catch (notifError) {
+                console.error(`  ❌ Error creando notificación para cliente ${cliente.id}:`, notifError.message);
             }
-            
-            console.log(`✅ Se crearon ${clientesEnRiesgo.length} notificaciones en el sistema`);
-        } else {
-            console.log('✅ No hay clientes en riesgo de suspensión');
         }
-        
-    } catch (error) {
-        console.error('❌ Error en verificación de suspensión:', error);
-        await registrarLog(
-            'alerta_suspension',
-            'error',
-            error.message,
-            0,
-            Date.now() - inicio
-        );
-        
-        await enviarAlerta(
-            'ERROR: Verificación de Suspensión Falló',
-            `
-            <h2>🔔 Alerta del Sistema</h2>
-            <p>Error en verificación automática: ${error.message}</p>
-            <hr>
-            <small>Este es un mensaje automático del sistema TV Jhaire</small>
-            `
-        );
-    }
-};
 
-// ============================================
-// TAREA 3: REACTIVACIÓN AUTOMÁTICA AL PAGAR
-// ============================================
-
-const reactivacionAutomatica = async () => {
-    const inicio = Date.now();
-    console.log('🔄 Verificando reactivaciones automáticas...');
-    
-    try {
-        // Reactivar clientes suspendidos que pagaron y ya no tienen deuda
-        const result = await pool.query(`
-            UPDATE clientes
-            SET 
-                estado = 'activo',
-                fecha_reactivacion = CURRENT_TIMESTAMP,
-                motivo_suspension = NULL,
-                fecha_suspension = NULL,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE estado = 'suspendido'
-            AND meses_deuda = 0
-            RETURNING id, nombre, apellido, dni
-        `);
-        
-        const clientesReactivados = result.rows;
         const tiempoEjecucion = Date.now() - inicio;
         
-        // Registrar en historial
-        for (const cliente of clientesReactivados) {
-            await pool.query(`
-                INSERT INTO historial_suspensiones (cliente_id, accion, motivo, observaciones)
-                VALUES ($1, 'reactivación', 'Pago completado', 'Reactivación automática del sistema')
-            `, [cliente.id]);
-        }
-        
-        // Registrar log
+        // Registrar en logs
         await registrarLog(
-            'reactivacion_automatica',
+            'verificar_deuda_alta',
             'success',
-            `Se reactivaron ${clientesReactivados.length} clientes`,
-            clientesReactivados.length,
+            `Se crearon ${notificacionesCreadas} notificaciones de alerta para clientes con deuda alta`,
+            notificacionesCreadas,
             tiempoEjecucion
         );
-        
-        console.log(`✅ ${clientesReactivados.length} clientes reactivados en ${tiempoEjecucion}ms`);
-        
-        if (clientesReactivados.length > 0) {
-            const listaClientes = clientesReactivados
-                .map(c => `• ${c.nombre} ${c.apellido} (DNI: ${c.dni})`)
-                .join('<br>');
-            
-            await enviarAlerta(
-                'Reactivaciones Automáticas',
-                `
-                <h2>🔔 Alerta del Sistema</h2>
-                <p>Se han reactivado <strong>${clientesReactivados.length} clientes</strong> 
-                que completaron sus pagos:<br><br>${listaClientes}</p>
-                <hr>
-                <small>Este es un mensaje automático del sistema TV Jhaire</small>
-                `
-            );
-        }
-        
+
+        console.log(`✅ Verificación completada en ${tiempoEjecucion}ms. ${notificacionesCreadas} notificaciones creadas`);
+
     } catch (error) {
-        console.error('❌ Error en reactivación automática:', error);
+        const tiempoEjecucion = Date.now() - inicio;
+        console.error('❌ Error en verificarClientesConDeudaAlta:', error);
         await registrarLog(
-            'reactivacion_automatica',
+            'verificar_deuda_alta',
             'error',
             error.message,
             0,
-            Date.now() - inicio
+            tiempoEjecucion
         );
     }
 };
 
 // ============================================
-// TAREA 4: ACTUALIZAR SCORES DE PAGO
+// TAREA: LIMPIAR NOTIFICACIONES ANTIGUAS
 // ============================================
 
-const actualizarScoresPago = async () => {
+const limpiarNotificacionesAntiguas = async () => {
     const inicio = Date.now();
-    console.log('🔄 Actualizando scores de pago...');
+    console.log('🧹 Limpiando notificaciones antiguas...');
     
     try {
-        // Actualizar scores usando la función SQL
         const result = await pool.query(`
-            UPDATE clientes
-            SET score_pago = calcular_score_pago(id)
-            WHERE estado = 'activo'
+            DELETE FROM notificaciones
+            WHERE fecha_creacion < CURRENT_TIMESTAMP - INTERVAL '30 days'
+            RETURNING id
         `);
         
         const tiempoEjecucion = Date.now() - inicio;
         
         await registrarLog(
-            'actualizar_scores',
+            'limpiar_notificaciones',
             'success',
-            `Scores actualizados para ${result.rowCount} clientes`,
+            `Se eliminaron ${result.rowCount} notificaciones antiguas`,
             result.rowCount,
             tiempoEjecucion
         );
         
-        console.log(`✅ Scores actualizados en ${tiempoEjecucion}ms`);
+        console.log(`✅ ${result.rowCount} notificaciones antiguas eliminadas`);
         
     } catch (error) {
-        console.error('❌ Error actualizando scores:', error);
+        console.error('❌ Error limpiando notificaciones:', error);
         await registrarLog(
-            'actualizar_scores',
+            'limpiar_notificaciones',
             'error',
             error.message,
             0,
@@ -409,16 +287,77 @@ const actualizarScoresPago = async () => {
 };
 
 // ============================================
-// TAREA 5: GENERAR MÉTRICAS DIARIAS
+// TAREA: ARCHIVOS AUTOMATICOS DE TAREAS
 // ============================================
 
-const generarMetricasDiarias = async () => {
+const archivarTareasVencidas = async () => {
     const inicio = Date.now();
-    console.log('🔄 Generando métricas diarias...');
+    console.log('📦 Archivando tareas vencidas...');
     
     try {
-        // Obtener métricas del día
         const result = await pool.query(`
+            UPDATE tareas
+            SET 
+                estado = 'cancelada',
+                fecha_cancelada = CURRENT_TIMESTAMP
+            WHERE estado = 'pendiente'
+            AND fecha_vencimiento < CURRENT_DATE
+            RETURNING id
+        `);
+        
+        const tiempoEjecucion = Date.now() - inicio;
+        
+        await registrarLog(
+            'archivar_tareas_vencidas',
+            'success',
+            `Se archivaron ${result.rowCount} tareas vencidas`,
+            result.rowCount,
+            tiempoEjecucion
+        );
+        
+        console.log(`✅ ${result.rowCount} tareas vencidas archivadas`);
+        
+    } catch (error) {
+        console.error('❌ Error archivando tareas:', error);
+        await registrarLog(
+            'archivar_tareas_vencidas',
+            'error',
+            error.message,
+            0,
+            Date.now() - inicio
+        );
+    }
+};
+
+// ============================================
+// TAREA: GENERAR MÉTRICAS HISTÓRICAS
+// ============================================
+
+const generarMetricasHistoricas = async () => {
+    const inicio = Date.now();
+    console.log('📊 Generando métricas históricas...');
+    
+    try {
+        // Obtener datos actuales
+        const statsResult = await pool.query(`
+            SELECT 
+                COUNT(*) as total_clientes,
+                COUNT(*) FILTER (WHERE estado = 'activo') as clientes_activos,
+                COUNT(*) FILTER (WHERE estado = 'suspendido') as clientes_suspendidos,
+                COUNT(*) FILTER (WHERE meses_deuda > 0) as clientes_con_deuda,
+                COALESCE(SUM(deuda_total), 0) as deuda_total,
+                ROUND(
+                    COUNT(*) FILTER (WHERE meses_deuda > 0) * 100.0 / 
+                    NULLIF(COUNT(*), 0), 
+                    2
+                ) as tasa_morosidad
+            FROM clientes
+        `);
+        
+        const stats = statsResult.rows[0];
+        
+        // Insertar en metricas_historicas
+        await pool.query(`
             INSERT INTO metricas_historicas (
                 fecha,
                 total_clientes,
@@ -426,55 +365,36 @@ const generarMetricasDiarias = async () => {
                 clientes_suspendidos,
                 clientes_con_deuda,
                 monto_total_deuda,
-                ingresos_dia,
-                ingresos_mes,
-                tasa_morosidad,
-                nuevos_clientes,
-                bajas_clientes
-            )
-            SELECT 
+                tasa_morosidad
+            ) VALUES (
                 CURRENT_DATE,
-                COUNT(*),
-                COUNT(*) FILTER (WHERE estado = 'activo'),
-                COUNT(*) FILTER (WHERE estado = 'suspendido'),
-                COUNT(*) FILTER (WHERE meses_deuda > 0 AND estado = 'activo'),
-                COALESCE(SUM(meses_deuda * precio_mensual), 0),
-                COALESCE((SELECT SUM(monto) FROM pagos WHERE fecha_pago = CURRENT_DATE), 0),
-                COALESCE((SELECT SUM(monto) FROM pagos 
-                          WHERE DATE_TRUNC('month', fecha_pago) = DATE_TRUNC('month', CURRENT_DATE)), 0),
-                ROUND((COUNT(*) FILTER (WHERE meses_deuda > 0 AND estado = 'activo')::DECIMAL / 
-                       NULLIF(COUNT(*) FILTER (WHERE estado = 'activo'), 0) * 100), 2),
-                COUNT(*) FILTER (WHERE DATE(fecha_instalacion) = CURRENT_DATE),
-                0  -- bajas se calculan manualmente
-            FROM clientes
-            ON CONFLICT (fecha) DO UPDATE SET
-                total_clientes = EXCLUDED.total_clientes,
-                clientes_activos = EXCLUDED.clientes_activos,
-                clientes_suspendidos = EXCLUDED.clientes_suspendidos,
-                clientes_con_deuda = EXCLUDED.clientes_con_deuda,
-                monto_total_deuda = EXCLUDED.monto_total_deuda,
-                ingresos_dia = EXCLUDED.ingresos_dia,
-                ingresos_mes = EXCLUDED.ingresos_mes,
-                tasa_morosidad = EXCLUDED.tasa_morosidad,
-                nuevos_clientes = EXCLUDED.nuevos_clientes
-        `);
+                $1, $2, $3, $4, $5, $6
+            )
+        `, [
+            stats.total_clientes,
+            stats.clientes_activos,
+            stats.clientes_suspendidos,
+            stats.clientes_con_deuda,
+            stats.deuda_total,
+            stats.tasa_morosidad
+        ]);
         
         const tiempoEjecucion = Date.now() - inicio;
         
         await registrarLog(
-            'metricas_diarias',
+            'generar_metricas',
             'success',
-            'Métricas diarias generadas correctamente',
+            `Métricas generadas: ${stats.total_clientes} clientes, S/ ${stats.deuda_total} deuda`,
             1,
             tiempoEjecucion
         );
         
-        console.log(`✅ Métricas diarias generadas en ${tiempoEjecucion}ms`);
+        console.log(`✅ Métricas generadas: ${stats.total_clientes} clientes activos, ${stats.clientes_con_deuda} con deuda`);
         
     } catch (error) {
         console.error('❌ Error generando métricas:', error);
         await registrarLog(
-            'metricas_diarias',
+            'generar_metricas',
             'error',
             error.message,
             0,
@@ -484,189 +404,62 @@ const generarMetricasDiarias = async () => {
 };
 
 // ============================================
-// TAREA 6: REFRESH VISTA DASHBOARD
+// CONTROLADOR PRINCIPAL DE CRON JOBS
 // ============================================
 
-const refreshDashboard = async () => {
-    const inicio = Date.now();
-    console.log('🔄 Refrescando vista dashboard...');
-    
-    try {
-        await pool.query('SELECT refresh_dashboard()');
+const cronService = {
+    // Inicializar todos los CRON JOBS
+    iniciarTareas: () => {
+        console.log('⏰ Inicializando CRON JOBS...\n');
         
-        const tiempoEjecucion = Date.now() - inicio;
+        // 1️⃣ Incrementar deuda cada 1º de mes a las 1:00 AM
+        cron.schedule('0 1 1 * *', () => {
+            console.log('\n⏰ [01:00] Ejecutando: Incrementar deuda mensual');
+            incrementarDeudaMensual();
+        });
         
-        await registrarLog(
-            'refresh_dashboard',
-            'success',
-            'Vista dashboard actualizada',
-            1,
-            tiempoEjecucion
-        );
+        // 2️⃣ Verificar deuda alta DIARIAMENTE a las 6:00 AM
+        // ✅ NUEVO: Solo notifica, NO suspende automáticamente
+        cron.schedule('0 6 * * *', () => {
+            console.log('\n⏰ [06:00] Ejecutando: Verificar clientes con deuda alta');
+            verificarClientesConDeudaAlta();
+        });
         
-        console.log(`✅ Dashboard refrescado en ${tiempoEjecucion}ms`);
+        // 3️⃣ Limpiar notificaciones viejas cada domingo a las 2:00 AM
+        cron.schedule('0 2 * * 0', () => {
+            console.log('\n⏰ [02:00 Domingo] Ejecutando: Limpiar notificaciones antiguas');
+            limpiarNotificacionesAntiguas();
+        });
         
-    } catch (error) {
-        console.error('❌ Error refrescando dashboard:', error);
-        await registrarLog(
-            'refresh_dashboard',
-            'error',
-            error.message,
-            0,
-            Date.now() - inicio
-        );
+        // 4️⃣ Archivar tareas vencidas cada día a las 3:00 AM
+        cron.schedule('0 3 * * *', () => {
+            console.log('\n⏰ [03:00] Ejecutando: Archivar tareas vencidas');
+            archivarTareasVencidas();
+        });
+        
+        // 5️⃣ Generar métricas cada día a las 11:59 PM
+        cron.schedule('59 23 * * *', () => {
+            console.log('\n⏰ [23:59] Ejecutando: Generar métricas históricas');
+            generarMetricasHistoricas();
+        });
+        
+        console.log('✅ CRON JOBS inicializados correctamente\n');
+        console.log('📅 Tareas programadas:');
+        console.log('  1️⃣ 01:00 del 1º - Incrementar deuda mensual');
+        console.log('  2️⃣ 06:00 diario - Verificar deuda alta (ALERTAS, NO SUSPENSIONES)');
+        console.log('  3️⃣ 02:00 domingo - Limpiar notificaciones antiguas');
+        console.log('  4️⃣ 03:00 diario - Archivar tareas vencidas');
+        console.log('  5️⃣ 23:59 diario - Generar métricas\n');
+    },
+
+    // Ejecutar tareas manualmente (útil para testing)
+    ejecutarManualmente: {
+        incrementarDeuda: incrementarDeudaMensual,
+        verificarDeudaAlta: verificarClientesConDeudaAlta,
+        limpiarNotificaciones: limpiarNotificacionesAntiguas,
+        archivarTareas: archivarTareasVencidas,
+        generarMetricas: generarMetricasHistoricas
     }
 };
 
-// ============================================
-// TAREA 7: BACKUP AUTOMÁTICO (SIMULADO)
-// ============================================
-
-const backupAutomatico = async () => {
-    const inicio = Date.now();
-    console.log('🔄 Iniciando backup automático...');
-    
-    try {
-        // En producción real, ejecutarías pg_dump aquí
-        // Por ahora solo registramos el evento
-        
-        const tiempoEjecucion = Date.now() - inicio;
-        
-        await registrarLog(
-            'backup_automatico',
-            'success',
-            'Backup simulado completado (implementar pg_dump en producción)',
-            1,
-            tiempoEjecucion
-        );
-        
-        console.log(`✅ Backup completado en ${tiempoEjecucion}ms`);
-        
-        await enviarAlerta(
-            'Backup Diario Completado',
-            `
-            <h2>🔔 Alerta del Sistema</h2>
-            <p>El backup automático se ha completado exitosamente.</p>
-            <hr>
-            <small>Este es un mensaje automático del sistema TV Jhaire</small>
-            `
-        );
-        
-    } catch (error) {
-        console.error('❌ Error en backup:', error);
-        await registrarLog(
-            'backup_automatico',
-            'error',
-            error.message,
-            0,
-            Date.now() - inicio
-        );
-        
-        await enviarAlerta(
-            'ERROR: Backup Falló',
-            `
-            <h2>🔔 Alerta del Sistema</h2>
-            <p>Error en backup automático: ${error.message}</p>
-            <hr>
-            <small>Este es un mensaje automático del sistema TV Jhaire</small>
-            `
-        );
-    }
-};
-
-// ============================================
-// CONFIGURAR CRON JOBS
-// ============================================
-
-const configurarCronJobs = () => {
-    console.log('🚀 Configurando CRON jobs...');
-    
-    // 1. Incrementar deuda - Primer día del mes a las 00:00
-    cron.schedule('0 0 1 * *', incrementarDeudaMensual, {
-        timezone: "America/Lima"
-    });
-    console.log('✅ CRON: Incremento deuda mensual - 1er día a las 00:00');
-    
-    // ✅ 2. Verificación de riesgo (SOLO ALERTA, NO SUSPENDE)
-    cron.schedule('0 2 * * *', suspensionAutomatica, {
-        timezone: "America/Lima"
-    });
-    console.log('⚠️ CRON: Verificación de riesgo - Diario a las 02:00 (SOLO ALERTAS, NO SUSPENDE)');
-    
-    // 3. Reactivación automática - Todos los días a las 03:00
-    cron.schedule('0 3 * * *', reactivacionAutomatica, {
-        timezone: "America/Lima"
-    });
-    console.log('✅ CRON: Reactivación automática - Diario a las 03:00');
-    
-    // 4. Actualizar scores - Todos los días a las 04:00
-    cron.schedule('0 4 * * *', actualizarScoresPago, {
-        timezone: "America/Lima"
-    });
-    console.log('✅ CRON: Actualizar scores - Diario a las 04:00');
-    
-    // 5. Métricas diarias - Todos los días a las 23:55
-    cron.schedule('55 23 * * *', generarMetricasDiarias, {
-        timezone: "America/Lima"
-    });
-    console.log('✅ CRON: Métricas diarias - Diario a las 23:55');
-    
-    // 6. Refresh dashboard - Cada hora
-    cron.schedule('0 * * * *', refreshDashboard, {
-        timezone: "America/Lima"
-    });
-    console.log('✅ CRON: Refresh dashboard - Cada hora');
-    
-    // 7. Backup automático - Todos los días a las 05:00
-    cron.schedule('0 5 * * *', backupAutomatico, {
-        timezone: "America/Lima"
-    });
-    console.log('✅ CRON: Backup automático - Diario a las 05:00');
-    
-    console.log('✅ Todos los CRON jobs configurados correctamente');
-    console.log('🕐 Timezone: America/Lima (UTC-5)');
-    console.log('⚠️ IMPORTANTE: La suspensión es MANUAL, solo se envían alertas');
-};
-
-// ============================================
-// FUNCIONES PARA EJECUTAR MANUALMENTE
-// ============================================
-
-const ejecutarTareaManual = async (nombreTarea) => {
-    console.log(`🔧 Ejecutando tarea manual: ${nombreTarea}`);
-    
-    const tareas = {
-        'incremento_deuda': incrementarDeudaMensual,
-        'suspension': suspensionAutomatica,
-        'reactivacion': reactivacionAutomatica,
-        'scores': actualizarScoresPago,
-        'metricas': generarMetricasDiarias,
-        'dashboard': refreshDashboard,
-        'backup': backupAutomatico
-    };
-    
-    const tarea = tareas[nombreTarea];
-    
-    if (tarea) {
-        await tarea();
-        return { success: true, message: `Tarea ${nombreTarea} ejecutada` };
-    } else {
-        return { success: false, message: 'Tarea no encontrada' };
-    }
-};
-
-// ============================================
-// EXPORTAR
-// ============================================
-
-module.exports = {
-    configurarCronJobs,
-    ejecutarTareaManual,
-    incrementarDeudaMensual,
-    suspensionAutomatica,
-    reactivacionAutomatica,
-    actualizarScoresPago,
-    generarMetricasDiarias,
-    refreshDashboard,
-    backupAutomatico
-};
+module.exports = cronService;

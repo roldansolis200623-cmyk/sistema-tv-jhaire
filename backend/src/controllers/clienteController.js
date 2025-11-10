@@ -184,16 +184,28 @@ const clienteController = {
         }
     },
 
-    // ✅ SIMPLIFICADO: SUSPENDER CLIENTE sin notificaciones
+    // ✅ MEJORADO: SUSPENDER CLIENTE - Ahora con más validaciones
     suspender: async (req, res) => {
         try {
             const { id } = req.params;
             const { motivo, observaciones, suspendido_por } = req.body;
 
+            // Validaciones adicionales
+            if (!motivo || motivo.trim() === '') {
+                return res.status(400).json({ error: 'El motivo es obligatorio' });
+            }
+
             const cliente = await ClienteModel.getById(id);
             if (!cliente) {
                 return res.status(404).json({ error: 'Cliente no encontrado' });
             }
+
+            // Verificar que no esté ya suspendido
+            if (cliente.estado === 'suspendido') {
+                return res.status(400).json({ error: 'Cliente ya está suspendido' });
+            }
+
+            console.log(`⏸️ Suspendiendo cliente: ${cliente.nombre} ${cliente.apellido}`);
 
             const clienteSuspendido = await ClienteModel.suspender(id, {
                 motivo,
@@ -207,9 +219,31 @@ const clienteController = {
                 suspendido_por: suspendido_por || 'Administrador'
             });
 
+            // ✅ AGREGAR: Crear notificación inteligente
+            try {
+                await pool.query(`
+                    INSERT INTO notificaciones_inteligentes (
+                        cliente_id, tipo, prioridad, titulo, mensaje, 
+                        accion_sugerida, origen
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                `, [
+                    id,
+                    'CLIENTE_SUSPENDIDO',
+                    'HIGH',
+                    `Cliente Suspendido: ${cliente.nombre}`,
+                    `${cliente.nombre} ${cliente.apellido} ha sido suspendido. Motivo: ${motivo}`,
+                    'Reactivar cliente',
+                    'MANUAL'
+                ]);
+                console.log(`✅ Notificación de suspensión creada`);
+            } catch (notifError) {
+                console.error('⚠️ Error creando notificación:', notifError);
+            }
+
             res.json({
                 message: 'Cliente suspendido exitosamente',
-                cliente: clienteSuspendido
+                cliente: clienteSuspendido,
+                success: true
             });
         } catch (error) {
             console.error('Error suspendiendo cliente:', error);
@@ -217,7 +251,7 @@ const clienteController = {
         }
     },
 
-    // ✅ SIMPLIFICADO: REACTIVAR CLIENTE sin notificaciones
+    // ✅ MEJORADO: REACTIVAR CLIENTE - Ahora con más validaciones
     reactivar: async (req, res) => {
         try {
             const { id } = req.params;
@@ -228,12 +262,43 @@ const clienteController = {
                 return res.status(404).json({ error: 'Cliente no encontrado' });
             }
 
+            // Verificar que esté suspendido
+            if (cliente.estado !== 'suspendido') {
+                return res.status(400).json({ 
+                    error: `Cliente no está suspendido. Estado actual: ${cliente.estado}` 
+                });
+            }
+
+            console.log(`▶️ Reactivando cliente: ${cliente.nombre} ${cliente.apellido}`);
+
             const clienteReactivado = await ClienteModel.reactivar(id, reactivado_por || 'Administrador');
             await ClienteModel.registrarReactivacion(id, reactivado_por || 'Administrador');
 
+            // ✅ AGREGAR: Crear notificación inteligente
+            try {
+                await pool.query(`
+                    INSERT INTO notificaciones_inteligentes (
+                        cliente_id, tipo, prioridad, titulo, mensaje, 
+                        accion_sugerida, origen
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                `, [
+                    id,
+                    'CLIENTE_REACTIVADO',
+                    'MEDIUM',
+                    `Cliente Reactivado: ${cliente.nombre}`,
+                    `${cliente.nombre} ${cliente.apellido} ha sido reactivado correctamente`,
+                    'Monitorear pagos',
+                    'MANUAL'
+                ]);
+                console.log(`✅ Notificación de reactivación creada`);
+            } catch (notifError) {
+                console.error('⚠️ Error creando notificación:', notifError);
+            }
+
             res.json({
                 message: 'Cliente reactivado exitosamente',
-                cliente: clienteReactivado
+                cliente: clienteReactivado,
+                success: true
             });
         } catch (error) {
             console.error('Error reactivando cliente:', error);
