@@ -20,33 +20,35 @@ const Cliente = {
         }
     },
 
-    async create(data) {
-        const {
-            nombre, apellido, dni, telefono, email, direccion,
-            numero_suministro, tipo_servicio, tipo_senal, perfil_internet_id,
-            plan, precio_mensual, fecha_instalacion,
-            estado = 'activo', estado_pago = 'al_dia', meses_deuda = 0
-        } = data;
+    // ✅ REEMPLAZA EN clienteModel.js
 
-        try {
-            const result = await pool.query(`
-                INSERT INTO clientes (
-                    nombre, apellido, dni, telefono, email, direccion,
-                    numero_suministro, tipo_servicio, tipo_senal, perfil_internet_id,
-                    plan, precio_mensual, fecha_instalacion, estado, estado_pago, meses_deuda
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-                RETURNING *
-            `, [
+async create(data) {
+    const {
+        nombre, apellido, dni, telefono, email, direccion,
+        suministro, tipo_servicio, tipo_senal, perfil_internet_id,
+        plan, precio_mensual, fecha_instalacion,
+        estado = 'activo', estado_pago = 'al_dia', meses_deuda = 0
+    } = data;
+
+    try {
+        const result = await pool.query(`
+            INSERT INTO clientes (
                 nombre, apellido, dni, telefono, email, direccion,
-                numero_suministro, tipo_servicio, tipo_senal, perfil_internet_id || null,
+                suministro, tipo_servicio, tipo_senal, perfil_internet_id,
                 plan, precio_mensual, fecha_instalacion, estado, estado_pago, meses_deuda
-            ]);
-            return result.rows[0];
-        } catch (error) {
-            console.error('Error en create:', error);
-            throw error;
-        }
-    },
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            RETURNING *
+        `, [
+            nombre, apellido, dni, telefono, email, direccion,
+            suministro, tipo_servicio, tipo_senal, perfil_internet_id || null,
+            plan, precio_mensual, fecha_instalacion, estado, estado_pago, meses_deuda
+        ]);
+        return result.rows[0];
+    } catch (error) {
+        console.error('Error en create:', error);
+        throw error;
+    }
+},
 
     async update(id, data) {
         try {
@@ -65,7 +67,7 @@ const Cliente = {
             
             const allowedFields = [
     'nombre', 'apellido', 'dni', 'telefono', 'email', 'direccion',
-    'suministro', 'numero_suministro', 'tipo_servicio', 'tipo_senal', 'perfil_internet_id',
+    'suministro', 'tipo_servicio', 'tipo_senal', 'perfil_internet_id',
     'plan', 'precio_mensual', 'fecha_instalacion', 'estado', 'estado_pago', 'meses_deuda'
 ];
             
