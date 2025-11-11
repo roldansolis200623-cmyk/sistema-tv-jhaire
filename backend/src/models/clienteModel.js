@@ -22,7 +22,7 @@ const Cliente = {
 
     async create(data) {
         const {
-            nombre, apellido, dni, telefono, correo, direccion,
+            nombre, apellido, dni, telefono, email, direccion,
             numero_suministro, tipo_servicio, tipo_senal, perfil_internet_id,
             plan, precio_mensual, fecha_instalacion,
             estado = 'activo', estado_pago = 'al_dia', meses_deuda = 0
@@ -31,13 +31,13 @@ const Cliente = {
         try {
             const result = await pool.query(`
                 INSERT INTO clientes (
-                    nombre, apellido, dni, telefono, correo, direccion,
+                    nombre, apellido, dni, telefono, email, direccion,
                     numero_suministro, tipo_servicio, tipo_senal, perfil_internet_id,
                     plan, precio_mensual, fecha_instalacion, estado, estado_pago, meses_deuda
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                 RETURNING *
             `, [
-                nombre, apellido, dni, telefono, correo, direccion,
+                nombre, apellido, dni, telefono, email, direccion,
                 numero_suministro, tipo_servicio, tipo_senal, perfil_internet_id || null,
                 plan, precio_mensual, fecha_instalacion, estado, estado_pago, meses_deuda
             ]);
@@ -64,10 +64,10 @@ const Cliente = {
             let paramCount = 1;
             
             const allowedFields = [
-                'nombre', 'apellido', 'dni', 'telefono', 'email', 'correo', 'direccion',
-                'suministro', 'numero_suministro', 'tipo_servicio', 'tipo_senal', 'perfil_internet_id',
-                'plan', 'precio_mensual', 'fecha_instalacion', 'estado', 'estado_pago', 'meses_deuda'
-            ];
+    'nombre', 'apellido', 'dni', 'telefono', 'email', 'direccion',
+    'suministro', 'numero_suministro', 'tipo_servicio', 'tipo_senal', 'perfil_internet_id',
+    'plan', 'precio_mensual', 'fecha_instalacion', 'estado', 'estado_pago', 'meses_deuda'
+];
             
             allowedFields.forEach(field => {
                 if (data[field] !== undefined) {
