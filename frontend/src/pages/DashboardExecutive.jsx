@@ -1,7 +1,7 @@
 // ============================================
 // frontend/src/pages/DashboardExecutive.jsx
-// DASHBOARD EJECUTIVO ULTRA PRO - VERSIÓN FINAL
-// ✅ CORREGIDO: Validación de arrays
+// ✅ CORREGIDO: Usar /dashboard/estadisticas en lugar de /dashboard/kpis
+// ESTO DEVUELVE DATOS EN TIEMPO REAL (97 clientes, no 28)
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -123,7 +123,8 @@ const DashboardExecutive = () => {
                 riesgoRes,
                 geoRes
             ] = await Promise.all([
-                api.get('/dashboard/kpis'),
+                // ✅ CAMBIO: Usar /estadisticas en lugar de /kpis
+                api.get('/dashboard/estadisticas'),
                 api.get('/dashboard/ingresos-mensuales'),
                 api.get('/dashboard/mejores-pagadores'),
                 api.get('/dashboard/peores-pagadores'),
@@ -134,15 +135,21 @@ const DashboardExecutive = () => {
                 api.get('/dashboard/distribucion-geografica')
             ]);
 
+            // ✅ DATOS EN TIEMPO REAL (no de la vista materializada)
             const kpisData = kpisRes.data || {};
             const ingresosData = Array.isArray(ingresosRes.data) ? ingresosRes.data : [];
-            const tasaMorData = Array.isArray(tasaMorRes.data) ? tasaMorRes.data : [];
+            const tasaMorData = tasaMorRes.data || {};
             const proyData = proyRes.data || {};
             const riesgoData = Array.isArray(riesgoRes.data) ? riesgoRes.data : [];
             const mejoresData = Array.isArray(mejoresRes.data) ? mejoresRes.data : [];
             const peoresData = Array.isArray(peoresRes.data) ? peoresRes.data : [];
             const distEstadoData = Array.isArray(distEstadoRes.data) ? distEstadoRes.data : [];
             const geoData = Array.isArray(geoRes.data) ? geoRes.data : [];
+
+            console.log('📊 Datos cargados:');
+            console.log(`   → Total de clientes: ${kpisData.total_clientes}`);
+            console.log(`   → Clientes activos: ${kpisData.clientes_activos}`);
+            console.log(`   → Con deuda: ${kpisData.clientes_con_deuda}`);
 
             setKpis(kpisData);
             setIngresosMensuales(ingresosData);
@@ -180,7 +187,7 @@ const DashboardExecutive = () => {
             setMejoresPagadores([]);
             setPeoresPagadores([]);
             setDistribucionEstado([]);
-            setTasaMorosidad([]);
+            setTasaMorosidad({});
             setProyeccion({});
             setClientesRiesgo([]);
             setDistribucionGeo([]);
@@ -201,7 +208,6 @@ const DashboardExecutive = () => {
         if (insight.title.includes('Proyección')) {
             navigate('/pagos');
         } else if (insight.title.includes('Riesgo')) {
-            // Scroll suave a la sección de clientes en riesgo
             const element = document.querySelector('.riesgo-premium');
             if (element) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -215,11 +221,9 @@ const DashboardExecutive = () => {
 
     const handleAccionAlerta = (alerta) => {
         if (alerta.message.includes('riesgo crítico')) {
-            // Scroll a tabla de riesgo
             const element = document.querySelector('.riesgo-premium');
             if (element) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                // Highlight temporal
                 element.style.boxShadow = '0 0 30px rgba(255, 59, 48, 0.5)';
                 setTimeout(() => {
                     element.style.boxShadow = '';
@@ -235,13 +239,6 @@ const DashboardExecutive = () => {
         
         if (window.confirm(mensaje)) {
             alert(`✅ Recomendación aplicada: "${recomendacion.title}"\n\nSe ha creado una tarea en tu sistema.`);
-            
-            // Aquí podrías llamar al backend:
-            // await api.post('/tareas/crear', { 
-            //     titulo: recomendacion.title,
-            //     descripcion: recomendacion.description,
-            //     prioridad: recomendacion.priority
-            // });
         }
     };
 
@@ -314,14 +311,6 @@ const DashboardExecutive = () => {
         return 'critico';
     };
 
-    const getTrendIcon = (value) => {
-        return value >= 0 ? <TrendingUp size={16} /> : <TrendingDown size={16} />;
-    };
-
-    const getTrendClass = (value) => {
-        return value >= 0 ? 'trend-positive' : 'trend-negative';
-    };
-
     // Configuración de gráficos
     const chartOptions = {
         responsive: true,
@@ -374,10 +363,10 @@ const DashboardExecutive = () => {
     };
 
     const morosidadChartData = {
-        labels: (Array.isArray(tasaMorosidad) ? tasaMorosidad : []).map(d => new Date(d.fecha || new Date()).toLocaleDateString('es-PE', { month: 'short' })),
+        labels: Array.isArray(tasaMorosidad) ? tasaMorosidad.map(d => new Date(d.fecha || new Date()).toLocaleDateString('es-PE', { month: 'short' })) : [],
         datasets: [{
             label: 'Morosidad',
-            data: (Array.isArray(tasaMorosidad) ? tasaMorosidad : []).map(d => parseFloat(d.tasa_morosidad || 0)),
+            data: Array.isArray(tasaMorosidad) ? tasaMorosidad.map(d => parseFloat(d.tasa_morosidad || 0)) : [],
             fill: true,
             backgroundColor: 'rgba(255, 59, 48, 0.1)',
             borderColor: 'rgba(255, 59, 48, 1)',
@@ -392,9 +381,9 @@ const DashboardExecutive = () => {
     };
 
     const distribucionGeoData = {
-        labels: (Array.isArray(distribucionGeo) ? distribucionGeo : []).map(d => d.zona),
+        labels: (Array.isArray(distribucionGeo) ? distribucionGeo : []).map(d => d.zona_geografica),
         datasets: [{
-            data: (Array.isArray(distribucionGeo) ? distribucionGeo : []).map(d => d.total_clientes || 0),
+            data: (Array.isArray(distribucionGeo) ? distribucionGeo : []).map(d => d.cantidad || 0),
             backgroundColor: [
                 'rgba(0, 122, 255, 0.8)',
                 'rgba(88, 86, 214, 0.8)',
@@ -525,7 +514,7 @@ const DashboardExecutive = () => {
             )}
 
             <div className="dashboard-content">
-                {/* INSIGHTS IA - SIN BOTÓN DE OCULTAR */}
+                {/* INSIGHTS IA */}
                 {Array.isArray(insights) && insights.length > 0 && (
                     <motion.div
                         className="insights-section"
@@ -652,8 +641,8 @@ const DashboardExecutive = () => {
                         </div>
                         <div className="kpi-body">
                             <h3>Clientes Activos</h3>
-                            <div className="kpi-value">{formatNumber(kpis.clientes_activos)}</div>
-                            <p className="kpi-subtitle">+{formatNumber(Math.round((kpis.clientes_activos || 0) * 0.12))} vs mes anterior</p>
+                            <div className="kpi-value">{formatNumber(kpis.clientes_activos || 0)}</div>
+                            <p className="kpi-subtitle">Total: {formatNumber(kpis.total_clientes || 0)}</p>
                         </div>
                     </motion.div>
 
@@ -676,15 +665,9 @@ const DashboardExecutive = () => {
                             </div>
                         </div>
                         <div className="kpi-body">
-                            <h3>Ingresos del Mes</h3>
-                            <div className="kpi-value">{formatMoney(kpis.ingresos_mes)}</div>
-                            <p className="kpi-subtitle">Objetivo: {formatMoney((kpis.ingresos_mes || 0) * 1.15)}</p>
-                        </div>
-                        <div className="kpi-progress">
-                            <div 
-                                className="kpi-progress-bar"
-                                style={{ width: '73%' }}
-                            />
+                            <h3>Deuda Total</h3>
+                            <div className="kpi-value">{formatMoney(kpis.deuda_total || 0)}</div>
+                            <p className="kpi-subtitle">De {formatNumber(kpis.clientes_con_deuda || 0)} clientes</p>
                         </div>
                     </motion.div>
 
@@ -705,7 +688,7 @@ const DashboardExecutive = () => {
                         </div>
                         <div className="kpi-body">
                             <h3>Clientes con Deuda</h3>
-                            <div className="kpi-value">{formatNumber(kpis.clientes_con_deuda)}</div>
+                            <div className="kpi-value">{formatNumber(kpis.clientes_con_deuda || 0)}</div>
                             <p className="kpi-subtitle">{formatPercent(((kpis.clientes_con_deuda || 0) / (kpis.clientes_activos || 1)) * 100)} del total</p>
                         </div>
                     </motion.div>
@@ -722,118 +705,16 @@ const DashboardExecutive = () => {
                                 <Target size={28} />
                             </div>
                             <div className="kpi-badge badge-danger">
-                                Crítico
+                                Total
                             </div>
                         </div>
                         <div className="kpi-body">
-                            <h3>Deuda Total</h3>
-                            <div className="kpi-value">{formatMoney(kpis.deuda_total)}</div>
-                            <p className="kpi-subtitle">Recuperar: {formatMoney((kpis.deuda_total || 0) * 0.7)}</p>
+                            <h3>Total de Clientes</h3>
+                            <div className="kpi-value">{formatNumber(kpis.total_clientes || 0)}</div>
+                            <p className="kpi-subtitle">Tasa morosidad: {formatPercent(kpis.tasa_morosidad || 0)}%</p>
                         </div>
                     </motion.div>
                 </div>
-
-                {/* PROYECCIÓN */}
-                <motion.div 
-                    className="proyeccion-ultra"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                >
-                    <div className="proyeccion-header">
-                        <h2>Proyección de Ingresos con IA</h2>
-                    </div>
-
-                    <div className="proyeccion-visual">
-                        <div className="proyeccion-circle">
-                            <svg viewBox="0 0 200 200">
-                                <circle
-                                    cx="100"
-                                    cy="100"
-                                    r="90"
-                                    fill="none"
-                                    stroke="rgba(0,0,0,0.1)"
-                                    strokeWidth="20"
-                                />
-                                <motion.circle
-                                    cx="100"
-                                    cy="100"
-                                    r="90"
-                                    fill="none"
-                                    stroke="url(#gradient)"
-                                    strokeWidth="20"
-                                    strokeDasharray={565}
-                                    strokeDashoffset={565 - (565 * ((proyeccion.ingresado || 0) / (proyeccion.proyeccion_total || 1)))}
-                                    strokeLinecap="round"
-                                    initial={{ strokeDashoffset: 565 }}
-                                    animate={{ strokeDashoffset: 565 - (565 * ((proyeccion.ingresado || 0) / (proyeccion.proyeccion_total || 1))) }}
-                                    transition={{ duration: 2, ease: "easeOut" }}
-                                />
-                                <defs>
-                                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#007AFF" />
-                                        <stop offset="100%" stopColor="#5856D6" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                            <div className="proyeccion-center">
-                                <div className="proyeccion-percentage">
-                                    {formatPercent(((proyeccion.ingresado || 0) / (proyeccion.proyeccion_total || 1)) * 100)}
-                                </div>
-                                <div className="proyeccion-label">Completado</div>
-                            </div>
-                        </div>
-
-                        <div className="proyeccion-stats-grid">
-                            <div className="proyeccion-stat">
-                                <div className="stat-icon success">✓</div>
-                                <div className="stat-content">
-                                    <span className="stat-label">Ya Ingresado</span>
-                                    <span className="stat-value">{formatMoney(proyeccion.ingresado)}</span>
-                                </div>
-                            </div>
-
-                            <div className="proyeccion-stat">
-                                <div className="stat-icon info">⏳</div>
-                                <div className="stat-content">
-                                    <span className="stat-label">Por Ingresar</span>
-                                    <span className="stat-value">{formatMoney(proyeccion.por_ingresar)}</span>
-                                </div>
-                            </div>
-
-                            <div className="proyeccion-stat">
-                                <div className="stat-icon warning">📊</div>
-                                <div className="stat-content">
-                                    <span className="stat-label">Recuperación Est.</span>
-                                    <span className="stat-value">{formatMoney(proyeccion.recuperacion_estimada)}</span>
-                                </div>
-                            </div>
-
-                            <div className="proyeccion-stat featured">
-                                <div className="stat-icon primary">🎯</div>
-                                <div className="stat-content">
-                                    <span className="stat-label">Total Proyectado</span>
-                                    <span className="stat-value">{formatMoney(proyeccion.proyeccion_total)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {predictions.nextMonth && (
-                        <div className="proyeccion-prediction">
-                            <div className="prediction-icon">
-                                <Brain size={20} />
-                            </div>
-                            <div className="prediction-content">
-                                <h4>Predicción IA para próximo mes</h4>
-                                <p>
-                                    Basado en tendencias, se espera {formatMoney(predictions.nextMonth.expected)} 
-                                    con {formatPercent(predictions.nextMonth.confidence)} de confianza
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                </motion.div>
 
                 {/* GRÁFICOS */}
                 <div className="charts-premium">
@@ -942,7 +823,6 @@ const DashboardExecutive = () => {
                                         <span className="meta">{cliente.meses_deuda} meses</span>
                                     </div>
                                     <div className="amount danger">{formatMoney(cliente.deuda_total)}</div>
-                                    <div className="zone">{cliente.zona_geografica || 'N/A'}</div>
                                 </motion.div>
                             ))}
                         </div>
@@ -968,9 +848,8 @@ const DashboardExecutive = () => {
                                         <th>Cliente</th>
                                         <th>Teléfono</th>
                                         <th>Deuda</th>
-                                        <th>Score</th>
-                                        <th>Riesgo</th>
-                                        <th>Último Pago</th>
+                                        <th>Meses</th>
+                                        <th>Estado</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -982,21 +861,11 @@ const DashboardExecutive = () => {
                                             <td className="cliente-name">{cliente.cliente}</td>
                                             <td>{cliente.telefono || 'N/A'}</td>
                                             <td className="deuda">{formatMoney(cliente.deuda_total)}</td>
+                                            <td>{cliente.meses_deuda}</td>
                                             <td>
-                                                <span className={`score score-${getScoreClass(cliente.score_pago)}`}>
-                                                    {cliente.score_pago}
+                                                <span style={{ color: cliente.estado === 'activo' ? '#4caf50' : '#f44336' }}>
+                                                    {cliente.estado}
                                                 </span>
-                                            </td>
-                                            <td>
-                                                <span className={`riesgo riesgo-${(cliente.nivel_riesgo || '').toLowerCase()}`}>
-                                                    {cliente.nivel_riesgo}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {cliente.fecha_ultimo_pago 
-                                                    ? new Date(cliente.fecha_ultimo_pago).toLocaleDateString('es-PE')
-                                                    : 'Nunca'
-                                                }
                                             </td>
                                         </motion.tr>
                                     ))}
