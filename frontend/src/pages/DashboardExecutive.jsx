@@ -1,7 +1,7 @@
 // ============================================
 // frontend/src/pages/DashboardExecutive.jsx
 // DASHBOARD EJECUTIVO ULTRA PRO - VERSIÓN FINAL
-// CON BOTONES FUNCIONALES
+// ✅ CORREGIDO: Validación de arrays
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -134,21 +134,25 @@ const DashboardExecutive = () => {
                 api.get('/dashboard/distribucion-geografica')
             ]);
 
-            const kpisData = kpisRes.data;
-            const ingresosData = ingresosRes.data;
-            const tasaMorData = tasaMorRes.data;
-            const proyData = proyRes.data;
-            const riesgoData = riesgoRes.data;
+            const kpisData = kpisRes.data || {};
+            const ingresosData = Array.isArray(ingresosRes.data) ? ingresosRes.data : [];
+            const tasaMorData = Array.isArray(tasaMorRes.data) ? tasaMorRes.data : [];
+            const proyData = proyRes.data || {};
+            const riesgoData = Array.isArray(riesgoRes.data) ? riesgoRes.data : [];
+            const mejoresData = Array.isArray(mejoresRes.data) ? mejoresRes.data : [];
+            const peoresData = Array.isArray(peoresRes.data) ? peoresRes.data : [];
+            const distEstadoData = Array.isArray(distEstadoRes.data) ? distEstadoRes.data : [];
+            const geoData = Array.isArray(geoRes.data) ? geoRes.data : [];
 
             setKpis(kpisData);
             setIngresosMensuales(ingresosData);
-            setMejoresPagadores(mejoresRes.data);
-            setPeoresPagadores(peoresRes.data);
-            setDistribucionEstado(distEstadoRes.data);
+            setMejoresPagadores(mejoresData);
+            setPeoresPagadores(peoresData);
+            setDistribucionEstado(distEstadoData);
             setTasaMorosidad(tasaMorData);
             setProyeccion(proyData);
-            setClientesRiesgo(riesgoRes.data);
-            setDistribucionGeo(geoRes.data);
+            setClientesRiesgo(riesgoData);
+            setDistribucionGeo(geoData);
 
             // GENERAR INSIGHTS CON IA
             const generatedInsights = generateInsights({
@@ -158,18 +162,32 @@ const DashboardExecutive = () => {
                 proyeccion: proyData,
                 riesgo: riesgoData
             });
-            setInsights(generatedInsights.insights);
-            setAlerts(generatedInsights.alerts);
-            setRecommendations(generatedInsights.recommendations);
+            setInsights(Array.isArray(generatedInsights.insights) ? generatedInsights.insights : []);
+            setAlerts(Array.isArray(generatedInsights.alerts) ? generatedInsights.alerts : []);
+            setRecommendations(Array.isArray(generatedInsights.recommendations) ? generatedInsights.recommendations : []);
 
             // PREDICCIONES
             const predictions = predictTrends(ingresosData, tasaMorData);
-            setPredictions(predictions);
+            setPredictions(predictions || {});
             
             setLoading(false);
             setRefreshing(false);
         } catch (error) {
             console.error('Error cargando dashboard:', error);
+            // Setear valores por defecto en caso de error
+            setKpis({});
+            setIngresosMensuales([]);
+            setMejoresPagadores([]);
+            setPeoresPagadores([]);
+            setDistribucionEstado([]);
+            setTasaMorosidad([]);
+            setProyeccion({});
+            setClientesRiesgo([]);
+            setDistribucionGeo([]);
+            setInsights([]);
+            setAlerts([]);
+            setRecommendations([]);
+            setPredictions({});
             setLoading(false);
             setRefreshing(false);
         }
@@ -331,10 +349,10 @@ const DashboardExecutive = () => {
     };
 
     const ingresosChartData = {
-        labels: ingresosMensuales.map(d => d.mes),
+        labels: (Array.isArray(ingresosMensuales) ? ingresosMensuales : []).map(d => d.mes),
         datasets: [{
             label: 'Ingresos',
-            data: ingresosMensuales.map(d => parseFloat(d.total)),
+            data: (Array.isArray(ingresosMensuales) ? ingresosMensuales : []).map(d => parseFloat(d.total || 0)),
             backgroundColor: 'rgba(0, 122, 255, 0.8)',
             borderColor: 'rgba(0, 122, 255, 1)',
             borderWidth: 3,
@@ -343,9 +361,9 @@ const DashboardExecutive = () => {
     };
 
     const distribucionEstadoData = {
-        labels: distribucionEstado.map(d => d.estado),
+        labels: (Array.isArray(distribucionEstado) ? distribucionEstado : []).map(d => d.estado),
         datasets: [{
-            data: distribucionEstado.map(d => d.cantidad),
+            data: (Array.isArray(distribucionEstado) ? distribucionEstado : []).map(d => d.cantidad || 0),
             backgroundColor: [
                 'rgba(52, 199, 89, 0.8)',
                 'rgba(255, 149, 0, 0.8)',
@@ -356,10 +374,10 @@ const DashboardExecutive = () => {
     };
 
     const morosidadChartData = {
-        labels: tasaMorosidad.map(d => new Date(d.fecha).toLocaleDateString('es-PE', { month: 'short' })),
+        labels: (Array.isArray(tasaMorosidad) ? tasaMorosidad : []).map(d => new Date(d.fecha || new Date()).toLocaleDateString('es-PE', { month: 'short' })),
         datasets: [{
             label: 'Morosidad',
-            data: tasaMorosidad.map(d => parseFloat(d.tasa_morosidad)),
+            data: (Array.isArray(tasaMorosidad) ? tasaMorosidad : []).map(d => parseFloat(d.tasa_morosidad || 0)),
             fill: true,
             backgroundColor: 'rgba(255, 59, 48, 0.1)',
             borderColor: 'rgba(255, 59, 48, 1)',
@@ -374,9 +392,9 @@ const DashboardExecutive = () => {
     };
 
     const distribucionGeoData = {
-        labels: distribucionGeo.map(d => d.zona),
+        labels: (Array.isArray(distribucionGeo) ? distribucionGeo : []).map(d => d.zona),
         datasets: [{
-            data: distribucionGeo.map(d => d.total_clientes),
+            data: (Array.isArray(distribucionGeo) ? distribucionGeo : []).map(d => d.total_clientes || 0),
             backgroundColor: [
                 'rgba(0, 122, 255, 0.8)',
                 'rgba(88, 86, 214, 0.8)',
@@ -508,7 +526,7 @@ const DashboardExecutive = () => {
 
             <div className="dashboard-content">
                 {/* INSIGHTS IA - SIN BOTÓN DE OCULTAR */}
-                {insights.length > 0 && (
+                {Array.isArray(insights) && insights.length > 0 && (
                     <motion.div
                         className="insights-section"
                         initial={{ y: 20, opacity: 0 }}
@@ -553,7 +571,7 @@ const DashboardExecutive = () => {
                             ))}
                         </div>
 
-                        {alerts.length > 0 && (
+                        {Array.isArray(alerts) && alerts.length > 0 && (
                             <div className="alerts-critical">
                                 <h3>🚨 Alertas Críticas</h3>
                                 <div className="alerts-list">
@@ -579,7 +597,7 @@ const DashboardExecutive = () => {
                             </div>
                         )}
 
-                        {recommendations.length > 0 && (
+                        {Array.isArray(recommendations) && recommendations.length > 0 && (
                             <div className="recommendations">
                                 <h3>💡 Recomendaciones</h3>
                                 <div className="recommendations-list">
@@ -881,7 +899,7 @@ const DashboardExecutive = () => {
                             <h3>Top 10 Mejores Pagadores</h3>
                         </div>
                         <div className="top-list">
-                            {mejoresPagadores.map((cliente, index) => (
+                            {Array.isArray(mejoresPagadores) && mejoresPagadores.map((cliente, index) => (
                                 <motion.div 
                                     key={cliente.id} 
                                     className="top-item"
@@ -912,7 +930,7 @@ const DashboardExecutive = () => {
                             <h3>Top 10 Clientes en Mora</h3>
                         </div>
                         <div className="top-list">
-                            {peoresPagadores.map((cliente, index) => (
+                            {Array.isArray(peoresPagadores) && peoresPagadores.map((cliente, index) => (
                                 <motion.div 
                                     key={cliente.id} 
                                     className="top-item"
@@ -941,7 +959,7 @@ const DashboardExecutive = () => {
                     <div className="riesgo-card">
                         <div className="riesgo-header">
                             <AlertCircle size={24} />
-                            <h3>Clientes en Riesgo ({clientesRiesgo.length})</h3>
+                            <h3>Clientes en Riesgo ({Array.isArray(clientesRiesgo) ? clientesRiesgo.length : 0})</h3>
                         </div>
                         <div className="riesgo-table">
                             <table>
@@ -956,7 +974,7 @@ const DashboardExecutive = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {clientesRiesgo.slice(0, 10).map((cliente) => (
+                                    {Array.isArray(clientesRiesgo) && clientesRiesgo.slice(0, 10).map((cliente) => (
                                         <motion.tr 
                                             key={cliente.id}
                                             whileHover={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}
