@@ -1,10 +1,9 @@
 // ============================================
 // backend/server.js (o backend/src/server.js)
-// SERVIDOR PRINCIPAL CON CRON JOBS ACTIVADOS
+// SERVIDOR PRINCIPAL CON CRON JOBS SEGUROS
 // ============================================
 
-const app = require('./src/app'); // o require('./app') si server.js está en src/
-const { configurarCronJobs } = require('./src/services/cronService');
+const app = require('./src/app');
 const pool = require('./src/config/database');
 
 const PORT = process.env.PORT || 5000;
@@ -48,28 +47,49 @@ const iniciarServidor = async () => {
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log('');
 
-        // ✅ NUEVO: Configurar y activar CRON jobs
+        // ✅ NUEVO: Configurar y activar CRON jobs CON MANEJO DE ERRORES
         if (dbConectada) {
             try {
                 console.log('⚙️  Configurando CRON jobs...');
-                configurarCronJobs();
-                console.log('');
-                console.log('✅ CRON jobs configurados y activos');
-                console.log('🕐 Timezone: America/Lima (UTC-5)');
-                console.log('');
-                console.log('📋 Tareas programadas:');
-                console.log('   • Incremento deuda mensual: 1er día a las 00:00');
-                console.log('   • Suspensión automática: Diario a las 02:00');
-                console.log('   • Reactivación automática: Diario a las 03:00');
-                console.log('   • Actualizar scores: Diario a las 04:00');
-                console.log('   • Métricas diarias: Diario a las 23:55');
-                console.log('   • Refresh dashboard: Cada hora');
-                console.log('   • Backup automático: Diario a las 05:00');
-                console.log('');
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                console.log('✅ SISTEMA COMPLETAMENTE OPERATIVO');
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                console.log('');
+                
+                // ✅ Importar de forma segura
+                try {
+                    const { configurarCronJobs } = require('./src/services/cronService');
+                    
+                    // Verificar que sea una función
+                    if (typeof configurarCronJobs === 'function') {
+                        configurarCronJobs();
+                        
+                        console.log('');
+                        console.log('✅ CRON jobs configurados y activos');
+                        console.log('🕐 Timezone: America/Lima (UTC-5)');
+                        console.log('');
+                        console.log('📋 Tareas programadas:');
+                        console.log('   • Incremento deuda mensual: 1er día a las 00:00');
+                        console.log('   • Suspensión automática: Diario a las 02:00');
+                        console.log('   • Reactivación automática: Diario a las 03:00');
+                        console.log('   • Actualizar scores: Diario a las 04:00');
+                        console.log('   • Métricas diarias: Diario a las 23:55');
+                        console.log('   • Refresh dashboard: Cada hora');
+                        console.log('   • Backup automático: Diario a las 05:00');
+                        console.log('');
+                        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                        console.log('✅ SISTEMA COMPLETAMENTE OPERATIVO');
+                        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                        console.log('');
+                    } else {
+                        throw new Error('configurarCronJobs no es una función');
+                    }
+                } catch (cronError) {
+                    console.warn('');
+                    console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.warn('⚠️  CRON jobs no disponibles');
+                    console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.warn('Razón:', cronError.message);
+                    console.warn('✅ El servidor funcionará sin automatización');
+                    console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.warn('');
+                }
             } catch (error) {
                 console.error('');
                 console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
