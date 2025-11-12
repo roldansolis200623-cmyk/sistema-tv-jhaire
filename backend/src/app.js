@@ -1,12 +1,13 @@
 // ============================================
 // backend/src/app.js
-// CONFIGURACIÓN EXPRESS CON TODAS LAS RUTAS
+// ✅ VERSIÓN MEJORADA CON SEGURIDAD Y VALIDACIONES
 // ============================================
 
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 
@@ -89,6 +90,50 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ============================================
+// ✅ NUEVO: RATE LIMITING
+// ============================================
+
+// Rate limit general (100 requests por 15 minutos)
+const limiterGeneral = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: {
+        success: false,
+        error: 'Demasiadas solicitudes desde esta IP. Intenta más tarde.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => process.env.NODE_ENV === 'development'
+});
+
+// Rate limit para login (5 intentos por 15 minutos)
+const limiterLogin = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: {
+        success: false,
+        error: 'Demasiados intentos de inicio de sesión. Intenta en 15 minutos.'
+    },
+    skipSuccessfulRequests: true,
+    skip: (req) => process.env.NODE_ENV === 'development'
+});
+
+// Rate limit para API pública (10 requests por minuto)
+const limiterPublic = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    message: {
+        success: false,
+        error: 'Límite de solicitudes alcanzado'
+    },
+    skip: (req) => process.env.NODE_ENV === 'development'
+});
+
+app.use('/api/', limiterGeneral);
+app.use('/api/auth/login', limiterLogin);
+app.use('/api/public/', limiterPublic);
+
+// ============================================
 // LOGGING EN DESARROLLO
 // ============================================
 if (process.env.NODE_ENV !== 'production') {
@@ -113,7 +158,9 @@ app.get('/', (req, res) => {
             'Portal Público Cliente',
             'Notificaciones Inteligentes',
             'Sistema Completo de Gestión',
-            'Sistema de Tareas con IA' // ✅ NUEVO
+            'Validación de Inputs',
+            'Rate Limiting',
+            'RBAC (Roles y Permisos)'
         ]
     });
 });
@@ -122,16 +169,24 @@ app.get('/', (req, res) => {
 // HEALTH CHECK
 // ============================================
 app.get('/health', async (req, res) => {
-    const { healthCheck } = require('./config/database');
-    const dbHealth = await healthCheck();
-    
-    res.json({
-        status: dbHealth.healthy ? 'ok' : 'error',
-        database: dbHealth,
-        uptime: process.uptime(),
-        memory: process.memoryUsage(),
-        timestamp: new Date().toISOString()
-    });
+    try {
+        const { healthCheck } = require('./config/database');
+        const dbHealth = await healthCheck();
+        
+        res.json({
+            status: dbHealth.healthy ? 'ok' : 'error',
+            database: dbHealth,
+            uptime: process.uptime(),
+            memory: process.memoryUsage(),
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
 });
 
 // ============================================
@@ -150,10 +205,6 @@ const notificacionRoutes = require('./routes/notificacionRoutes');
 const notificacionInteligenteRoutes = require('./routes/notificacionInteligenteRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const cronRoutes = require('./routes/cronRoutes');
-
-// ============================================
-// ✅ NUEVO: IMPORTAR RUTAS DE TAREAS
-// ============================================
 const tareasRoutes = require('./routes/tareas');
 
 // ============================================
@@ -177,16 +228,15 @@ app.use('/api/reportes', reporteRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/cron', cronRoutes);
 
-// ============================================
-// ✅ NUEVO: USAR RUTAS DE TAREAS
-// ============================================
+// Rutas de tareas
 app.use('/api/tareas', tareasRoutes);
 
 // ============================================
-// MANEJO DE RUTAS 404
+// ✅ MANEJO DE RUTAS 404
 // ============================================
 app.use((req, res) => {
     res.status(404).json({
+        success: false,
         error: 'Ruta no encontrada',
         path: req.path,
         method: req.method,
@@ -197,14 +247,14 @@ app.use((req, res) => {
             '/api/pagos',
             '/api/dashboard',
             '/api/cron',
-            '/api/tareas', // ✅ NUEVO
+            '/api/tareas',
             '/health'
         ]
     });
 });
 
 // ============================================
-// MANEJO DE ERRORES GLOBAL
+// ✅ MANEJO DE ERRORES GLOBAL (MEJORADO)
 // ============================================
 app.use((err, req, res, next) => {
     // Log completo en servidor
@@ -212,25 +262,80 @@ app.use((err, req, res, next) => {
     console.error('❌ ERROR:', err.message);
     console.error('📍 Ruta:', req.path);
     console.error('🔧 Método:', req.method);
+    console.error('👤 Usuario:', req.user?.id || 'anónimo');
     
     if (process.env.NODE_ENV !== 'production') {
         console.error('📚 Stack:', err.stack);
     }
     console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    // Respuesta al cliente
-    const errorResponse = {
+    // Construir respuesta de error
+    let errorResponse = {
+        success: false,
         error: err.message || 'Error interno del servidor',
         timestamp: new Date().toISOString()
     };
     
-    // Solo incluir stack en desarrollo
-    if (process.env.NODE_ENV === 'development') {
-        errorResponse.stack = err.stack;
-        errorResponse.path = req.path;
+    // Error de validación
+    if (err.name === 'ValidationError') {
+        return res.status(400).json({
+            ...errorResponse,
+            error: 'Error de validación',
+            details: err.details
+        });
     }
     
-    res.status(err.status || 500).json(errorResponse);
+    // Error de BD (PostgreSQL)
+    if (err.code && typeof err.code === 'string') {
+        if (err.code.startsWith('23')) {
+            // Constraint violation
+            return res.status(400).json({
+                ...errorResponse,
+                error: 'Datos inválidos o duplicados'
+            });
+        }
+        if (err.code === '42P01') {
+            // Table not found
+            return res.status(500).json({
+                ...errorResponse,
+                error: 'Error en base de datos'
+            });
+        }
+    }
+    
+    // Error de CORS
+    if (err.message === 'No permitido por CORS') {
+        return res.status(403).json({
+            ...errorResponse,
+            error: 'Acceso CORS denegado'
+        });
+    }
+    
+    // Error de autenticación JWT
+    if (err.name === 'JsonWebTokenError') {
+        return res.status(401).json({
+            ...errorResponse,
+            error: 'Token inválido'
+        });
+    }
+    
+    // Error de token expirado
+    if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({
+            ...errorResponse,
+            error: 'Token expirado'
+        });
+    }
+    
+    // Incluir stack solo en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+        errorResponse.stack = err.stack;
+        errorResponse.details = err;
+    }
+    
+    // Determinar status code
+    const statusCode = err.statusCode || err.status || 500;
+    res.status(statusCode).json(errorResponse);
 });
 
 module.exports = app;
