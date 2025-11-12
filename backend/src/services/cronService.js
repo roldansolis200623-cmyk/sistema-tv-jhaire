@@ -462,4 +462,7 @@ const cronService = {
     }
 };
 
-module.exports = cronService;
+module.exports = {
+    ...cronService,
+    configurarCronJobs: cronService.iniciarTareas
+};
