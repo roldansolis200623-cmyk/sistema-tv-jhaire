@@ -1,15 +1,11 @@
-// ============================================
-// backend/src/controllers/authController.js
-// ✅ VERSIÓN MEJORADA CON JWT SEGURO
-// ============================================
-
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const pool = require('../config/database');
 
 // ============================================
 // GENERAR TOKENS (ACCESS + REFRESH)
 // ============================================
-const generateTokens = (userId, userRole = 'cliente') => {
+const generateTokens = (userId, userRole = 'admin') => {
     // Access token: válido por 1 hora
     const accessToken = jwt.sign(
         {
@@ -47,50 +43,48 @@ const generateTokens = (userId, userRole = 'cliente') => {
 // ============================================
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { username, password } = req.body;
 
         // ✅ Validar inputs
-        if (!email || !password) {
+        if (!username || !password) {
             return res.status(400).json({
                 success: false,
-                error: 'Email y contraseña requeridos'
+                error: 'Usuario y contraseña requeridos'
             });
         }
 
-        // Buscar usuario
+        // Buscar usuario por USERNAME
         const result = await pool.query(
-            'SELECT * FROM usuarios WHERE email = $1',
-            [email.toLowerCase()]
+            'SELECT * FROM usuarios WHERE username = $1',
+            [username]
         );
 
         if (result.rows.length === 0) {
-            // ✅ No revelar si el email existe
             return res.status(401).json({
                 success: false,
-                error: 'Email o contraseña inválidos'
+                error: 'Usuario o contraseña incorrectos'
             });
         }
 
         const usuario = result.rows[0];
 
-        // ✅ Validar contraseña (en producción, usar bcrypt)
-        // Nota: Esto es un ejemplo simple. En producción:
-        // const passwordMatch = await bcrypt.compare(password, usuario.password_hash);
-        if (usuario.password !== password) {
+        // ✅ Validar contraseña con bcrypt
+        const passwordMatch = await bcrypt.compare(password, usuario.password);
+        
+        if (!passwordMatch) {
             return res.status(401).json({
                 success: false,
-                error: 'Email o contraseña inválidos'
+                error: 'Usuario o contraseña incorrectos'
             });
         }
 
         // ✅ Generar tokens
-        const { accessToken, refreshToken } = generateTokens(usuario.id, usuario.rol || 'cliente');
+        const { accessToken, refreshToken } = generateTokens(usuario.id, usuario.rol);
 
-        // ✅ Guardar refresh token en BD (opcional, para logout en todos los devices)
+        // ✅ Guardar refresh token en BD
         await pool.query(
-            `UPDATE usuarios SET refresh_token = $1, ultimo_login = CURRENT_TIMESTAMP 
-             WHERE id = $2`,
-            [refreshToken, usuario.id]
+            `UPDATE usuarios SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+            [usuario.id]
         );
 
         // ✅ Responder con tokens
@@ -101,7 +95,7 @@ const login = async (req, res) => {
             refreshToken,
             usuario: {
                 id: usuario.id,
-                email: usuario.email,
+                username: usuario.username,
                 nombre: usuario.nombre,
                 rol: usuario.rol
             }
@@ -147,7 +141,7 @@ const refreshToken = async (req, res) => {
             });
         }
 
-        // ✅ Verificar que el token coincida con el de BD
+        // ✅ Verificar que el usuario existe
         const userResult = await pool.query(
             'SELECT * FROM usuarios WHERE id = $1',
             [decoded.userId]
@@ -161,14 +155,6 @@ const refreshToken = async (req, res) => {
         }
 
         const usuario = userResult.rows[0];
-
-        // ✅ Verificar que el token matches
-        if (usuario.refresh_token !== token) {
-            return res.status(401).json({
-                success: false,
-                error: 'Refresh token no válido'
-            });
-        }
 
         // ✅ Generar nuevo access token
         const { accessToken: newAccessToken } = generateTokens(usuario.id, usuario.rol);
@@ -192,7 +178,7 @@ const refreshToken = async (req, res) => {
 // ============================================
 const logout = async (req, res) => {
     try {
-        const userId = req.user?.id;
+        const userId = req.user?.userId;
 
         if (!userId) {
             return res.status(401).json({
@@ -200,12 +186,6 @@ const logout = async (req, res) => {
                 error: 'No autenticado'
             });
         }
-
-        // ✅ Invalidar refresh token en BD
-        await pool.query(
-            'UPDATE usuarios SET refresh_token = NULL WHERE id = $1',
-            [userId]
-        );
 
         res.json({
             success: true,
@@ -263,7 +243,7 @@ const verifyToken = (req, res) => {
 // ============================================
 const getProfile = async (req, res) => {
     try {
-        const userId = req.user?.id;
+        const userId = req.user?.userId;
 
         if (!userId) {
             return res.status(401).json({
@@ -273,7 +253,7 @@ const getProfile = async (req, res) => {
         }
 
         const result = await pool.query(
-            'SELECT id, email, nombre, rol, fecha_creacion FROM usuarios WHERE id = $1',
+            'SELECT id, username, nombre, rol, created_at, updated_at FROM usuarios WHERE id = $1',
             [userId]
         );
 
@@ -303,8 +283,8 @@ const getProfile = async (req, res) => {
 // ============================================
 const changePassword = async (req, res) => {
     try {
-        const userId = req.user?.id;
-        const { passwordActual, passwordNueva, passwordNuevaConfirm } = req.body;
+        const userId = req.user?.userId;
+        const { passwordActual, passwordNueva } = req.body;
 
         if (!userId) {
             return res.status(401).json({
@@ -314,17 +294,10 @@ const changePassword = async (req, res) => {
         }
 
         // ✅ Validar inputs
-        if (!passwordActual || !passwordNueva || !passwordNuevaConfirm) {
+        if (!passwordActual || !passwordNueva) {
             return res.status(400).json({
                 success: false,
                 error: 'Todos los campos son requeridos'
-            });
-        }
-
-        if (passwordNueva !== passwordNuevaConfirm) {
-            return res.status(400).json({
-                success: false,
-                error: 'Las contraseñas no coinciden'
             });
         }
 
@@ -351,19 +324,22 @@ const changePassword = async (req, res) => {
         const usuario = result.rows[0];
 
         // ✅ Verificar contraseña actual
-        // En producción: await bcrypt.compare(passwordActual, usuario.password_hash)
-        if (usuario.password !== passwordActual) {
+        const passwordMatch = await bcrypt.compare(passwordActual, usuario.password);
+        
+        if (!passwordMatch) {
             return res.status(401).json({
                 success: false,
                 error: 'Contraseña actual incorrecta'
             });
         }
 
+        // ✅ Hash de nueva contraseña
+        const passwordNuevaHash = await bcrypt.hash(passwordNueva, 10);
+
         // ✅ Actualizar contraseña
-        // En producción: usar bcrypt.hash()
         await pool.query(
-            'UPDATE usuarios SET password = $1 WHERE id = $2',
-            [passwordNueva, userId]
+            'UPDATE usuarios SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            [passwordNuevaHash, userId]
         );
 
         res.json({
