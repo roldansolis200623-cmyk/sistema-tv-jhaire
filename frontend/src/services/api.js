@@ -6,7 +6,7 @@
 import axios from 'axios';
 
 // ✅ URL de producción (Railway)
-const API_URL = 'https://sistema-tv-jhaire-production-1248.up.railway.app/api';
+const API_URL = process.env.REACT_APP_API_URL || 'https://sistema-tv-jhaire-production-1248.up.railway.app/api';
 
 console.log('🔗 API URL configurada:', API_URL);
 
