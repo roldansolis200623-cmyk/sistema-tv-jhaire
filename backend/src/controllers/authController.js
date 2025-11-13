@@ -1,12 +1,16 @@
+// ============================================
+// backend/src/controllers/authController.js
+// ✅ FIX: Retorna "user" en lugar de "usuario"
+// ============================================
+
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const pool = require('../config/database');
 
 // ============================================
-// GENERAR TOKENS (ACCESS + REFRESH)
+// GENERAR TOKENS
 // ============================================
 const generateTokens = (userId, userRole = 'admin') => {
-    // Access token: válido por 1 hora
     const accessToken = jwt.sign(
         {
             userId,
@@ -21,7 +25,6 @@ const generateTokens = (userId, userRole = 'admin') => {
         }
     );
 
-    // Refresh token: válido por 7 días
     const refreshToken = jwt.sign(
         {
             userId,
@@ -45,7 +48,6 @@ const login = async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // ✅ Validar inputs
         if (!username || !password) {
             return res.status(400).json({
                 success: false,
@@ -53,7 +55,7 @@ const login = async (req, res) => {
             });
         }
 
-        // Buscar usuario por USERNAME
+        // Buscar usuario
         const result = await pool.query(
             'SELECT * FROM usuarios WHERE username = $1',
             [username]
@@ -66,10 +68,10 @@ const login = async (req, res) => {
             });
         }
 
-        const usuario = result.rows[0];
+        const userData = result.rows[0];
 
-        // ✅ Validar contraseña con bcrypt
-        const passwordMatch = await bcrypt.compare(password, usuario.password);
+        // Validar contraseña
+        const passwordMatch = await bcrypt.compare(password, userData.password);
         
         if (!passwordMatch) {
             return res.status(401).json({
@@ -78,26 +80,20 @@ const login = async (req, res) => {
             });
         }
 
-        // ✅ Generar tokens
-        const { accessToken, refreshToken } = generateTokens(usuario.id, usuario.rol);
+        // Generar tokens
+        const { accessToken, refreshToken } = generateTokens(userData.id, userData.rol);
 
-        // ✅ Guardar refresh token en BD
-        await pool.query(
-            `UPDATE usuarios SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
-            [usuario.id]
-        );
-
-        // ✅ Responder con tokens
+        // Retornar con "user" (NO "usuario")
         res.json({
             success: true,
             message: 'Sesión iniciada correctamente',
             accessToken,
             refreshToken,
-            usuario: {
-                id: usuario.id,
-                username: usuario.username,
-                nombre: usuario.nombre,
-                rol: usuario.rol
+            user: {
+                id: userData.id,
+                username: userData.username,
+                nombre: userData.nombre,
+                rol: userData.rol
             }
         });
 
@@ -124,7 +120,6 @@ const refreshToken = async (req, res) => {
             });
         }
 
-        // ✅ Verificar refresh token
         let decoded;
         try {
             decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'tu-refresh-secret-key');
@@ -132,7 +127,7 @@ const refreshToken = async (req, res) => {
             if (error.name === 'TokenExpiredError') {
                 return res.status(401).json({
                     success: false,
-                    error: 'Refresh token expirado. Por favor inicia sesión nuevamente'
+                    error: 'Refresh token expirado'
                 });
             }
             return res.status(401).json({
@@ -141,7 +136,6 @@ const refreshToken = async (req, res) => {
             });
         }
 
-        // ✅ Verificar que el usuario existe
         const userResult = await pool.query(
             'SELECT * FROM usuarios WHERE id = $1',
             [decoded.userId]
@@ -154,10 +148,8 @@ const refreshToken = async (req, res) => {
             });
         }
 
-        const usuario = userResult.rows[0];
-
-        // ✅ Generar nuevo access token
-        const { accessToken: newAccessToken } = generateTokens(usuario.id, usuario.rol);
+        const userData = userResult.rows[0];
+        const { accessToken: newAccessToken } = generateTokens(userData.id, userData.rol);
 
         res.json({
             success: true,
@@ -178,20 +170,10 @@ const refreshToken = async (req, res) => {
 // ============================================
 const logout = async (req, res) => {
     try {
-        const userId = req.user?.userId;
-
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                error: 'No autenticado'
-            });
-        }
-
         res.json({
             success: true,
             message: 'Sesión cerrada correctamente'
         });
-
     } catch (error) {
         console.error('❌ Error en logout:', error);
         res.status(500).json({
@@ -202,7 +184,7 @@ const logout = async (req, res) => {
 };
 
 // ============================================
-// VERIFICAR TOKEN (TEST)
+// VERIFY TOKEN
 // ============================================
 const verifyToken = (req, res) => {
     try {
@@ -239,7 +221,7 @@ const verifyToken = (req, res) => {
 };
 
 // ============================================
-// OBTENER PERFIL ACTUAL
+// GET PROFILE
 // ============================================
 const getProfile = async (req, res) => {
     try {
@@ -266,11 +248,11 @@ const getProfile = async (req, res) => {
 
         res.json({
             success: true,
-            usuario: result.rows[0]
+            user: result.rows[0]
         });
 
     } catch (error) {
-        console.error('❌ Error obteniendo perfil:', error);
+        console.error('❌ Error en getProfile:', error);
         res.status(500).json({
             success: false,
             error: 'Error en el servidor'
@@ -279,7 +261,7 @@ const getProfile = async (req, res) => {
 };
 
 // ============================================
-// CAMBIAR CONTRASEÑA
+// CHANGE PASSWORD
 // ============================================
 const changePassword = async (req, res) => {
     try {
@@ -293,7 +275,6 @@ const changePassword = async (req, res) => {
             });
         }
 
-        // ✅ Validar inputs
         if (!passwordActual || !passwordNueva) {
             return res.status(400).json({
                 success: false,
@@ -308,7 +289,6 @@ const changePassword = async (req, res) => {
             });
         }
 
-        // Obtener usuario
         const result = await pool.query(
             'SELECT * FROM usuarios WHERE id = $1',
             [userId]
@@ -321,10 +301,9 @@ const changePassword = async (req, res) => {
             });
         }
 
-        const usuario = result.rows[0];
+        const userData = result.rows[0];
 
-        // ✅ Verificar contraseña actual
-        const passwordMatch = await bcrypt.compare(passwordActual, usuario.password);
+        const passwordMatch = await bcrypt.compare(passwordActual, userData.password);
         
         if (!passwordMatch) {
             return res.status(401).json({
@@ -333,10 +312,8 @@ const changePassword = async (req, res) => {
             });
         }
 
-        // ✅ Hash de nueva contraseña
         const passwordNuevaHash = await bcrypt.hash(passwordNueva, 10);
 
-        // ✅ Actualizar contraseña
         await pool.query(
             'UPDATE usuarios SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
             [passwordNuevaHash, userId]
@@ -348,7 +325,7 @@ const changePassword = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Error cambiando contraseña:', error);
+        console.error('❌ Error en changePassword:', error);
         res.status(500).json({
             success: false,
             error: 'Error en el servidor'
