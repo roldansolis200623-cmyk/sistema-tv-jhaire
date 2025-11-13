@@ -66,8 +66,9 @@ export const authService = {
     login: async (username, password) => {
         try {
             const response = await api.post('/auth/login', { username, password });
-            if (response.data.token) {
-                localStorage.setItem('token', response.data.token);
+            // ✅ FIX: accessToken en lugar de token
+            if (response.data.accessToken) {
+                localStorage.setItem('token', response.data.accessToken);
                 localStorage.setItem('user', JSON.stringify(response.data.user));
             }
             return response.data;
@@ -181,7 +182,7 @@ export const pagoService = {
 };
 
 // ============================================
-// ✅ NUEVO: SERVICIOS DE DASHBOARD
+// SERVICIOS DE DASHBOARD
 // ============================================
 export const dashboardService = {
     getKPIs: async () => {
@@ -296,7 +297,7 @@ export const dashboardService = {
 };
 
 // ============================================
-// ✅ NUEVO: SERVICIOS DE CRON
+// SERVICIOS DE CRON
 // ============================================
 export const cronService = {
     ejecutarTarea: async (tarea) => {
