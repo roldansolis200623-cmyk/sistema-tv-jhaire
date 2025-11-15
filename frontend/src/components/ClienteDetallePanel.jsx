@@ -130,19 +130,38 @@ const ClienteDetallePanel = ({ cliente, onClose, onSuspender, onReactivar, onWha
                                 Estado Financiero
                             </h3>
                             <div className="space-y-3">
-                                <InfoRow 
-                                    icon={<TrendingDown size={16} />} 
-                                    label="Meses de Deuda" 
-                                    value={`${cliente.meses_deuda || 0} mes(es)`}
-                                    danger={cliente.meses_deuda > 0}
-                                />
-                                <InfoRow 
-                                    icon={<DollarSign size={16} />} 
-                                    label="Deuda Total" 
-                                    value={`S/ ${deudaTotal.toFixed(2)}`}
-                                    danger={deudaTotal > 0}
-                                    highlight
-                                />
+                                {cliente.meses_deuda < 0 ? (
+                                    <>
+                                        <InfoRow
+                                            icon={<CheckCircle size={16} />}
+                                            label="Meses Adelantados"
+                                            value={`${Math.abs(cliente.meses_deuda)} mes(es)`}
+                                            highlight
+                                        />
+                                        <InfoRow
+                                            icon={<DollarSign size={16} />}
+                                            label="Saldo a Favor"
+                                            value={`S/ ${Math.abs(deudaTotal).toFixed(2)}`}
+                                            highlight
+                                        />
+                                    </>
+                                ) : (
+                                    <>
+                                        <InfoRow
+                                            icon={<TrendingDown size={16} />}
+                                            label="Meses de Deuda"
+                                            value={`${cliente.meses_deuda || 0} mes(es)`}
+                                            danger={cliente.meses_deuda > 0}
+                                        />
+                                        <InfoRow
+                                            icon={<DollarSign size={16} />}
+                                            label="Deuda Total"
+                                            value={`S/ ${deudaTotal.toFixed(2)}`}
+                                            danger={deudaTotal > 0}
+                                            highlight
+                                        />
+                                    </>
+                                )}
                             </div>
                         </section>
 

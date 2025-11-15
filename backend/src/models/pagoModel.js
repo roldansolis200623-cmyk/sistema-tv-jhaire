@@ -113,7 +113,7 @@ const PagoModel = {
 
             // ✅ CALCULAR DEUDA - SIMPLE: RESTAR MESES PAGADOS DE LO QUE DEBÍA
             const deudaAnterior = meses_deuda || 0;
-            const deudaNueva = Math.max(0, deudaAnterior - mesesPagados);
+            const deudaNueva = deudaAnterior - mesesPagados;
 
             console.log(`   📊 Deuda anterior: ${deudaAnterior} meses`);
             console.log(`   📊 Pagando: ${mesesPagados} meses`);

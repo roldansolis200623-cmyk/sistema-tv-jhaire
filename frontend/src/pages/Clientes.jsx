@@ -112,6 +112,7 @@ const Clientes = () => {
 
     // 🎨 FUNCIÓN PARA OBTENER COLOR SEGÚN DEUDA
     const getColorByDeuda = (mesesDeuda) => {
+        if (mesesDeuda < 0) return 'bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-400'; // Adelantado
         if (mesesDeuda === 0) return 'bg-green-50 hover:bg-green-100 border-l-4 border-green-400';
         if (mesesDeuda === 1) return 'bg-yellow-50 hover:bg-yellow-100 border-l-4 border-yellow-400';
         if (mesesDeuda === 2) return 'bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-400';
