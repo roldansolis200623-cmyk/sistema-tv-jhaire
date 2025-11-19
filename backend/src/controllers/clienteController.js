@@ -1,5 +1,6 @@
 const ClienteModel = require('../models/clienteModel');
 const pool = require('../config/database');
+const notificacionInteligenteService = require('../services/notificacionInteligenteService');
 
 const clienteController = {
     // Obtener todos los clientes
@@ -30,15 +31,24 @@ const clienteController = {
         }
     },
 
-    // ✅ SIMPLIFICADO: Crear nuevo cliente SIN notificaciones
+    // ✅ CON NOTIFICACIONES INTELIGENTES: Crear nuevo cliente y generar alertas
     create: async (req, res) => {
         try {
             console.log('📝 Creando cliente...', req.body);
-            
+
             const nuevoCliente = await ClienteModel.create(req.body);
-            
+
             console.log('✅ Cliente creado exitosamente:', nuevoCliente.id);
-            
+
+            // 🔔 Generar notificaciones inteligentes en background
+            setImmediate(async () => {
+                try {
+                    await notificacionInteligenteService.generarNotificacionesInteligentes();
+                } catch (error) {
+                    console.error('Error generando notificaciones:', error);
+                }
+            });
+
             res.status(201).json({
                 message: 'Cliente creado exitosamente',
                 cliente: nuevoCliente
@@ -46,7 +56,7 @@ const clienteController = {
         } catch (error) {
             console.error('❌ Error creando cliente:', error);
             console.error('Stack:', error.stack);
-            res.status(500).json({ 
+            res.status(500).json({
                 error: 'Error creando cliente',
                 details: process.env.NODE_ENV === 'development' ? error.message : undefined
             });

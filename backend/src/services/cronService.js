@@ -2,11 +2,13 @@
 // backend/src/services/cronService.js
 // SERVICIO DE AUTOMATIZACIÓN CON CRON JOBS
 // ✅ CORREGIDO: Sin suspensión automática
+// ✅ OPTIMIZADO: Usa notificaciones inteligentes
 // ============================================
 
 const cron = require('node-cron');
 const pool = require('../config/database');
 const nodemailer = require('nodemailer');
+const notificacionInteligenteService = require('./notificacionInteligenteService');
 
 // ✅ Configurar transporter de email (opcional)
 const transporter = nodemailer.createTransport({
@@ -411,42 +413,45 @@ const cronService = {
     // Inicializar todos los CRON JOBS
     iniciarTareas: () => {
         console.log('⏰ Inicializando CRON JOBS...\n');
-        
+
         // 1️⃣ Incrementar deuda cada 1º de mes a las 1:00 AM
         cron.schedule('0 1 1 * *', () => {
             console.log('\n⏰ [01:00] Ejecutando: Incrementar deuda mensual');
             incrementarDeudaMensual();
         });
-        
-        // 2️⃣ Verificar deuda alta DIARIAMENTE a las 6:00 AM
-        // ✅ NUEVO: Solo notifica, NO suspende automáticamente
-        cron.schedule('0 6 * * *', () => {
-            console.log('\n⏰ [06:00] Ejecutando: Verificar clientes con deuda alta');
-            verificarClientesConDeudaAlta();
+
+        // 2️⃣ OPTIMIZADO: Generar notificaciones inteligentes cada 30 minutos
+        cron.schedule('*/30 * * * *', async () => {
+            console.log('\n⏰ [Cada 30min] Ejecutando: Generar notificaciones inteligentes');
+            try {
+                await notificacionInteligenteService.generarNotificacionesInteligentes();
+            } catch (error) {
+                console.error('❌ Error generando notificaciones inteligentes:', error);
+            }
         });
-        
+
         // 3️⃣ Limpiar notificaciones viejas cada domingo a las 2:00 AM
         cron.schedule('0 2 * * 0', () => {
             console.log('\n⏰ [02:00 Domingo] Ejecutando: Limpiar notificaciones antiguas');
             limpiarNotificacionesAntiguas();
         });
-        
+
         // 4️⃣ Archivar tareas vencidas cada día a las 3:00 AM
         cron.schedule('0 3 * * *', () => {
             console.log('\n⏰ [03:00] Ejecutando: Archivar tareas vencidas');
             archivarTareasVencidas();
         });
-        
+
         // 5️⃣ Generar métricas cada día a las 11:59 PM
         cron.schedule('59 23 * * *', () => {
             console.log('\n⏰ [23:59] Ejecutando: Generar métricas históricas');
             generarMetricasHistoricas();
         });
-        
+
         console.log('✅ CRON JOBS inicializados correctamente\n');
         console.log('📅 Tareas programadas:');
         console.log('  1️⃣ 01:00 del 1º - Incrementar deuda mensual');
-        console.log('  2️⃣ 06:00 diario - Verificar deuda alta (ALERTAS, NO SUSPENSIONES)');
+        console.log('  2️⃣ Cada 30 minutos - Generar notificaciones inteligentes (OPTIMIZADO)');
         console.log('  3️⃣ 02:00 domingo - Limpiar notificaciones antiguas');
         console.log('  4️⃣ 03:00 diario - Archivar tareas vencidas');
         console.log('  5️⃣ 23:59 diario - Generar métricas\n');
@@ -458,7 +463,8 @@ const cronService = {
         verificarDeudaAlta: verificarClientesConDeudaAlta,
         limpiarNotificaciones: limpiarNotificacionesAntiguas,
         archivarTareas: archivarTareasVencidas,
-        generarMetricas: generarMetricasHistoricas
+        generarMetricas: generarMetricasHistoricas,
+        generarNotificacionesInteligentes: () => notificacionInteligenteService.generarNotificacionesInteligentes()
     }
 };
 

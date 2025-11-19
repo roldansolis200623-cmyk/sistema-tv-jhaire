@@ -1,7 +1,8 @@
 // ============================================
 // backend/src/services/notificacionInteligenteService.js
-// SERVICIO DE NOTIFICACIONES INTELIGENTES - OPTIMIZADO
+// SERVICIO DE NOTIFICACIONES INTELIGENTES - COMPLETO
 // ✅ 100x MÁS RÁPIDO - ELIMINA N+1 QUERIES
+// ✅ TODAS LAS FUNCIONES PARA CONTROLLER
 // ============================================
 
 const pool = require('../config/database');
@@ -54,12 +55,29 @@ const notificacionInteligenteService = {
             console.log(`   → Mejoraron: ${mejoraron}`);
             console.log(`   📊 TOTAL: ${totalCreadas} notificaciones\n`);
 
-            return totalCreadas;
+            return {
+                cantidad_generadas: totalCreadas,
+                tiempo_ms: tiempoTotal,
+                desglose: {
+                    deuda_critica: deudaCritica,
+                    patrones: patrones,
+                    vencimientos: vencimientos,
+                    nuevos_sin_pago: nuevosSinPago,
+                    mejoraron: mejoraron
+                }
+            };
 
         } catch (error) {
             console.error('❌ Error generando notificaciones inteligentes:', error);
             throw error;
         }
+    },
+
+    /**
+     * Alias para compatibilidad con controller
+     */
+    async generarNotificaciones() {
+        return await this.generarNotificacionesInteligentes();
     },
 
     /**
@@ -117,8 +135,6 @@ const notificacionInteligenteService = {
 
     /**
      * 2️⃣ DETECTAR PATRONES DE PAGO - OPTIMIZADO CON CTE
-     * Antes: 1 SELECT + N consultas individuales
-     * Ahora: 1 query con CTE
      */
     async detectarPatronesPago() {
         try {
@@ -332,22 +348,223 @@ const notificacionInteligenteService = {
     },
 
     /**
+     * ✅ OBTENER TODAS LAS NOTIFICACIONES CON FILTROS
+     */
+    async obtenerNotificaciones(filtros = {}) {
+        try {
+            let query = `
+                SELECT
+                    ni.*,
+                    c.nombre,
+                    c.apellido,
+                    c.telefono,
+                    c.email
+                FROM notificaciones_inteligentes ni
+                LEFT JOIN clientes c ON ni.cliente_id = c.id
+                WHERE 1=1
+            `;
+            const params = [];
+            let paramCount = 1;
+
+            // Filtros opcionales
+            if (filtros.tipo) {
+                query += ` AND ni.tipo = $${paramCount}`;
+                params.push(filtros.tipo);
+                paramCount++;
+            }
+
+            if (filtros.prioridad) {
+                query += ` AND ni.prioridad = $${paramCount}`;
+                params.push(filtros.prioridad);
+                paramCount++;
+            }
+
+            if (filtros.leida !== undefined) {
+                query += ` AND ni.leida = $${paramCount}`;
+                params.push(filtros.leida);
+                paramCount++;
+            }
+
+            if (filtros.archivada !== undefined) {
+                query += ` AND ni.archivada = $${paramCount}`;
+                params.push(filtros.archivada);
+                paramCount++;
+            }
+
+            query += ` ORDER BY ni.fecha_creacion DESC`;
+
+            // Paginación
+            if (filtros.limit) {
+                query += ` LIMIT $${paramCount}`;
+                params.push(filtros.limit);
+                paramCount++;
+            }
+
+            if (filtros.offset) {
+                query += ` OFFSET $${paramCount}`;
+                params.push(filtros.offset);
+            }
+
+            const result = await pool.query(query, params);
+            return result.rows;
+
+        } catch (error) {
+            console.error('Error en obtenerNotificaciones:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * ✅ OBTENER RESUMEN DE NOTIFICACIONES
+     */
+    async obtenerResumen() {
+        try {
+            const result = await pool.query(`
+                SELECT
+                    COUNT(*) as total,
+                    COUNT(*) FILTER (WHERE leida = false) as no_leidas,
+                    COUNT(*) FILTER (WHERE archivada = true) as archivadas,
+                    COUNT(*) FILTER (WHERE prioridad = 'CRITICAL') as criticas,
+                    COUNT(*) FILTER (WHERE prioridad = 'HIGH') as altas,
+                    COUNT(*) FILTER (WHERE prioridad = 'MEDIUM') as medias,
+                    COUNT(*) FILTER (WHERE prioridad = 'LOW') as bajas,
+                    json_build_object(
+                        'DEUDA_CRITICA', COUNT(*) FILTER (WHERE tipo = 'DEUDA_CRITICA'),
+                        'PATRON_PAGO_DETECTADO', COUNT(*) FILTER (WHERE tipo = 'PATRON_PAGO_DETECTADO'),
+                        'PROXIMO_VENCIMIENTO', COUNT(*) FILTER (WHERE tipo = 'PROXIMO_VENCIMIENTO'),
+                        'CLIENTE_NUEVO_SIN_PAGO', COUNT(*) FILTER (WHERE tipo = 'CLIENTE_NUEVO_SIN_PAGO'),
+                        'CLIENTE_MEJORADO', COUNT(*) FILTER (WHERE tipo = 'CLIENTE_MEJORADO')
+                    ) as por_tipo
+                FROM notificaciones_inteligentes
+                WHERE archivada = false
+            `);
+
+            const stats = result.rows[0];
+            return {
+                total: parseInt(stats.total),
+                no_leidas: parseInt(stats.no_leidas),
+                archivadas: parseInt(stats.archivadas),
+                por_prioridad: {
+                    CRITICAL: parseInt(stats.criticas),
+                    HIGH: parseInt(stats.altas),
+                    MEDIUM: parseInt(stats.medias),
+                    LOW: parseInt(stats.bajas)
+                },
+                por_tipo: stats.por_tipo
+            };
+
+        } catch (error) {
+            console.error('Error en obtenerResumen:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * ✅ OBTENER NOTIFICACIONES DE UN CLIENTE
+     */
+    async obtenerPorCliente(clienteId) {
+        try {
+            const result = await pool.query(`
+                SELECT * FROM notificaciones_inteligentes
+                WHERE cliente_id = $1
+                AND archivada = false
+                ORDER BY fecha_creacion DESC
+                LIMIT 50
+            `, [clienteId]);
+
+            return result.rows;
+
+        } catch (error) {
+            console.error('Error en obtenerPorCliente:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * ✅ MARCAR COMO LEÍDA
+     */
+    async marcarComoLeida(id) {
+        try {
+            const result = await pool.query(`
+                UPDATE notificaciones_inteligentes
+                SET leida = true, fecha_leida = CURRENT_TIMESTAMP
+                WHERE id = $1
+                RETURNING *
+            `, [id]);
+
+            return result.rows[0];
+
+        } catch (error) {
+            console.error('Error en marcarComoLeida:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * ✅ MARCAR VARIAS COMO LEÍDAS
+     */
+    async marcarVariasComoLeidas(ids) {
+        try {
+            const result = await pool.query(`
+                UPDATE notificaciones_inteligentes
+                SET leida = true, fecha_leida = CURRENT_TIMESTAMP
+                WHERE id = ANY($1::int[])
+                RETURNING id
+            `, [ids]);
+
+            return {
+                cantidad: result.rowCount,
+                ids: result.rows.map(r => r.id)
+            };
+
+        } catch (error) {
+            console.error('Error en marcarVariasComoLeidas:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * ✅ ARCHIVAR NOTIFICACIÓN
+     */
+    async archivar(id) {
+        try {
+            const result = await pool.query(`
+                UPDATE notificaciones_inteligentes
+                SET archivada = true, fecha_archivada = CURRENT_TIMESTAMP
+                WHERE id = $1
+                RETURNING *
+            `, [id]);
+
+            return result.rows[0];
+
+        } catch (error) {
+            console.error('Error en archivar:', error);
+            throw error;
+        }
+    },
+
+    /**
      * LIMPIAR NOTIFICACIONES MUY ANTIGUAS
      */
-    async limpiarNotificacionesAntiguas() {
+    async limpiarNotificacionesAntiguas(dias = 60) {
         try {
             const result = await pool.query(`
                 DELETE FROM notificaciones_inteligentes
-                WHERE fecha_creacion < CURRENT_TIMESTAMP - INTERVAL '60 days'
+                WHERE fecha_creacion < CURRENT_TIMESTAMP - INTERVAL '${dias} days'
+                AND archivada = true
                 RETURNING id
             `);
 
             console.log(`🧹 ${result.rowCount} notificaciones antiguas eliminadas`);
-            return result.rowCount;
+            return {
+                cantidad_eliminadas: result.rowCount
+            };
 
         } catch (error) {
             console.error('❌ Error limpiando notificaciones:', error);
-            return 0;
+            return {
+                cantidad_eliminadas: 0
+            };
         }
     }
 };
