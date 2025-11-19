@@ -230,6 +230,32 @@ body {
     transform: translateY(-2px);
 }
 
+.btn-generar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #FF9500, #FF6B00);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(255, 149, 0, 0.3);
+    transition: var(--transition);
+}
+
+.btn-generar:hover {
+    box-shadow: 0 12px 28px rgba(255, 149, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-generar:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .btn-refresh {
     width: 48px;
     height: 48px;

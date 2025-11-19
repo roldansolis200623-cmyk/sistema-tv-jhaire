@@ -34,6 +34,7 @@ import {
     Mail
 } from 'lucide-react';
 import api from '../services/api';
+import notificacionInteligenteService from '../services/notificacionInteligenteService';
 import './NotificacionesInteligentes.css';
 
 const NotificacionesInteligentes = () => {
@@ -82,161 +83,114 @@ const NotificacionesInteligentes = () => {
         try {
             if (!silent) setLoading(true);
             else setRefreshing(true);
-            
-            // Por ahora usamos datos de ejemplo
-            // Cuando tengas el backend real, usa: await api.get('/notificaciones')
-            const notifEjemplo = [
-                {
-                    id: 1,
-                    tipo: 'ia',
-                    titulo: '🤖 Nueva recomendación de IA - Oportunidad de Ingresos',
-                    mensaje: 'Se detectaron 6 clientes en riesgo alto que requieren seguimiento inmediato. Implementar estrategia de contacto personalizada puede recuperar S/ 2,450 en los próximos 7 días.',
-                    fecha: new Date().toISOString(),
-                    leida: false,
-                    prioridad: 'critica',
-                    icono: 'brain',
-                    seccion: 'Análisis IA',
-                    acciones: ['Contactar', 'Ver clientes', 'Crear tarea'],
-                    datos_extra: {
-                        clientes_afectados: 6,
-                        monto_potencial: 2450,
-                        probabilidad: '87%'
-                    }
-                },
-                {
-                    id: 2,
-                    tipo: 'pago',
-                    titulo: '✅ Pago Recibido - Juan Pérez García',
-                    mensaje: 'Se ha procesado un pago de S/ 150.00 de parte de Juan Pérez García. Tu índice de cobranza se ha incrementado a 87.5%.',
-                    fecha: new Date(Date.now() - 3600000).toISOString(),
-                    leida: false,
-                    prioridad: 'normal',
-                    icono: 'dollar',
-                    seccion: 'Pagos',
-                    acciones: ['Ver cliente', 'Enviar comprobante'],
-                    datos_extra: {
-                        cliente: 'Juan Pérez García',
-                        monto: 150,
-                        cuenta: '****1234'
-                    }
-                },
-                {
-                    id: 3,
-                    tipo: 'alerta',
-                    titulo: '⚠️ Cliente en Mora Crítica - María García López',
-                    mensaje: 'María García López tiene 3 meses de deuda acumulada - S/ 450.00. Se recomienda acción inmediata de cobranza.',
-                    fecha: new Date(Date.now() - 7200000).toISOString(),
-                    leida: false,
-                    prioridad: 'critica',
-                    icono: 'alert',
-                    seccion: 'Alertas',
-                    acciones: ['Contactar', 'Ver historial', 'Crear tarea de cobro'],
-                    datos_extra: {
-                        cliente: 'María García López',
-                        deuda: 450,
-                        meses: 3,
-                        telefono: '+51 987 654 321'
-                    }
-                },
-                {
-                    id: 4,
-                    tipo: 'sistema',
-                    titulo: '✔️ Tarea Completada - Contactar clientes en mora',
-                    mensaje: 'Has completado exitosamente la tarea: "Contactar clientes en mora". Se registraron 8 contactos exitosos.',
-                    fecha: new Date(Date.now() - 86400000).toISOString(),
-                    leida: true,
-                    prioridad: 'normal',
-                    icono: 'check',
-                    seccion: 'Sistema',
-                    acciones: ['Ver reporte'],
-                    datos_extra: {
-                        contactos: 8,
-                        exitosos: 7,
-                        fallidos: 1
-                    }
-                },
-                {
-                    id: 5,
-                    tipo: 'recordatorio',
-                    titulo: '🔔 Recordatorio - Vencimientos Próximos',
-                    mensaje: '15 clientes tienen pagos que vencen mañana. Total a cobrar: S/ 3,200. Se recomienda enviar recordatorios personalizados.',
-                    fecha: new Date(Date.now() - 172800000).toISOString(),
-                    leida: true,
-                    prioridad: 'alta',
-                    icono: 'clock',
-                    seccion: 'Recordatorios',
-                    acciones: ['Enviar recordatorios', 'Ver lista'],
-                    datos_extra: {
-                        clientes: 15,
-                        monto_total: 3200,
-                        dias: 1
-                    }
-                },
-                {
-                    id: 6,
-                    tipo: 'ia',
-                    titulo: '📈 Análisis de Tendencias - Proyección de Ingresos',
-                    mensaje: 'Basado en patrones históricos, se proyecta un incremento del 12% en ingresos para el próximo mes si se mantiene la estrategia actual.',
-                    fecha: new Date(Date.now() - 259200000).toISOString(),
-                    leida: true,
-                    prioridad: 'alta',
-                    icono: 'brain',
-                    seccion: 'Análisis IA',
-                    acciones: ['Ver proyección', 'Descargar reporte'],
-                    datos_extra: {
-                        incremento: '12%',
-                        confianza: '89%',
-                        periodo: 'Próximo mes'
-                    }
-                },
-                {
-                    id: 7,
-                    tipo: 'pago',
-                    titulo: '💳 Transacción Rechazada - Carlos Mendoza',
-                    mensaje: 'El intento de pago de S/ 200.00 de Carlos Mendoza fue rechazado. Motivo: Fondos insuficientes. Se ha notificado al cliente.',
-                    fecha: new Date(Date.now() - 345600000).toISOString(),
-                    leida: true,
-                    prioridad: 'alta',
-                    icono: 'dollar',
-                    seccion: 'Pagos',
-                    acciones: ['Reenviar cobro', 'Contactar cliente'],
-                    datos_extra: {
-                        cliente: 'Carlos Mendoza',
-                        monto: 200,
-                        motivo: 'Fondos insuficientes'
-                    }
-                },
-                {
-                    id: 8,
-                    tipo: 'alerta',
-                    titulo: '⚡ Actividad Sospechosa Detectada',
-                    mensaje: 'Se detectaron 3 intentos de acceso fallidos a tu cuenta. Se recomienda cambiar tu contraseña de inmediato.',
-                    fecha: new Date(Date.now() - 432000000).toISOString(),
-                    leida: true,
-                    prioridad: 'critica',
-                    icono: 'alert',
-                    seccion: 'Seguridad',
-                    acciones: ['Cambiar contraseña', 'Ver detalles'],
-                    datos_extra: {
-                        intentos: 3,
-                        ubicacion: 'Lima, Perú',
-                        hora: '14:32'
-                    }
-                }
-            ];
 
-            setNotificaciones(notifEjemplo);
-            
+            // ✅ CONECTADO A API REAL
+            const filtros = {};
+
+            // Aplicar filtros avanzados
+            if (advancedFilters.prioridad !== 'todas') {
+                filtros.prioridad = advancedFilters.prioridad.toUpperCase();
+            }
+            if (advancedFilters.tipo !== 'todas') {
+                filtros.tipo = advancedFilters.tipo.toUpperCase();
+            }
+            if (advancedFilters.leidas !== 'todas') {
+                filtros.leida = advancedFilters.leidas === 'leidas';
+            }
+
+            // Obtener notificaciones de la API
+            const notificacionesAPI = await notificacionInteligenteService.obtenerTodas(filtros);
+
+            // Mapear notificaciones del backend al formato del frontend
+            const notificacionesMapeadas = notificacionesAPI.map(n => ({
+                id: n.id,
+                tipo: mapearTipo(n.tipo),
+                titulo: n.titulo,
+                mensaje: n.mensaje,
+                fecha: n.fecha_creacion,
+                leida: n.leida,
+                prioridad: mapearPrioridad(n.prioridad),
+                icono: mapearIcono(n.tipo),
+                seccion: mapearSeccion(n.tipo),
+                acciones: obtenerAcciones(n.tipo),
+                cliente_id: n.cliente_id,
+                nombre_cliente: n.nombre && n.apellido ? `${n.nombre} ${n.apellido}` : null,
+                datos_extra: {
+                    deuda_actual: n.deuda_actual,
+                    patron_detectado: n.patron_detectado,
+                    dias_sin_pagar: n.dias_sin_pagar,
+                    accion_sugerida: n.accion_sugerida
+                }
+            }));
+
+            setNotificaciones(notificacionesMapeadas);
+
             // Calcular stats avanzadas
-            calcularStats(notifEjemplo);
-            
+            calcularStats(notificacionesMapeadas);
+
             setLoading(false);
             setRefreshing(false);
         } catch (error) {
             console.error('Error cargando notificaciones:', error);
+            setNotificaciones([]);
             setLoading(false);
             setRefreshing(false);
         }
+    };
+
+    // Funciones auxiliares de mapeo
+    const mapearTipo = (tipoBackend) => {
+        const mapeo = {
+            'DEUDA_CRITICA': 'alerta',
+            'PATRON_PAGO_DETECTADO': 'ia',
+            'PROXIMO_VENCIMIENTO': 'recordatorio',
+            'CLIENTE_NUEVO_SIN_PAGO': 'alerta',
+            'CLIENTE_MEJORADO': 'pago'
+        };
+        return mapeo[tipoBackend] || 'sistema';
+    };
+
+    const mapearPrioridad = (prioridadBackend) => {
+        const mapeo = {
+            'CRITICAL': 'critica',
+            'HIGH': 'alta',
+            'MEDIUM': 'normal',
+            'LOW': 'normal'
+        };
+        return mapeo[prioridadBackend] || 'normal';
+    };
+
+    const mapearIcono = (tipoBackend) => {
+        const mapeo = {
+            'DEUDA_CRITICA': 'alert',
+            'PATRON_PAGO_DETECTADO': 'brain',
+            'PROXIMO_VENCIMIENTO': 'clock',
+            'CLIENTE_NUEVO_SIN_PAGO': 'alert',
+            'CLIENTE_MEJORADO': 'check'
+        };
+        return mapeo[tipoBackend] || 'info';
+    };
+
+    const mapearSeccion = (tipoBackend) => {
+        const mapeo = {
+            'DEUDA_CRITICA': 'Alertas',
+            'PATRON_PAGO_DETECTADO': 'Análisis IA',
+            'PROXIMO_VENCIMIENTO': 'Recordatorios',
+            'CLIENTE_NUEVO_SIN_PAGO': 'Alertas',
+            'CLIENTE_MEJORADO': 'Pagos'
+        };
+        return mapeo[tipoBackend] || 'Sistema';
+    };
+
+    const obtenerAcciones = (tipoBackend) => {
+        const mapeo = {
+            'DEUDA_CRITICA': ['Contactar', 'Ver historial'],
+            'PATRON_PAGO_DETECTADO': ['Ver patrón', 'Enviar recordatorio'],
+            'PROXIMO_VENCIMIENTO': ['Enviar recordatorio', 'Ver cliente'],
+            'CLIENTE_NUEVO_SIN_PAGO': ['Contactar', 'Ver cliente'],
+            'CLIENTE_MEJORADO': ['Ver cliente', 'Agradecer']
+        };
+        return mapeo[tipoBackend] || ['Ver detalles'];
     };
 
     const calcularStats = (notifs) => {
@@ -265,22 +219,62 @@ const NotificacionesInteligentes = () => {
     // ============================================
 
     const marcarComoLeida = async (id) => {
-        setNotificaciones(notificaciones.map(n =>
-            n.id === id ? { ...n, leida: true } : n
-        ));
+        try {
+            await notificacionInteligenteService.marcarLeida(id);
+            setNotificaciones(notificaciones.map(n =>
+                n.id === id ? { ...n, leida: true } : n
+            ));
+        } catch (error) {
+            console.error('Error marcando como leída:', error);
+        }
     };
 
     const marcarTodasLeidas = async () => {
-        setNotificaciones(notificaciones.map(n => ({ ...n, leida: true })));
+        try {
+            const ids = notificaciones.filter(n => !n.leida).map(n => n.id);
+            if (ids.length > 0) {
+                await notificacionInteligenteService.marcarVariasLeidas(ids);
+                setNotificaciones(notificaciones.map(n => ({ ...n, leida: true })));
+            }
+        } catch (error) {
+            console.error('Error marcando todas como leídas:', error);
+        }
     };
 
     const eliminarNotificacion = async (id) => {
-        setNotificaciones(notificaciones.filter(n => n.id !== id));
+        try {
+            await notificacionInteligenteService.archivar(id);
+            setNotificaciones(notificaciones.filter(n => n.id !== id));
+        } catch (error) {
+            console.error('Error eliminando notificación:', error);
+        }
     };
 
-    const archivarNotificacion = (id) => {
+    const archivarNotificacion = async (id) => {
+        try {
+            await notificacionInteligenteService.archivar(id);
+            setNotificaciones(notificaciones.filter(n => n.id !== id));
+        } catch (error) {
+            console.error('Error archivando notificación:', error);
+        }
+    };
+
+    const archivarNotificacionOld = (id) => {
         // Simulamos archivar (en producción sería un delete soft)
         eliminarNotificacion(id);
+    };
+
+    const generarNotificaciones = async () => {
+        try {
+            setRefreshing(true);
+            const resultado = await notificacionInteligenteService.generar();
+            console.log('Notificaciones generadas:', resultado);
+            // Recargar notificaciones después de generar
+            await cargarNotificaciones(true);
+        } catch (error) {
+            console.error('Error generando notificaciones:', error);
+            setRefreshing(false);
+        }
     };
 
     const seleccionarMultiple = (id) => {
@@ -468,7 +462,19 @@ const NotificacionesInteligentes = () => {
                                 Marcar todas como leídas
                             </motion.button>
                         )}
-                        
+
+                        <motion.button
+                            className="btn-generar"
+                            onClick={generarNotificaciones}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            disabled={refreshing}
+                            title="Generar notificaciones inteligentes ahora"
+                        >
+                            <Zap size={18} />
+                            Generar
+                        </motion.button>
+
                         <motion.button
                             className="btn-refresh"
                             onClick={() => cargarNotificaciones()}
