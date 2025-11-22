@@ -148,47 +148,50 @@ const notificacionInteligenteService = {
     async detectarPatronesPago() {
         try {
             let notificacionesCreadas = 0;
-            
+
             const clientes = await pool.query(`
-                SELECT 
-                    c.id, c.nombre, c.apellido, c.patron_pago_dias,
-                    COUNT(p.id) as total_pagos,
-                    ROUND(AVG(EXTRACT(DAY FROM (p.fecha_pago - LAG(p.fecha_pago) OVER (ORDER BY p.fecha_pago))))) as promedio_dias
+                SELECT
+                    c.id,
+                    c.nombre,
+                    c.apellido,
+                    c.patron_pago_dias,
+                    COUNT(p.id) as total_pagos
                 FROM clientes c
                 LEFT JOIN pagos p ON c.id = p.cliente_id
                 WHERE c.estado = 'activo'
-                GROUP BY c.id
-                HAVING COUNT(p.id) >= 3  -- Mínimo 3 pagos para analizar patrón
+                GROUP BY c.id, c.nombre, c.apellido, c.patron_pago_dias
+                HAVING COUNT(p.id) >= 3
             `);
             
             for (const cliente of clientes.rows) {
                 try {
-                    const esConfiable = cliente.promedio_dias && cliente.promedio_dias <= 40;
-                    
+                    const patronDias = cliente.patron_pago_dias || 0;
+                    const esConfiable = patronDias > 0 && patronDias <= 40;
+
                     // Verificar si ya existe para hoy
                     const existe = await pool.query(`
                         SELECT id FROM notificaciones_inteligentes
-                        WHERE cliente_id = $1 
+                        WHERE cliente_id = $1
                         AND tipo = 'PATRON_PAGO_DETECTADO'
                         AND DATE(fecha_creacion) = CURRENT_DATE
                         LIMIT 1
                     `, [cliente.id]);
-                    
+
                     if (existe.rows.length > 0) {
                         continue;
                     }
-                    
-                    const titulo = esConfiable 
-                        ? `✅ Cliente CONFIABLE` 
+
+                    const titulo = esConfiable
+                        ? `✅ Cliente CONFIABLE`
                         : `⚠️ Patrón IRREGULAR`;
-                    
-                    const mensaje = esConfiable 
-                        ? `${cliente.nombre} paga regularmente cada ${cliente.promedio_dias} días. Patrón CONFIABLE.`
-                        : `${cliente.nombre} tiene pagos irregulares (promedio ${cliente.promedio_dias} días). REQUIERE SEGUIMIENTO.`;
-                    
+
+                    const mensaje = esConfiable
+                        ? `${cliente.nombre} paga regularmente cada ${patronDias} días. Patrón CONFIABLE.`
+                        : `${cliente.nombre} tiene pagos irregulares (patrón ${patronDias} días). REQUIERE SEGUIMIENTO.`;
+
                     await pool.query(`
-                        INSERT INTO notificaciones_inteligentes 
-                        (cliente_id, tipo, prioridad, titulo, mensaje, 
+                        INSERT INTO notificaciones_inteligentes
+                        (cliente_id, tipo, prioridad, titulo, mensaje,
                          patron_detectado, accion_sugerida, origen)
                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                     `, [
@@ -197,13 +200,13 @@ const notificacionInteligenteService = {
                         esConfiable ? 'LOW' : 'MEDIUM',
                         titulo,
                         mensaje,
-                        cliente.promedio_dias || 0,
+                        patronDias,
                         esConfiable ? 'Mantener comunicación regular' : 'Seguimiento intensivo',
                         'SISTEMA_AUTOMATICO'
                     ]);
-                    
+
                     notificacionesCreadas++;
-                    
+
                 } catch (error) {
                     console.error(`   Error procesando cliente ${cliente.id}:`, error.message);
                 }
@@ -701,12 +704,11 @@ const notificacionInteligenteService = {
                     c.nombre,
                     c.apellido,
                     c.patron_pago_dias,
-                    COUNT(p.id) as total_pagos,
-                    ROUND(AVG(EXTRACT(DAY FROM (p.fecha_pago - LAG(p.fecha_pago) OVER (ORDER BY p.fecha_pago))))) as promedio_dias
+                    COUNT(p.id) as total_pagos
                 FROM clientes c
                 LEFT JOIN pagos p ON c.id = p.cliente_id
                 WHERE c.id = $1
-                GROUP BY c.id
+                GROUP BY c.id, c.nombre, c.apellido, c.patron_pago_dias
             `, [clienteId]);
 
             if (result.rows.length === 0) {
@@ -714,13 +716,13 @@ const notificacionInteligenteService = {
             }
 
             const cliente = result.rows[0];
-            const esConfiable = cliente.promedio_dias && cliente.promedio_dias <= 40;
+            const patronDias = cliente.patron_pago_dias || 0;
+            const esConfiable = patronDias > 0 && patronDias <= 40;
 
             return {
                 cliente_id: cliente.id,
                 nombre: `${cliente.nombre} ${cliente.apellido}`,
-                patron_dias: cliente.patron_pago_dias,
-                promedio_dias: cliente.promedio_dias || 0,
+                patron_dias: patronDias,
                 total_pagos: parseInt(cliente.total_pagos),
                 es_confiable: esConfiable,
                 clasificacion: esConfiable ? 'CONFIABLE' : 'IRREGULAR'

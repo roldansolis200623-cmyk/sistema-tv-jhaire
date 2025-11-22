@@ -123,27 +123,24 @@ const notificacionInteligenteController = {
      */
     async generar(req, res) {
         try {
-            // ✅ Verificar que la función exista
-            if (typeof notificacionService.generarNotificaciones !== 'function') {
-                return res.json({
-                    success: true,
-                    message: 'Generación de notificaciones no disponible',
-                    data: { cantidad_generadas: 0 }
-                });
-            }
+            console.log('🔔 Iniciando generación manual de notificaciones...');
 
-            const resultado = await notificacionService.generarNotificaciones();
-            
+            const totalCreadas = await notificacionService.generarNotificacionesInteligentes();
+
             res.json({
                 success: true,
-                message: `Se generaron ${resultado.cantidad_generadas} notificaciones`,
-                data: resultado
+                message: `Se generaron ${totalCreadas} notificaciones inteligentes`,
+                data: {
+                    cantidad_generadas: totalCreadas,
+                    timestamp: new Date().toISOString()
+                }
             });
         } catch (error) {
             console.error('Error en generar:', error);
             res.status(500).json({
                 success: false,
-                error: 'Error generando notificaciones'
+                error: 'Error generando notificaciones',
+                details: error.message
             });
         }
     },
