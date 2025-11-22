@@ -1,6 +1,7 @@
 const PagoModel = require('../models/pagoModel');
 const ClienteModel = require('../models/clienteModel');
 const notificacionService = require('../services/notificacionService');
+const notificacionInteligenteService = require('../services/notificacionInteligenteService');
 const pool = require('../config/database');
 
 const pagoController = {
@@ -178,6 +179,16 @@ const pagoController = {
                 console.error('Error enviando notificación:', notifError);
                 // No fallar el pago si falla la notificación
             }
+
+            // 🤖 Generar notificaciones inteligentes en background
+            setImmediate(async () => {
+                try {
+                    await notificacionInteligenteService.generarNotificacionesInteligentes();
+                    console.log('🔔 Notificaciones inteligentes generadas después de registrar pago');
+                } catch (notifError) {
+                    console.error('⚠️ Error generando notificaciones inteligentes:', notifError.message);
+                }
+            });
 
             res.status(201).json({
                 message: `Pago de ${mesesPagadosNum} mes(es) registrado correctamente`,
