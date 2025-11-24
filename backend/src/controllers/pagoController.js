@@ -180,15 +180,16 @@ const pagoController = {
                 // No fallar el pago si falla la notificación
             }
 
-            // 🤖 Generar notificaciones inteligentes en background
-            setImmediate(async () => {
-                try {
-                    await notificacionInteligenteService.generarNotificacionesInteligentes();
-                    console.log('🔔 Notificaciones inteligentes generadas después de registrar pago');
-                } catch (notifError) {
-                    console.error('⚠️ Error generando notificaciones inteligentes:', notifError.message);
-                }
-            });
+            // 🤖 Generar notificaciones inteligentes INMEDIATAMENTE
+            try {
+                console.log('🤖 Iniciando generación de notificaciones inteligentes...');
+                const totalCreadas = await notificacionInteligenteService.generarNotificacionesInteligentes();
+                console.log(`✅ ${totalCreadas} notificaciones inteligentes generadas después de registrar pago`);
+            } catch (notifError) {
+                console.error('⚠️ Error generando notificaciones inteligentes:', notifError);
+                console.error('Stack completo:', notifError.stack);
+                // No fallar el pago si fallan las notificaciones
+            }
 
             res.status(201).json({
                 message: `Pago de ${mesesPagadosNum} mes(es) registrado correctamente`,

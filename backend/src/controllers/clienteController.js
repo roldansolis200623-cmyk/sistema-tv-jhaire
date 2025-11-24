@@ -40,15 +40,16 @@ const clienteController = {
 
             console.log('✅ Cliente creado exitosamente:', nuevoCliente.id);
 
-            // Generar notificaciones inteligentes en background
-            setImmediate(async () => {
-                try {
-                    await notificacionInteligenteService.generarNotificacionesInteligentes();
-                    console.log('🔔 Notificaciones inteligentes generadas después de crear cliente');
-                } catch (notifError) {
-                    console.error('⚠️ Error generando notificaciones inteligentes:', notifError.message);
-                }
-            });
+            // 🔔 Generar notificaciones inteligentes INMEDIATAMENTE
+            try {
+                console.log('🤖 Iniciando generación de notificaciones inteligentes...');
+                const totalCreadas = await notificacionInteligenteService.generarNotificacionesInteligentes();
+                console.log(`✅ ${totalCreadas} notificaciones inteligentes generadas`);
+            } catch (notifError) {
+                console.error('⚠️ Error generando notificaciones inteligentes:', notifError);
+                console.error('Stack completo:', notifError.stack);
+                // No fallar la creación del cliente si fallan las notificaciones
+            }
 
             res.status(201).json({
                 message: 'Cliente creado exitosamente',
