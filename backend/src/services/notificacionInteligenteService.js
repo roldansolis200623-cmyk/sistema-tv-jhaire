@@ -446,6 +446,8 @@ const notificacionInteligenteService = {
         try {
             const { tipo, prioridad, leida, archivada, limit = 50, offset = 0 } = filtros;
 
+            console.log('📋 Obteniendo notificaciones con filtros:', { tipo, prioridad, leida, archivada, limit, offset });
+
             let query = `
                 SELECT
                     n.*,
@@ -487,11 +489,18 @@ const notificacionInteligenteService = {
             query += ` ORDER BY n.fecha_creacion DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
             params.push(limit, offset);
 
+            console.log('📝 Query SQL:', query);
+            console.log('📝 Params:', params);
+
             const result = await pool.query(query, params);
+
+            console.log(`✅ ${result.rows.length} notificaciones obtenidas`);
+
             return result.rows;
 
         } catch (error) {
             console.error('❌ Error obteniendo notificaciones:', error);
+            console.error('Stack:', error.stack);
             throw error;
         }
     },
