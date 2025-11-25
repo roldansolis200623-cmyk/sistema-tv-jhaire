@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { Bell, X, CheckCheck, Trash2, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import notificacionService from '../services/notificacionService';
+import notificacionInteligenteService from '../services/notificacionInteligenteService';
 
 const NotificationBell = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -34,20 +34,21 @@ const NotificationBell = () => {
 
     const cargarContador = async () => {
         try {
-            const data = await notificacionService.getContador();
-            console.log('📊 Contador:', data);
-            setContador(data.total || 0);
+            const data = await notificacionInteligenteService.obtenerResumen();
+            console.log('📊 Contador notificaciones inteligentes:', data);
+            setContador(data.no_leidas || 0);
         } catch (error) {
             console.error('❌ Error cargando contador:', error);
+            setContador(0);
         }
     };
 
     const cargarNotificaciones = async () => {
         try {
             setLoading(true);
-            console.log('🔄 Cargando notificaciones...');
-            const data = await notificacionService.getNoLeidas();
-            console.log('📬 Notificaciones recibidas:', data);
+            console.log('🔄 Cargando notificaciones inteligentes...');
+            const data = await notificacionInteligenteService.obtenerTodas({ leida: false, limit: 50 });
+            console.log('📬 Notificaciones inteligentes recibidas:', data);
             setNotificaciones(data || []);
         } catch (error) {
             console.error('❌ Error cargando notificaciones:', error);
@@ -65,15 +66,16 @@ const NotificationBell = () => {
         }
     };
 
-    const handleMarcarLeida = async (id, url) => {
+    const handleMarcarLeida = async (id, clienteId) => {
         try {
-            await notificacionService.marcarComoLeida(id);
+            await notificacionInteligenteService.marcarLeida(id);
             setNotificaciones(notificaciones.filter(n => n.id !== id));
             setContador(Math.max(0, contador - 1));
-            
-            if (url) {
+
+            // Si hay un cliente_id, navegar a la página del cliente
+            if (clienteId) {
                 setIsOpen(false);
-                navigate(url);
+                navigate(`/clientes/${clienteId}`);
             }
         } catch (error) {
             console.error('Error marcando como leída:', error);
@@ -82,9 +84,12 @@ const NotificationBell = () => {
 
     const handleMarcarTodasLeidas = async () => {
         try {
-            await notificacionService.marcarTodasComoLeidas();
-            setNotificaciones([]);
-            setContador(0);
+            const ids = notificaciones.map(n => n.id);
+            if (ids.length > 0) {
+                await notificacionInteligenteService.marcarVariasLeidas(ids);
+                setNotificaciones([]);
+                setContador(0);
+            }
         } catch (error) {
             console.error('Error marcando todas como leídas:', error);
         }
@@ -93,31 +98,47 @@ const NotificationBell = () => {
     const handleEliminar = async (id, e) => {
         e.stopPropagation();
         try {
-            await notificacionService.eliminar(id);
+            await notificacionInteligenteService.archivar(id);
             setNotificaciones(notificaciones.filter(n => n.id !== id));
             setContador(Math.max(0, contador - 1));
         } catch (error) {
-            console.error('Error eliminando notificación:', error);
+            console.error('Error archivando notificación:', error);
         }
     };
 
-    const getIcono = (icono) => {
-        switch (icono) {
-            case 'alert': return <AlertCircle size={20} />;
-            case 'success': return <CheckCircle size={20} />;
-            case 'warning': return <AlertTriangle size={20} />;
-            case 'info': 
-            default: return <Info size={20} />;
-        }
-    };
-
-    const getColorClasses = (color) => {
-        switch (color) {
-            case 'red': return 'bg-red-50 border-red-200 text-red-700';
-            case 'green': return 'bg-green-50 border-green-200 text-green-700';
-            case 'yellow': return 'bg-yellow-50 border-yellow-200 text-yellow-700';
-            case 'blue':
-            default: return 'bg-blue-50 border-blue-200 text-blue-700';
+    // Mapear prioridad a icono y color
+    const getPrioridadConfig = (prioridad) => {
+        switch (prioridad) {
+            case 'CRITICAL':
+                return {
+                    icono: <AlertCircle size={20} />,
+                    colorClasses: 'bg-red-50 border-red-200 text-red-700',
+                    iconColor: 'text-red-600'
+                };
+            case 'HIGH':
+                return {
+                    icono: <AlertTriangle size={20} />,
+                    colorClasses: 'bg-orange-50 border-orange-200 text-orange-700',
+                    iconColor: 'text-orange-600'
+                };
+            case 'MEDIUM':
+                return {
+                    icono: <Info size={20} />,
+                    colorClasses: 'bg-yellow-50 border-yellow-200 text-yellow-700',
+                    iconColor: 'text-yellow-600'
+                };
+            case 'LOW':
+                return {
+                    icono: <CheckCircle size={20} />,
+                    colorClasses: 'bg-green-50 border-green-200 text-green-700',
+                    iconColor: 'text-green-600'
+                };
+            default:
+                return {
+                    icono: <Info size={20} />,
+                    colorClasses: 'bg-blue-50 border-blue-200 text-blue-700',
+                    iconColor: 'text-blue-600'
+                };
         }
     };
 
@@ -214,40 +235,48 @@ const NotificationBell = () => {
                                 </div>
                             ) : (
                                 <div className="divide-y divide-gray-100">
-                                    {notificaciones.map((notif) => (
-                                        <div
-                                            key={notif.id}
-                                            onClick={() => handleMarcarLeida(notif.id, notif.url)}
-                                            className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors border-l-4 ${getColorClasses(notif.color)}`}
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <div className={`mt-1 flex-shrink-0 ${notif.color === 'red' ? 'text-red-600' : notif.color === 'green' ? 'text-green-600' : notif.color === 'yellow' ? 'text-yellow-600' : 'text-blue-600'}`}>
-                                                    {getIcono(notif.icono)}
-                                                </div>
-                                                
-                                                <div className="flex-1 min-w-0">
-                                                    <h4 className="font-semibold text-sm text-gray-900 mb-1">
-                                                        {notif.titulo}
-                                                    </h4>
-                                                    <p className="text-xs text-gray-600 mb-2">
-                                                        {notif.mensaje}
-                                                    </p>
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-xs text-gray-400">
-                                                            {formatFecha(notif.fecha_creacion)}
-                                                        </span>
-                                                        
-                                                        <button
-                                                            onClick={(e) => handleEliminar(notif.id, e)}
-                                                            className="p-1 hover:bg-red-100 rounded transition-colors text-red-500 flex-shrink-0"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
+                                    {notificaciones.map((notif) => {
+                                        const config = getPrioridadConfig(notif.prioridad);
+                                        return (
+                                            <div
+                                                key={notif.id}
+                                                onClick={() => handleMarcarLeida(notif.id, notif.cliente_id)}
+                                                className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors border-l-4 ${config.colorClasses}`}
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <div className={`mt-1 flex-shrink-0 ${config.iconColor}`}>
+                                                        {config.icono}
+                                                    </div>
+
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-semibold text-sm text-gray-900 mb-1">
+                                                            {notif.titulo}
+                                                        </h4>
+                                                        <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                                                            {notif.mensaje}
+                                                        </p>
+                                                        {notif.cliente_nombre && (
+                                                            <p className="text-xs text-gray-500 mb-2">
+                                                                Cliente: {notif.cliente_nombre}
+                                                            </p>
+                                                        )}
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs text-gray-400">
+                                                                {formatFecha(notif.fecha_creacion)}
+                                                            </span>
+
+                                                            <button
+                                                                onClick={(e) => handleEliminar(notif.id, e)}
+                                                                className="p-1 hover:bg-red-100 rounded transition-colors text-red-500 flex-shrink-0"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
